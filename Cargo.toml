@@ -17,9 +17,10 @@ version = "0.1.1"
 name = "abe_gpsw"
 
 [dependencies]
-cosmian_bls12_381 = "0.4.0"
+cosmian_bls12_381 = "0.4"
 eyre = "0.6"
 ff = "0.9"
+getrandom = {version = "0.2", features = ["js"]}
 group = "0.9"
 hex = "0.4"
 rand = "0.8"

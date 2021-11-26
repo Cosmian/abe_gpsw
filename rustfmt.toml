@@ -41,16 +41,3 @@ wrap_comments = true
 # Which version of the formatting rules to use. Version::One is backwards-compatible with Rustfmt 1.0. Other versions are only backwards compatible within a major version number.
 # Default value: "One"
 version = "Two"
-
-# The following rust files listing have been made in october 2021.
-# This listing allows us first to ignore all rust files formmatting.
-# Then we can remove progressively from this list the files we want to format
-ignore = [
-  "resources/crypto/lib/crypto_base/src/brc_c_prf_hi.rs",
-  "resources/crypto/psi/src/psi",
-  "resources/cosmian_server_core/src/lib.rs",
-  "resources/orchestrator/src/models/computation.rs",
-  "resources/orchestrator/src/models/datasource.rs",
-  # Problem when formatting
-  "resources/hdfs/src/lib.rs",
-]
