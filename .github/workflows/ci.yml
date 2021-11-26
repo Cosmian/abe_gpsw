@@ -14,9 +14,9 @@ jobs:
           # Using a rustfmt.toml with unstable features, need nightly
           toolchain: nightly
           override: true
+          components: rustfmt, clippy
 
       # Ensure all code has been formatted with rustfmt
-      - run: rustup component add rustfmt clippy
       - name: Check formatting
         uses: actions-rs/cargo@v1
         with:
