@@ -11,16 +11,22 @@ jobs:
       - uses: actions/checkout@v1
       - uses: actions-rs/toolchain@v1
         with:
+          # Using a rustfmt.toml with unstable features, need nightly
           toolchain: nightly
           override: true
 
       # Ensure all code has been formatted with rustfmt
-      - run: rustup component add rustfmt
+      - run: rustup component add rustfmt, clippy
       - name: Check formatting
         uses: actions-rs/cargo@v1
         with:
           command: fmt
           args: -- --check --color always
+      - name: Static analysis
+        uses: actions-rs/cargo@v1
+        with:
+          command: clippy
+          args: -- -D warnings
 
   test:
     name: Test on ${{ matrix.os }}
@@ -33,28 +39,9 @@ jobs:
       - uses: actions/checkout@v1
       - uses: actions-rs/toolchain@v1
         with:
-          toolchain: 1.56.0
+          toolchain: stable
           override: true
-      - name: cargo fetch
-        uses: actions-rs/cargo@v1
-        with:
-          command: fetch
-      - name: Build tests
-        uses: actions-rs/cargo@v1
-        with:
-          command: build
-          args: --verbose --release --tests
       - name: Run tests
-        uses: actions-rs/cargo@v1
-        with:
-          command: test
-          args: --verbose --release
-      - name: Build tests (no endomorphism)
-        uses: actions-rs/cargo@v1
-        with:
-          command: build
-          args: --verbose --release --tests
-      - name: Run tests (no endomorphism)
         uses: actions-rs/cargo@v1
         with:
           command: test
@@ -66,21 +53,15 @@ jobs:
     strategy:
       matrix:
         target:
-          # - thumbv6m-none-eabi
           - wasm32-unknown-unknown
-          # - wasm32-wasi
 
     steps:
       - uses: actions/checkout@v1
       - uses: actions-rs/toolchain@v1
         with:
-          toolchain: 1.56.0
+          toolchain: stable
           override: true
       - run: rustup target add ${{ matrix.target }}
-      - name: cargo fetch
-        uses: actions-rs/cargo@v1
-        with:
-          command: fetch
       - name: Build
         uses: actions-rs/cargo@v1
         with:
@@ -97,10 +78,6 @@ jobs:
         with:
           toolchain: nightly
           override: true
-      - name: cargo fetch
-        uses: actions-rs/cargo@v1
-        with:
-          command: fetch
 
       # Ensure intra-documentation links all resolve correctly
       # Requires #![deny(intra_doc_link_resolution_failure)] in crate.
