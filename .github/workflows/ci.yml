@@ -43,12 +43,12 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command: build
-          args: --verbose --release --tests --features endo
+          args: --verbose --release --tests
       - name: Run tests
         uses: actions-rs/cargo@v1
         with:
           command: test
-          args: --verbose --release --features endo
+          args: --verbose --release
       - name: Build tests (no endomorphism)
         uses: actions-rs/cargo@v1
         with:
@@ -85,7 +85,7 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command: build
-          args: --verbose --target ${{ matrix.target }} --no-default-features --features groups,pairings
+          args: --verbose --target ${{ matrix.target }}
 
   doc-links:
     name: Nightly lint
