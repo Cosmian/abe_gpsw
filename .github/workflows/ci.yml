@@ -66,9 +66,9 @@ jobs:
     strategy:
       matrix:
         target:
-          - thumbv6m-none-eabi
+          # - thumbv6m-none-eabi
           - wasm32-unknown-unknown
-          - wasm32-wasi
+          # - wasm32-wasi
 
     steps:
       - uses: actions/checkout@v1
