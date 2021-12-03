@@ -29,14 +29,69 @@ Some specificities of ABE schemes are:
 - these systems allow for multiple private keys to be used with a single public key (hence the "fuzzy" in the original title, for "fuzzy matching", meaning approximate matching in computer science land).
 - secondly, private keys are constructed from a list of attributes (or a policy) instead of an identity. Anyone who has all the attributes (or a valid access policy) can read the message.
 
+![img](figs/CP-vs-KP.png)
 ## Ciphertext-Policy
 
 In Ciphertext-Policy Attribute-Based Encryption (CP-ABE), the access policy is encoded in the encrypted message; a ciphertext specifies an access policy over a defined universe of attributes within the system. A user’s private key is associated with a set of attributes which corresponds to a user’s identity: a user will be able to decrypt a ciphertext, if and only if his attributes satisfy the policy of the respective ciphertext. See for example [BSW07](https://hal.archives-ouvertes.fr/hal-01788815/document).
 
 ## Key-Policy
+
 KP-ABE is the dual to CP-ABE in the sense that an access policy is encoded into the users secret key, e.g., (𝐴∧𝐶)∨𝐷, and a ciphertext is computed with respect to a set of attributes, e.g., {𝐴,𝐵}. In this example the user would not be able to decrypt the ciphertext but would for instance be able to decrypt a ciphertext with respect to {𝐴,𝐶}. See for example [GPSW06].
 
-<br/><br/>
+
+## Policies
+
+Policies in [GPSW](https://eprint.iacr.org/2006/309.pdf) use monotone access structures.
+
+In order to make policies more user friendly, Cosmian implements an indirection between the way the user expresses a policy and the actual attribute values used in GPSW.
+
+From a user perspective, the overall policy is expressed as a set of policy axes. Each axis can be optionally marked as being hierarchical, and contains an enumeration of the possible values for that axis.
+
+For instance, the policy
+
+```json
+[
+    "Security Level": {
+        "hierarchical": true,
+        "attributes": ["high","medium","low"]
+    },
+    "Department": {
+        "hierarchical": false,
+        "attributes": ["HR","FIN","MKG","R&D"]
+    }
+]
+```
+
+defines 2 axis `Security Level` and `Department`.
+
+Here, the use of axis allows to handle access policies encoded as CNF formulas.
+
+Contrarily to the `Department` axis, the `Security Level` axis is hierarchical: a user that posesses a key with an attribute `Security Level::high` will have access to data encrypted with any of the attributes of the `Security Level`.
+
+All unique attribute names (7 in the example above) are derived by concatenating the axis names and the possible values for that axis, and are assigned a unique attribute value:
+
+| Attribute name         |  Value  |
+|------------------------|---------|
+| Department::HR         |    1    |
+| Department::FIN        |    2    |
+| Department::MKG        |    3    |
+| Department::R&D        |    4    |
+| Security Level::high   |    5    |
+| Security Level::medium |    6    |
+| Security Level::low    |    7    |
+
+From the master secret key, a derived decryption key for a user of the marketing department (`MKG`) with a `medium` security level will hold an access policy expressed as the boolean expression:
+
+```
+'Department::MKG' & ( 'Security Level::medium' | 'Security Level::low' )
+```
+
+Finally, since attribute names are mapped to attribute values, the policy above is translated in GPSW as
+
+```javascript
+3 & ( 6 | 7 )
+```
+
 # BLS12-381: Pairing-friendly elliptic curve
 
 This KP-ABE implementation is based on the crate [bls12_381](https://crates.io/crates/cosmian_bls12_381), a pairing-friendly elliptic curve construction from the [BLS family](https://eprint.iacr.org/2002/088), with embedding degree 12. It is built over a 381-bit prime field `GF(p)` with...
