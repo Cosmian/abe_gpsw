@@ -3,6 +3,16 @@
 All notable changes to this project will be documented in this file.
 
 ---
+## [0.1.3] - 2021-12-06
+### Added
+- Add access policy comparison (trait `PartialEq`) with ABE attributes commutativity
+
+### Changed
+### Fixed
+- Bug in hierarchical axis, order DOES matter now
+### Removed
+---
+
 ## [0.1.2] - 2021-12-03
 ### Added
 - Add CHANGELOG and LICENSE files
