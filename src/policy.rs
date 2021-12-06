@@ -1,6 +1,6 @@
 #![allow(clippy::module_name_repetitions)]
 use std::{
-    collections::{BTreeSet, BinaryHeap, HashMap},
+    collections::{BinaryHeap, HashMap},
     convert::TryFrom,
     fmt::Display,
     ops::{BitAnd, BitOr},
@@ -87,7 +87,6 @@ impl<'de> Deserialize<'de> for Attribute {
 // An `AccessPolicy` is a boolean expression over attributes
 // Only `positive` literals are allowed (no negation)
 #[derive(Serialize, Deserialize, Debug, Clone)]
-
 pub enum AccessPolicy {
     Attr(Attribute),
     And(Box<AccessPolicy>, Box<AccessPolicy>),
@@ -265,29 +264,8 @@ pub fn ap(axis: &str, name: &str) -> AccessPolicy {
 #[derive(Clone)]
 pub(crate) struct PolicyAxis {
     name: String,
-    attributes: BTreeSet<String>,
+    attributes: Vec<String>,
     hierarchical: bool,
-}
-
-pub struct PolicyInit {
-    pub name: String,
-    pub attributes: Vec<String>,
-    pub hierarchical: bool,
-}
-
-impl TryFrom<PolicyInit> for PolicyAxis {
-    type Error = eyre::Error;
-
-    fn try_from(policy_init: PolicyInit) -> Result<Self, Self::Error> {
-        let axis = policy_init
-            .attributes
-            .iter()
-            .map(|x| x.as_str())
-            .collect::<Vec<_>>();
-        let policy_def =
-            PolicyAxis::new(policy_init.name.as_str(), &axis, policy_init.hierarchical);
-        Ok(policy_def)
-    }
 }
 
 impl PolicyAxis {
@@ -295,10 +273,7 @@ impl PolicyAxis {
     pub fn new(name: &str, attributes: &[&str], hierarchical: bool) -> Self {
         Self {
             name: name.to_owned(),
-            attributes: attributes
-                .iter()
-                .map(|s| (*s).to_owned())
-                .collect::<BTreeSet<_>>(),
+            attributes: attributes.iter().map(|s| s.to_string()).collect::<Vec<_>>(),
             hierarchical,
         }
     }
@@ -317,7 +292,7 @@ pub struct Policy {
     pub(crate) last_attribute: usize,
     pub(crate) max_attribute: usize,
     // store the policies by name
-    pub(crate) store: HashMap<String, (BTreeSet<String>, bool)>,
+    pub(crate) store: HashMap<String, (Vec<String>, bool)>,
     // mapping between (policy_name, policy_attribute) -> integer
     pub(crate) attribute_to_int: HashMap<Attribute, BinaryHeap<u32>>,
 }
@@ -343,7 +318,7 @@ impl Policy {
         }
     }
 
-    pub fn store(&self) -> HashMap<String, (BTreeSet<String>, bool)> {
+    pub fn store(&self) -> HashMap<String, (Vec<String>, bool)> {
         self.store.clone()
     }
 
@@ -440,21 +415,23 @@ impl Policy {
     // take care of the hierarchical mode
     // In hierarchical, return the Or of all lower attributes
     fn to_node(&self, attr: &Attribute) -> eyre::Result<Node> {
-        if let Some((list, h)) = self.store.get(&attr.axis) {
-            if let Some(res) = list.get(&attr.name) {
-                //let mut val = Node::Leaf(self.attribute_to_int[attr]);
+        if let Some((list, hierarchical)) = self.store.get(&attr.axis) {
+            if list.contains(&attr.name) {
+                let res = list.iter().position(|r| r == &attr.name).ok_or_else(|| {
+                    eyre::eyre!("Attribute name {:?} expected in {:?}", attr.name, list)
+                })?;
                 let mut val = self.attribute_to_int[attr]
                     .iter()
                     .map(|attr| Node::Leaf(*attr))
                     .reduce(std::ops::BitOr::bitor)
                     .ok_or_else(|| eyre::eyre!("No Attribute"))?;
-                if *h {
-                    for at in list {
+                if *hierarchical {
+                    for (at, elem) in list.iter().enumerate() {
                         if at >= res {
                             break
                         }
                         val = val
-                            | self.attribute_to_int[&(attr.axis.clone(), at.clone()).into()]
+                            | self.attribute_to_int[&(attr.axis.clone(), elem.clone()).into()]
                                 .iter()
                                 .map(|attr| Node::Leaf(*attr))
                                 .reduce(std::ops::BitOr::bitor)
