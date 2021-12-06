@@ -13,7 +13,7 @@ fn policy_group() -> eyre::Result<()> {
     let json = serde_json::to_string(&policy_group).unwrap();
     println!("{}", &json);
     let _pol_acc: AccessPolicy =
-        ap("Security Level", "level 1") & (ap("Department", "dHR") | ap("Department", "R&D"));
+        ap("Security Level", "level 1") & (ap("Department", "HR") | ap("Department", "R&D"));
     // deserialization
     let _policy_group_: Policy = serde_json::from_str(&json).unwrap();
     // assert_eq!(policy_group, policy_group_);
@@ -53,7 +53,7 @@ fn policy_group_from_java() {
         .ok_or("There should be a department")
         .unwrap();
     assert!(!*hierarchical);
-    assert!(attributes.contains("MKG"));
+    assert!(attributes.contains(&"MKG".to_string()));
     let attribute_to_int = policy_group.attribute_to_int;
     let dpt_hr = attribute_to_int
         .get(&attr("Department", "HR"))
