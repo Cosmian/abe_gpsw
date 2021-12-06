@@ -134,14 +134,13 @@ impl AccessPolicy {
                     *integer_value
                 } else {
                     // To assign an integer value to a new attribute, we take the current max
-                    // integer value + 1
-                    let max_value = attribute_mapping.values().max();
-                    let max = if let Some(max) = max_value {
-                        *max + 1
-                    } else {
-                        // Starting counting attribute at 1
-                        1
-                    };
+                    // integer value + 1.
+                    // Initial value starts at 1.
+                    let max = attribute_mapping
+                        .values()
+                        .max()
+                        .map(|max| *max + 1)
+                        .unwrap_or(1);
                     attribute_mapping.insert(attr.clone(), max);
                     debug!("attribute: {:?}, value = {}", attr, max);
                     max
