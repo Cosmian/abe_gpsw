@@ -29,16 +29,24 @@ fn partialeq_access_policy() {
     let sec_level_1 = ap("Levels", "Sec_level_1");
     let access_policy_1 = (fr.clone() | en.clone() | de.clone()) & sec_level_1.clone();
     let access_policy_2 = (en.clone() | de.clone() | fr.clone()) & sec_level_1.clone();
-    let access_policy_3 = (de.clone() | fr.clone() | en) & sec_level_1.clone();
+    let access_policy_3 = (de.clone() | fr.clone() | en.clone()) & sec_level_1.clone();
 
     // We must have the equality
     assert_eq!(access_policy_1, access_policy_2);
     assert_eq!(access_policy_1, access_policy_3);
 
+    // Those 2 next access policies have the same (integer) value but different
+    // attributes. So they cannot be equal
+    let access_policy_4 =
+        (fr.clone() | en.clone() | de.clone() | au.clone() | fr.clone() | de.clone())
+            & sec_level_1.clone();
+    let access_policy_5 = (fr.clone() | en | de.clone() | au.clone() | au) & sec_level_1;
+    assert_ne!(access_policy_4, access_policy_5);
+
     // Make sure those 2 policies are not equivalent
-    let access_policy_fr_de = (fr | de) & sec_level_1.clone(); //to u32 = 1+3
-    let access_policy_au = (au) & sec_level_1; // to u32 = 4
-    assert_ne!(access_policy_fr_de, access_policy_au);
+    let access_policy_fr_de = fr & de.clone(); //to u32 = 1*2
+    let access_policy_de = de; // to u32 = 2
+    assert_ne!(access_policy_fr_de, access_policy_de);
 }
 
 #[test]
