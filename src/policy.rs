@@ -13,7 +13,7 @@ use crate::msp::{MonotoneSpanProgram, Node};
 
 // An attribute in a policy group is characterized by the policy name (axis)
 // and its own particular name
-#[derive(Hash, PartialEq, Eq, Clone, Debug)]
+#[derive(Hash, PartialEq, Eq, Clone, Debug, PartialOrd, Ord)]
 pub struct Attribute {
     axis: String,
     name: String,
@@ -87,6 +87,7 @@ impl<'de> Deserialize<'de> for Attribute {
 // An `AccessPolicy` is a boolean expression over attributes
 // Only `positive` literals are allowed (no negation)
 #[derive(Serialize, Deserialize, Debug, Clone)]
+
 pub enum AccessPolicy {
     Attr(Attribute),
     And(Box<AccessPolicy>, Box<AccessPolicy>),
@@ -96,11 +97,17 @@ pub enum AccessPolicy {
 
 impl PartialEq for AccessPolicy {
     fn eq(&self, other: &Self) -> bool {
-        match (self, other) {
-            (Self::Attr(l0), Self::Attr(r0)) => l0 == r0,
-            (Self::And(l0, l1), Self::And(r0, r1)) => l0 == r0 && l1 == r1 || l0 == r1 && l1 == r0,
-            (Self::Or(l0, l1), Self::Or(r0, r1)) => l0 == r0 && l1 == r1 || l0 == r1 && l1 == r0,
-            _ => core::mem::discriminant(self) == core::mem::discriminant(other),
+        let mut attributes_mapping = HashMap::<Attribute, u32>::new();
+        let left_to_u32 = self.to_u32(&mut attributes_mapping);
+        let right_to_u32 = other.to_u32(&mut attributes_mapping);
+        debug!("left u32: {}", left_to_u32);
+        debug!("right u32: {}", right_to_u32);
+        if left_to_u32 != right_to_u32 {
+            false
+        } else {
+            debug!("left attributes: {:?}", self.attributes());
+            debug!("right attributes: {:?}", other.attributes());
+            self.attributes() == other.attributes()
         }
     }
 }
@@ -112,6 +119,39 @@ impl AccessPolicy {
             axis: axis_name.to_owned(),
             name: attribute_name.to_owned(),
         })
+    }
+
+    /// Convert policy to integer value (for comparison).
+    /// Each attribute is mapped to an integer value and the algebraic
+    /// expression is applied with those values.
+    /// We must keep a mapping of each attribute to the corresponding integer
+    /// value in order to avoid having 2 different attributes with same integer
+    /// value
+    fn to_u32(&self, attribute_mapping: &mut HashMap<Attribute, u32>) -> u32 {
+        match self {
+            AccessPolicy::Attr(attr) => {
+                if let Some(integer_value) = attribute_mapping.get(attr) {
+                    debug!("found attribute: {:?}, value = {}", attr, *integer_value);
+                    *integer_value
+                } else {
+                    // To assign an integer value to a new attribute, we take the current max
+                    // integer value + 1
+                    let max_value = attribute_mapping.values().max();
+                    let max = if let Some(max) = max_value {
+                        *max + 1
+                    } else {
+                        // Starting counting attribute at 1
+                        1
+                    };
+                    attribute_mapping.insert(attr.clone(), max);
+                    debug!("attribute: {:?}, value = {}", attr, max);
+                    max
+                }
+            }
+            AccessPolicy::And(l, r) => l.to_u32(attribute_mapping) * r.to_u32(attribute_mapping),
+            AccessPolicy::Or(l, r) => l.to_u32(attribute_mapping) + r.to_u32(attribute_mapping),
+            AccessPolicy::All => 0,
+        }
     }
 
     /// Generate an access policy from a map of policy access names to policy
@@ -154,7 +194,9 @@ impl AccessPolicy {
     }
 
     pub fn attributes(&self) -> Vec<Attribute> {
-        AccessPolicy::_attributes(self)
+        let mut attributes = AccessPolicy::_attributes(self);
+        attributes.sort();
+        attributes
     }
 
     fn _attributes(access_policy: &AccessPolicy) -> Vec<Attribute> {

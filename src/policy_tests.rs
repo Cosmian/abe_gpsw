@@ -13,24 +13,33 @@ fn policy_group() -> eyre::Result<()> {
     let json = serde_json::to_string(&policy_group).unwrap();
     println!("{}", &json);
     let _pol_acc: AccessPolicy =
-        ap("Security Level", "level 1") & (ap("Department", "HR") | ap("Department", "R&D"));
+        ap("Security Level", "level 1") & (ap("Department", "dHR") | ap("Department", "R&D"));
     // deserialization
     let _policy_group_: Policy = serde_json::from_str(&json).unwrap();
     // assert_eq!(policy_group, policy_group_);
     Ok(())
 }
 
-// #[test]
-// fn partialeq_access_policy() {
-//     let access_policy_1 = (ap("Countries", "FR") | ap("Countries", "EN") |
-// ap("Countries", "DE"))         & ap("Levels", "Sec_level_1");
-//     let access_policy_2 = (ap("Countries", "EN") | ap("Countries", "DE") |
-// ap("Countries", "FR"))         & ap("Levels", "Sec_level_1");
-//     // let f = access_policy_1.flatten_or();
-//     // let g = access_policy_2.flatten_or();
-//     // let r = f == g;
-//     assert_eq!(access_policy_1, access_policy_2);
-// }
+#[test]
+fn partialeq_access_policy() {
+    let fr = ap("Countries", "FR"); //1
+    let en = ap("Countries", "EN"); //2
+    let de = ap("Countries", "DE"); //3
+    let au = ap("Countries", "AU"); //4
+    let sec_level_1 = ap("Levels", "Sec_level_1");
+    let access_policy_1 = (fr.clone() | en.clone() | de.clone()) & sec_level_1.clone();
+    let access_policy_2 = (en.clone() | de.clone() | fr.clone()) & sec_level_1.clone();
+    let access_policy_3 = (de.clone() | fr.clone() | en) & sec_level_1.clone();
+
+    // We must have the equality
+    assert_eq!(access_policy_1, access_policy_2);
+    assert_eq!(access_policy_1, access_policy_3);
+
+    // Make sure those 2 policies are not equivalent
+    let access_policy_fr_de = (fr | de) & sec_level_1.clone(); //to u32 = 1+3
+    let access_policy_au = (au) & sec_level_1; // to u32 = 4
+    assert_ne!(access_policy_fr_de, access_policy_au);
+}
 
 #[test]
 fn policy_group_from_java() {
