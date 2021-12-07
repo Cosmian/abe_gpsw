@@ -1,6 +1,6 @@
 #![allow(clippy::module_name_repetitions)]
 use std::{
-    collections::{BTreeSet, BinaryHeap, HashMap},
+    collections::{BinaryHeap, HashMap},
     convert::TryFrom,
     fmt::Display,
     ops::{BitAnd, BitOr},
@@ -13,7 +13,7 @@ use crate::msp::{MonotoneSpanProgram, Node};
 
 // An attribute in a policy group is characterized by the policy name (axis)
 // and its own particular name
-#[derive(Hash, PartialEq, Eq, Clone, Debug)]
+#[derive(Hash, PartialEq, Eq, Clone, Debug, PartialOrd, Ord)]
 pub struct Attribute {
     axis: String,
     name: String,
@@ -96,11 +96,17 @@ pub enum AccessPolicy {
 
 impl PartialEq for AccessPolicy {
     fn eq(&self, other: &Self) -> bool {
-        match (self, other) {
-            (Self::Attr(l0), Self::Attr(r0)) => l0 == r0,
-            (Self::And(l0, l1), Self::And(r0, r1)) => l0 == r0 && l1 == r1 || l0 == r1 && l1 == r0,
-            (Self::Or(l0, l1), Self::Or(r0, r1)) => l0 == r0 && l1 == r1 || l0 == r1 && l1 == r0,
-            _ => core::mem::discriminant(self) == core::mem::discriminant(other),
+        let mut attributes_mapping = HashMap::<Attribute, u32>::new();
+        let left_to_u32 = self.to_u32(&mut attributes_mapping);
+        let right_to_u32 = other.to_u32(&mut attributes_mapping);
+        debug!("left u32: {}", left_to_u32);
+        debug!("right u32: {}", right_to_u32);
+        if left_to_u32 != right_to_u32 {
+            false
+        } else {
+            debug!("left attributes: {:?}", self.attributes());
+            debug!("right attributes: {:?}", other.attributes());
+            self.attributes() == other.attributes()
         }
     }
 }
@@ -112,6 +118,38 @@ impl AccessPolicy {
             axis: axis_name.to_owned(),
             name: attribute_name.to_owned(),
         })
+    }
+
+    /// Convert policy to integer value (for comparison).
+    /// Each attribute is mapped to an integer value and the algebraic
+    /// expression is applied with those values.
+    /// We must keep a mapping of each attribute to the corresponding integer
+    /// value in order to avoid having 2 different attributes with same integer
+    /// value
+    fn to_u32(&self, attribute_mapping: &mut HashMap<Attribute, u32>) -> u32 {
+        match self {
+            AccessPolicy::Attr(attr) => {
+                if let Some(integer_value) = attribute_mapping.get(attr) {
+                    debug!("found attribute: {:?}, value = {}", attr, *integer_value);
+                    *integer_value
+                } else {
+                    // To assign an integer value to a new attribute, we take the current max
+                    // integer value + 1.
+                    // Initial value starts at 1.
+                    let max = attribute_mapping
+                        .values()
+                        .max()
+                        .map(|max| *max + 1)
+                        .unwrap_or(1);
+                    attribute_mapping.insert(attr.clone(), max);
+                    debug!("attribute: {:?}, value = {}", attr, max);
+                    max
+                }
+            }
+            AccessPolicy::And(l, r) => l.to_u32(attribute_mapping) * r.to_u32(attribute_mapping),
+            AccessPolicy::Or(l, r) => l.to_u32(attribute_mapping) + r.to_u32(attribute_mapping),
+            AccessPolicy::All => 0,
+        }
     }
 
     /// Generate an access policy from a map of policy access names to policy
@@ -154,7 +192,9 @@ impl AccessPolicy {
     }
 
     pub fn attributes(&self) -> Vec<Attribute> {
-        AccessPolicy::_attributes(self)
+        let mut attributes = AccessPolicy::_attributes(self);
+        attributes.sort();
+        attributes
     }
 
     fn _attributes(access_policy: &AccessPolicy) -> Vec<Attribute> {
@@ -223,29 +263,8 @@ pub fn ap(axis: &str, name: &str) -> AccessPolicy {
 #[derive(Clone)]
 pub(crate) struct PolicyAxis {
     name: String,
-    attributes: BTreeSet<String>,
+    attributes: Vec<String>,
     hierarchical: bool,
-}
-
-pub struct PolicyInit {
-    pub name: String,
-    pub attributes: Vec<String>,
-    pub hierarchical: bool,
-}
-
-impl TryFrom<PolicyInit> for PolicyAxis {
-    type Error = eyre::Error;
-
-    fn try_from(policy_init: PolicyInit) -> Result<Self, Self::Error> {
-        let axis = policy_init
-            .attributes
-            .iter()
-            .map(|x| x.as_str())
-            .collect::<Vec<_>>();
-        let policy_def =
-            PolicyAxis::new(policy_init.name.as_str(), &axis, policy_init.hierarchical);
-        Ok(policy_def)
-    }
 }
 
 impl PolicyAxis {
@@ -253,10 +272,7 @@ impl PolicyAxis {
     pub fn new(name: &str, attributes: &[&str], hierarchical: bool) -> Self {
         Self {
             name: name.to_owned(),
-            attributes: attributes
-                .iter()
-                .map(|s| (*s).to_owned())
-                .collect::<BTreeSet<_>>(),
+            attributes: attributes.iter().map(|s| s.to_string()).collect::<Vec<_>>(),
             hierarchical,
         }
     }
@@ -275,7 +291,7 @@ pub struct Policy {
     pub(crate) last_attribute: usize,
     pub(crate) max_attribute: usize,
     // store the policies by name
-    pub(crate) store: HashMap<String, (BTreeSet<String>, bool)>,
+    pub(crate) store: HashMap<String, (Vec<String>, bool)>,
     // mapping between (policy_name, policy_attribute) -> integer
     pub(crate) attribute_to_int: HashMap<Attribute, BinaryHeap<u32>>,
 }
@@ -301,7 +317,7 @@ impl Policy {
         }
     }
 
-    pub fn store(&self) -> HashMap<String, (BTreeSet<String>, bool)> {
+    pub fn store(&self) -> HashMap<String, (Vec<String>, bool)> {
         self.store.clone()
     }
 
@@ -398,21 +414,23 @@ impl Policy {
     // take care of the hierarchical mode
     // In hierarchical, return the Or of all lower attributes
     fn to_node(&self, attr: &Attribute) -> eyre::Result<Node> {
-        if let Some((list, h)) = self.store.get(&attr.axis) {
-            if let Some(res) = list.get(&attr.name) {
-                //let mut val = Node::Leaf(self.attribute_to_int[attr]);
+        if let Some((list, hierarchical)) = self.store.get(&attr.axis) {
+            if list.contains(&attr.name) {
+                let res = list.iter().position(|r| r == &attr.name).ok_or_else(|| {
+                    eyre::eyre!("Attribute name {:?} expected in {:?}", attr.name, list)
+                })?;
                 let mut val = self.attribute_to_int[attr]
                     .iter()
                     .map(|attr| Node::Leaf(*attr))
                     .reduce(std::ops::BitOr::bitor)
                     .ok_or_else(|| eyre::eyre!("No Attribute"))?;
-                if *h {
-                    for at in list {
+                if *hierarchical {
+                    for (at, elem) in list.iter().enumerate() {
                         if at >= res {
                             break
                         }
                         val = val
-                            | self.attribute_to_int[&(attr.axis.clone(), at.clone()).into()]
+                            | self.attribute_to_int[&(attr.axis.clone(), elem.clone()).into()]
                                 .iter()
                                 .map(|attr| Node::Leaf(*attr))
                                 .reduce(std::ops::BitOr::bitor)

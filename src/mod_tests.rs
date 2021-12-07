@@ -25,7 +25,7 @@ fn abe() -> eyre::Result<()> {
     // from these two axes to be able to decrypt files. ### Security Level
     // Axis The first Policy Axis is the 'Security Level' axis and is a
     // hierarchical axis made of 5 levels: level 1, ̀level 2̀ , ..., level 5̀
-    // It is hierarchical: a user being granted access to level  ̀n` is automatically
+    // It is hierarchical: a user being granted access to level `n` is automatically
     // granted access to all levels below n.
     // ### Department Security Axis
     // The second Policy Axis is the Department axis and is made of 4 values: R&D,

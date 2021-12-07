@@ -20,17 +20,34 @@ fn policy_group() -> eyre::Result<()> {
     Ok(())
 }
 
-// #[test]
-// fn partialeq_access_policy() {
-//     let access_policy_1 = (ap("Countries", "FR") | ap("Countries", "EN") |
-// ap("Countries", "DE"))         & ap("Levels", "Sec_level_1");
-//     let access_policy_2 = (ap("Countries", "EN") | ap("Countries", "DE") |
-// ap("Countries", "FR"))         & ap("Levels", "Sec_level_1");
-//     // let f = access_policy_1.flatten_or();
-//     // let g = access_policy_2.flatten_or();
-//     // let r = f == g;
-//     assert_eq!(access_policy_1, access_policy_2);
-// }
+#[test]
+fn partialeq_access_policy() {
+    let fr = ap("Countries", "FR"); //1
+    let en = ap("Countries", "EN"); //2
+    let de = ap("Countries", "DE"); //3
+    let au = ap("Countries", "AU"); //4
+    let sec_level_1 = ap("Levels", "Sec_level_1");
+    let access_policy_1 = (fr.clone() | en.clone() | de.clone()) & sec_level_1.clone();
+    let access_policy_2 = (en.clone() | de.clone() | fr.clone()) & sec_level_1.clone();
+    let access_policy_3 = (de.clone() | fr.clone() | en.clone()) & sec_level_1.clone();
+
+    // We must have the equality
+    assert_eq!(access_policy_1, access_policy_2);
+    assert_eq!(access_policy_1, access_policy_3);
+
+    // Those 2 next access policies have the same (integer) value but different
+    // attributes. So they cannot be equal
+    let access_policy_4 =
+        (fr.clone() | en.clone() | de.clone() | au.clone() | fr.clone() | de.clone())
+            & sec_level_1.clone();
+    let access_policy_5 = (fr.clone() | en | de.clone() | au.clone() | au) & sec_level_1;
+    assert_ne!(access_policy_4, access_policy_5);
+
+    // Make sure those 2 policies are not equivalent
+    let access_policy_fr_de = fr & de.clone(); //to u32 = 1*2
+    let access_policy_de = de; // to u32 = 2
+    assert_ne!(access_policy_fr_de, access_policy_de);
+}
 
 #[test]
 fn policy_group_from_java() {
@@ -44,7 +61,7 @@ fn policy_group_from_java() {
         .ok_or("There should be a department")
         .unwrap();
     assert!(!*hierarchical);
-    assert!(attributes.contains("MKG"));
+    assert!(attributes.contains(&"MKG".to_string()));
     let attribute_to_int = policy_group.attribute_to_int;
     let dpt_hr = attribute_to_int
         .get(&attr("Department", "HR"))
