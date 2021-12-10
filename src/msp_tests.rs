@@ -1,4 +1,5 @@
 use crate::{
+    error::FormatErr,
     gpsw::AsBytes,
     msp::{
         MonotoneSpanProgram, Node,
@@ -6,12 +7,12 @@ use crate::{
     },
 };
 
-fn to_msp(val: &str) -> eyre::Result<MonotoneSpanProgram<i32>> {
+fn to_msp(val: &str) -> Result<MonotoneSpanProgram<i32>, FormatErr> {
     Node::parse(val)?.to_msp()
 }
 
 #[test]
-fn parsing() -> eyre::Result<()> {
+fn parsing() -> Result<(), FormatErr> {
     let a = Box::new(Leaf(1));
     let b = Box::new(Leaf(2));
     let c = Box::new(Leaf(3));
@@ -41,7 +42,7 @@ fn parsing() -> eyre::Result<()> {
 }
 
 #[test]
-fn test_equality() -> eyre::Result<()> {
+fn test_equality() -> Result<(), FormatErr> {
     // can be written let formula = a & (d | (b & c));
     let formula_str = "1 & (4 | (2 & 3))";
     let other_formula = "1 & (4 | (2 & 3))";
@@ -59,7 +60,7 @@ fn test_equality() -> eyre::Result<()> {
 }
 
 #[test]
-fn parsing_multi() -> eyre::Result<()> {
+fn parsing_multi() -> Result<(), FormatErr> {
     Node::parse("1 & (4 | (2 & 3))")?;
     Node::parse("(1 & 2) | (2 & 3)")?;
     Node::parse("1 | 2")?;
@@ -95,7 +96,7 @@ fn parsing_with_bad_formula() {
 }
 
 #[test]
-fn msp_to_matrix() -> eyre::Result<()> {
+fn msp_to_matrix() -> Result<(), FormatErr> {
     let a = Box::new(Leaf(1));
     let b = Box::new(Leaf(2));
     let c = Box::new(Leaf(3));
@@ -109,7 +110,7 @@ fn msp_to_matrix() -> eyre::Result<()> {
 }
 
 #[test]
-fn msp_as_bytes() -> eyre::Result<()> {
+fn msp_as_bytes() -> Result<(), FormatErr> {
     let a = Box::new(Leaf(1));
     let b = Box::new(Leaf(2));
     let c = Box::new(Leaf(3));

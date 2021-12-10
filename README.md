@@ -8,7 +8,6 @@ Fine-Grained Access Control of Encrypted Data](https://eprint.iacr.org/2006/309.
 [Latest Version]: https://img.shields.io/crates/v/abe_gpsw.svg
 [crates.io]: https://crates.io/crates/abe_gpsw
 
-
 # Introduction
 
 In a standard public-key encryption scheme, each user has his own public key and secret key, so that if one wants to encrypt a message intended for several receivers (for example, according to their jobs in a company), it will be necessary to compute the ciphertext for each public key of each recipient, which implies a huge loss of time and space.
@@ -30,6 +29,7 @@ Some specificities of ABE schemes are:
 - secondly, private keys are constructed from a list of attributes (or a policy) instead of an identity. Anyone who has all the attributes (or a valid access policy) can read the message.
 
 ![img](figs/CP-vs-KP.png)
+
 ## Ciphertext-Policy
 
 In Ciphertext-Policy Attribute-Based Encryption (CP-ABE), the access policy is encoded in the encrypted message; a ciphertext specifies an access policy over a defined universe of attributes within the system. A user’s private key is associated with a set of attributes which corresponds to a user’s identity: a user will be able to decrypt a ciphertext, if and only if his attributes satisfy the policy of the respective ciphertext. See for example [BSW07](https://hal.archives-ouvertes.fr/hal-01788815/document).
@@ -70,15 +70,15 @@ Contrarily to the `Department` axis, the `Security Level` axis is hierarchical: 
 
 All unique attribute names (7 in the example above) are derived by concatenating the axis names and the possible values for that axis, and are assigned a unique attribute value:
 
-| Attribute name         |  Value  |
-|------------------------|---------|
-| Department::HR         |    1    |
-| Department::FIN        |    2    |
-| Department::MKG        |    3    |
-| Department::R&D        |    4    |
-| Security Level::high   |    5    |
-| Security Level::medium |    6    |
-| Security Level::low    |    7    |
+| Attribute name         | Value |
+| ---------------------- | ----- |
+| Department::HR         | 1     |
+| Department::FIN        | 2     |
+| Department::MKG        | 3     |
+| Department::R&D        | 4     |
+| Security Level::high   | 5     |
+| Security Level::medium | 6     |
+| Security Level::low    | 7     |
 
 From the master secret key, a derived decryption key for a user of the marketing department (`MKG`) with a `medium` security level will hold an access policy expressed as the boolean expression:
 

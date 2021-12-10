@@ -1,5 +1,5 @@
 use super::{bilinear_map::bls12_381::Bls12_381, gpsw::abe::Gpsw, AccessPolicy, Engine, Policy};
-use crate::policy::ap;
+use crate::{error::FormatErr, policy::ap};
 
 /// # Encryption using an Authorization Policy
 /// This test demonstrates how data can be encrypted with policy attributes.
@@ -7,7 +7,7 @@ use crate::policy::ap;
 /// proper attributes. This test also demonstrates revocation of an
 /// attribute value and how to implement forward secrecy.
 #[test]
-fn abe() -> eyre::Result<()> {
+fn abe() -> Result<(), FormatErr> {
     // ## Policy
     // In this demo, we will create a Policy which combines two axes, a
     // 'security level' and a 'department'. An user will be able to decrypt

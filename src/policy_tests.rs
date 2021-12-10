@@ -1,8 +1,11 @@
 use super::{AccessPolicy, Policy};
-use crate::policy::{ap, attr};
+use crate::{
+    error::FormatErr,
+    policy::{ap, attr},
+};
 
 #[test]
-fn policy_group() -> eyre::Result<()> {
+fn policy_group() -> Result<(), FormatErr> {
     let policy_group = Policy::new(1000)
         .add_axis(
             "Security Level",

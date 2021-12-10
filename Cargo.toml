@@ -12,14 +12,12 @@ license = "MIT/Apache-2.0"
 name = "abe_gpsw"
 repository = "https://github.com/Cosmian/abe_gpsw"
 version = "0.1.3"
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [lib]
 name = "abe_gpsw"
 
 [dependencies]
 cosmian_bls12_381 = "0.4"
-eyre = "0.6"
 ff = "0.9"
 getrandom = {version = "0.2", features = ["js"]}
 group = "0.9"
@@ -30,4 +28,5 @@ regex = "1.5.4"
 serde = {version = "1.0", features = ["derive"]}
 serde_json = "1.0"
 sha3 = "0.9"
+thiserror = "1"
 tracing = "0.1"

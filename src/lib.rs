@@ -1,10 +1,14 @@
+#![allow(clippy::type_complexity)]
+
 pub mod bilinear_map;
+pub mod error;
 pub mod gpsw;
 pub mod msp;
 pub mod policy;
 
 use std::convert::TryFrom;
 
+use error::FormatErr;
 use gpsw::{AbeScheme, AsBytes};
 use policy::{AccessPolicy, Attribute, Policy};
 use sha3::{
@@ -19,7 +23,7 @@ pub struct Engine<S: AbeScheme> {
 }
 
 impl<S: AbeScheme> TryFrom<&[u8]> for Engine<S> {
-    type Error = eyre::Error;
+    type Error = FormatErr;
 
     fn try_from(attributes: &[u8]) -> Result<Self, Self::Error> {
         let pg: Policy = serde_json::from_slice(attributes)?;
@@ -38,11 +42,14 @@ impl<S: AbeScheme> Engine<S> {
 
     pub fn generate_master_key(
         &self,
-    ) -> eyre::Result<(
-        S::MasterPrivateKey,
-        S::MasterPublicKey,
-        S::MasterPublicDelegationKey,
-    )> {
+    ) -> Result<
+        (
+            S::MasterPrivateKey,
+            S::MasterPublicKey,
+            S::MasterPublicDelegationKey,
+        ),
+        FormatErr,
+    > {
         self.sch.generate_master_key(self.pg.max_attr())
     }
 
@@ -50,7 +57,7 @@ impl<S: AbeScheme> Engine<S> {
         &self,
         priv_key: &S::MasterPrivateKey,
         access_policy: &AccessPolicy,
-    ) -> eyre::Result<S::UserDecryptionKey> {
+    ) -> Result<S::UserDecryptionKey, FormatErr> {
         let msp = self.pg.to_msp(access_policy)?;
         self.sch.key_generation(&msp, priv_key)
     }
@@ -66,7 +73,7 @@ impl<S: AbeScheme> Engine<S> {
         del_key: &S::MasterPublicDelegationKey,
         user_key: &S::UserDecryptionKey,
         access_policy: &AccessPolicy,
-    ) -> eyre::Result<S::UserDecryptionKey> {
+    ) -> Result<S::UserDecryptionKey, FormatErr> {
         let msp = match access_policy {
             AccessPolicy::All => None,
             _ => Some(self.pg.to_msp(access_policy)?),
@@ -78,7 +85,7 @@ impl<S: AbeScheme> Engine<S> {
         &self,
         enc: &S::CipherText,
         key: &S::UserDecryptionKey,
-    ) -> eyre::Result<Option<S::PlainText>> {
+    ) -> Result<Option<S::PlainText>, FormatErr> {
         self.sch.decrypt(enc, key)
     }
 
@@ -86,7 +93,7 @@ impl<S: AbeScheme> Engine<S> {
         &self,
         attrs: &[Attribute],
         pub_key: &S::MasterPublicKey,
-    ) -> eyre::Result<(S::PlainText, S::CipherText)> {
+    ) -> Result<(S::PlainText, S::CipherText), FormatErr> {
         let random_plain = self.sch.generate_random_plaintext()?;
         let attrs = attrs
             .iter()
@@ -106,7 +113,7 @@ impl<S: AbeScheme> Engine<S> {
         &self,
         attrs: &[Attribute],
         pub_key: &S::MasterPublicKey,
-    ) -> eyre::Result<([u8; 32], Vec<u8>)> {
+    ) -> Result<([u8; 32], Vec<u8>), FormatErr> {
         let (plaintext, ciphertext) = self.generate_cleartext_ciphertext(attrs, pub_key)?;
 
         let hasher = Shake256::default();
@@ -121,7 +128,7 @@ impl<S: AbeScheme> Engine<S> {
     }
 
     // Update an attribute
-    pub fn update(&mut self, attr: &Attribute) -> eyre::Result<()> {
+    pub fn update(&mut self, attr: &Attribute) -> Result<(), FormatErr> {
         self.pg.update(attr)
     }
 }
