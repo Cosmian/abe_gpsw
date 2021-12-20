@@ -2,7 +2,7 @@ use core::ops::{Add, Div, Mul, Neg, Sub};
 
 use rand::{CryptoRng, RngCore, SeedableRng};
 
-use crate::gpsw::AsBytes;
+use crate::{error::FormatErr, gpsw::AsBytes};
 
 pub mod bls12_381;
 
@@ -51,11 +51,12 @@ pub trait BilinearMap: Default {
     fn gen_rand_scalar_inner<R: CryptoRng + RngCore>(
         &self,
         rng: &mut R,
-    ) -> eyre::Result<Self::Scalar>;
+    ) -> Result<Self::Scalar, FormatErr>;
 
-    fn gen_rand_gt_inner<R: CryptoRng + RngCore>(&self, rng: &mut R) -> eyre::Result<Self::Gt>;
+    fn gen_rand_gt_inner<R: CryptoRng + RngCore>(&self, rng: &mut R)
+    -> Result<Self::Gt, FormatErr>;
 
-    fn msg_to_scalar(&self, msg: &[u8]) -> eyre::Result<Self::Scalar>;
+    fn msg_to_scalar(&self, msg: &[u8]) -> Result<Self::Scalar, FormatErr>;
 
     // Group
     // compute g1^x
@@ -91,12 +92,12 @@ pub trait BilinearMap: Default {
     //
     // Derived functions
     //
-    fn gen_random_scalar(&self) -> eyre::Result<Self::Scalar> {
+    fn gen_random_scalar(&self) -> Result<Self::Scalar, FormatErr> {
         let mut rng = rand_hc::Hc128Rng::from_entropy();
         self.gen_rand_scalar_inner(&mut rng)
     }
 
-    fn gen_random_scalar_vector(&self, size: usize) -> eyre::Result<Vec<Self::Scalar>> {
+    fn gen_random_scalar_vector(&self, size: usize) -> Result<Vec<Self::Scalar>, FormatErr> {
         let mut rng = rand_hc::Hc128Rng::from_entropy();
         std::iter::repeat_with(|| self.gen_rand_scalar_inner(&mut rng))
             .take(size)
@@ -111,12 +112,12 @@ pub trait BilinearMap: Default {
         vec_x.iter().map(|x| self.g2_gen_exp(x)).collect()
     }
 
-    fn msg_to_gt(&self, msg: &[u8]) -> eyre::Result<Self::Gt> {
+    fn msg_to_gt(&self, msg: &[u8]) -> Result<Self::Gt, FormatErr> {
         let scl = self.msg_to_scalar(msg)?;
         Ok(self.gt_gen_exp(&scl))
     }
 
-    fn gen_random_msg_in_gt(&self) -> eyre::Result<Self::Gt> {
+    fn gen_random_msg_in_gt(&self) -> Result<Self::Gt, FormatErr> {
         let mut rng = rand_hc::Hc128Rng::from_entropy();
         self.gen_rand_gt_inner(&mut rng)
     }

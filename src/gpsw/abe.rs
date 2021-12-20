@@ -1,7 +1,7 @@
 use std::fmt::Display;
 
 use super::{AbeScheme, AsBytes};
-use crate::{bilinear_map::BilinearMap, msp::MonotoneSpanProgram};
+use crate::{bilinear_map::BilinearMap, error::FormatErr, msp::MonotoneSpanProgram};
 
 // Master Private Key
 #[derive(Debug, PartialEq)]
@@ -93,7 +93,7 @@ impl<G: BilinearMap> PartialEq for GpswDecryptionKey<G> {
 }
 
 impl<G: BilinearMap> AsBytes for GpswMasterPrivateKey<G> {
-    fn as_bytes(&self) -> eyre::Result<Vec<u8>> {
+    fn as_bytes(&self) -> Result<Vec<u8>, FormatErr> {
         let mut t_i_bytes = self.t_i.as_bytes()?;
         let mut y_bytes = self.y.as_bytes()?;
         let mut res = Vec::with_capacity(t_i_bytes.len() + y_bytes.len());
@@ -104,7 +104,7 @@ impl<G: BilinearMap> AsBytes for GpswMasterPrivateKey<G> {
         Ok(res)
     }
 
-    fn from_bytes(bytes: &[u8]) -> eyre::Result<Self> {
+    fn from_bytes(bytes: &[u8]) -> Result<Self, FormatErr> {
         let t_i = Vec::<G::Scalar>::from_bytes(bytes)?;
         let t_i_len = t_i.len_bytes();
         let y = G::Scalar::from_bytes(&bytes[t_i_len..])?;
@@ -118,7 +118,7 @@ impl<G: BilinearMap> AsBytes for GpswMasterPrivateKey<G> {
 }
 
 impl<G: BilinearMap> AsBytes for GpswMasterPublicKey<G> {
-    fn as_bytes(&self) -> eyre::Result<Vec<u8>> {
+    fn as_bytes(&self) -> Result<Vec<u8>, FormatErr> {
         let mut t_i_bytes = self.t_i.as_bytes()?;
         let mut y_bytes = self.y.as_bytes()?;
         let mut res = Vec::with_capacity(t_i_bytes.len() + y_bytes.len());
@@ -129,7 +129,7 @@ impl<G: BilinearMap> AsBytes for GpswMasterPublicKey<G> {
         Ok(res)
     }
 
-    fn from_bytes(bytes: &[u8]) -> eyre::Result<Self> {
+    fn from_bytes(bytes: &[u8]) -> Result<Self, FormatErr> {
         let t_i = Vec::<G::G2>::from_bytes(bytes)?;
         let t_i_len = t_i.len_bytes();
         let y = G::Gt::from_bytes(&bytes[t_i_len..])?;
@@ -143,7 +143,7 @@ impl<G: BilinearMap> AsBytes for GpswMasterPublicKey<G> {
 }
 
 impl<G: BilinearMap> AsBytes for GpswMasterPublicDelegationKey<G> {
-    fn as_bytes(&self) -> eyre::Result<Vec<u8>> {
+    fn as_bytes(&self) -> Result<Vec<u8>, FormatErr> {
         let mut inv_t_i_bytes = self.inv_t_i.as_bytes()?;
         let mut res = Vec::with_capacity(inv_t_i_bytes.len());
 
@@ -152,7 +152,7 @@ impl<G: BilinearMap> AsBytes for GpswMasterPublicDelegationKey<G> {
         Ok(res)
     }
 
-    fn from_bytes(bytes: &[u8]) -> eyre::Result<Self> {
+    fn from_bytes(bytes: &[u8]) -> Result<Self, FormatErr> {
         let inv_t_i = Vec::<G::G3>::from_bytes(bytes)?;
 
         Ok(Self { inv_t_i })
@@ -164,7 +164,7 @@ impl<G: BilinearMap> AsBytes for GpswMasterPublicDelegationKey<G> {
 }
 
 impl<G: BilinearMap> AsBytes for GpswDecryptionKey<G> {
-    fn as_bytes(&self) -> eyre::Result<Vec<u8>> {
+    fn as_bytes(&self) -> Result<Vec<u8>, FormatErr> {
         let mut raw_d_i_bytes = self.raw_d_i.as_bytes()?;
         let mut msp_bytes = self.msp.as_bytes()?;
         let mut res = Vec::with_capacity(raw_d_i_bytes.len() + msp_bytes.len());
@@ -175,7 +175,7 @@ impl<G: BilinearMap> AsBytes for GpswDecryptionKey<G> {
         Ok(res)
     }
 
-    fn from_bytes(bytes: &[u8]) -> eyre::Result<Self> {
+    fn from_bytes(bytes: &[u8]) -> Result<Self, FormatErr> {
         let raw_d_i = Vec::<G::G3>::from_bytes(bytes)?;
         let raw_d_i_len = raw_d_i.len_bytes();
         let msp = MonotoneSpanProgram::<G::Scalar>::from_bytes(&bytes[raw_d_i_len..])?;
@@ -190,7 +190,7 @@ impl<G: BilinearMap> AsBytes for GpswDecryptionKey<G> {
 }
 
 impl<G: BilinearMap> AsBytes for GpswCiphertext<G> {
-    fn as_bytes(&self) -> eyre::Result<Vec<u8>> {
+    fn as_bytes(&self) -> Result<Vec<u8>, FormatErr> {
         let mut gamma_bytes = self.gamma.as_bytes()?;
         let mut e_prime_bytes = self.e_prime.as_bytes()?;
         let mut e_i_bytes = self.e_i.as_bytes()?;
@@ -203,7 +203,7 @@ impl<G: BilinearMap> AsBytes for GpswCiphertext<G> {
         Ok(res)
     }
 
-    fn from_bytes(bytes: &[u8]) -> eyre::Result<Self> {
+    fn from_bytes(bytes: &[u8]) -> Result<Self, FormatErr> {
         let gamma = Vec::<u32>::from_bytes(&bytes[0..])?;
         let gamma_len = gamma.len_bytes();
         let e_i = Vec::<G::G2>::from_bytes(&bytes[gamma_len..])?;
@@ -251,11 +251,14 @@ where
     fn generate_master_key(
         &self,
         size: usize,
-    ) -> eyre::Result<(
-        Self::MasterPrivateKey,
-        Self::MasterPublicKey,
-        Self::MasterPublicDelegationKey,
-    )> {
+    ) -> Result<
+        (
+            Self::MasterPrivateKey,
+            Self::MasterPublicKey,
+            Self::MasterPublicDelegationKey,
+        ),
+        FormatErr,
+    > {
         let mk = self.generate_master_key(size)?;
         Ok((mk.priv_key, mk.pub_key, mk.del_key))
     }
@@ -264,7 +267,7 @@ where
         &self,
         msp: &MonotoneSpanProgram<i32>,
         priv_key: &Self::MasterPrivateKey,
-    ) -> eyre::Result<Self::UserDecryptionKey> {
+    ) -> Result<Self::UserDecryptionKey, FormatErr> {
         self.key_generation(msp, priv_key)
     }
 
@@ -274,18 +277,18 @@ where
         msp: &Option<MonotoneSpanProgram<i32>>,
         user_key: &GpswDecryptionKey<G>,
         del_key: &GpswMasterPublicDelegationKey<G>,
-    ) -> eyre::Result<GpswDecryptionKey<G>> {
+    ) -> Result<GpswDecryptionKey<G>, FormatErr> {
         msp.as_ref().map_or_else(
             || self.key_randomization(user_key, del_key),
             |m| self.key_delegation(m, user_key, del_key),
         )
     }
 
-    fn generate_random_plaintext(&self) -> eyre::Result<Self::PlainText> {
+    fn generate_random_plaintext(&self) -> Result<Self::PlainText, FormatErr> {
         self.group.gen_random_msg_in_gt()
     }
 
-    fn msg_encode(&self, msg: &[u8]) -> eyre::Result<Self::PlainText> {
+    fn msg_encode(&self, msg: &[u8]) -> Result<Self::PlainText, FormatErr> {
         self.msg_encode(msg)
     }
 
@@ -294,7 +297,7 @@ where
         msg: &Self::PlainText,
         attr: &[u32],
         pub_key: &Self::MasterPublicKey,
-    ) -> eyre::Result<Self::CipherText> {
+    ) -> Result<Self::CipherText, FormatErr> {
         self.encrypt(msg, attr, pub_key)
     }
 
@@ -302,7 +305,7 @@ where
         &self,
         enc: &Self::CipherText,
         key: &Self::UserDecryptionKey,
-    ) -> eyre::Result<Option<Self::PlainText>> {
+    ) -> Result<Option<Self::PlainText>, FormatErr> {
         self.decrypt(enc, key)
     }
 
@@ -318,7 +321,7 @@ where
 }
 
 impl<G: BilinearMap> Gpsw<G> {
-    pub fn generate_master_key(&self, size: usize) -> eyre::Result<GpswMasterKey<G>> {
+    pub fn generate_master_key(&self, size: usize) -> Result<GpswMasterKey<G>, FormatErr> {
         let t_i = self.group.gen_random_scalar_vector(size)?;
         let y = self.group.gen_random_scalar()?;
         let big_y = self.group.gt_gen_exp(&y);
@@ -345,9 +348,9 @@ impl<G: BilinearMap> Gpsw<G> {
         &self,
         msp: &MonotoneSpanProgram<i32>,
         priv_key: &GpswMasterPrivateKey<G>,
-    ) -> eyre::Result<GpswDecryptionKey<G>> {
+    ) -> Result<GpswDecryptionKey<G>, FormatErr> {
         let u = match msp.cols() {
-            0 => eyre::bail!("Empty msp"),
+            0 => return Err(FormatErr::InternalOperation("empty MSP".to_string())),
             1 => vec![priv_key.y.clone()],
             x => {
                 let mut u = self.group.gen_random_scalar_vector(x - 1)?;
@@ -363,10 +366,12 @@ impl<G: BilinearMap> Gpsw<G> {
         for (i, row) in msp.matrix().iter().enumerate() {
             let prod_scal = Self::prod_scal(&(*row), &u);
             let attribute = msp.get_attr_from_row(i) as usize;
-            eyre::ensure!(
-                attribute < priv_key.t_i.len(),
-                "Monotone Span Program is invalid: msp-row larger than private-key-t_i"
-            );
+            if attribute >= priv_key.t_i.len() {
+                return Err(FormatErr::InternalOperation(
+                    "Monotone Span Program is invalid: msp-row larger than private-key-t_i"
+                        .to_string(),
+                ))
+            }
             let t_rho_i = &priv_key.t_i[attribute];
             let di = self.group.g1_gen_exp(&(prod_scal / t_rho_i));
             big_d_i.push(di.0);
@@ -385,9 +390,9 @@ impl<G: BilinearMap> Gpsw<G> {
         msp: &MonotoneSpanProgram<i32>,
         user_key: &GpswDecryptionKey<G>,
         del_key: &GpswMasterPublicDelegationKey<G>,
-    ) -> eyre::Result<GpswDecryptionKey<G>> {
+    ) -> Result<GpswDecryptionKey<G>, FormatErr> {
         let u = match msp.cols() {
-            0 => eyre::bail!("Empty msp"),
+            0 => return Err(FormatErr::InternalOperation("empty MSP".to_string())),
             1 => vec![G::ZERO],
             x => {
                 let mut u = self.group.gen_random_scalar_vector(x - 1)?;
@@ -410,7 +415,9 @@ impl<G: BilinearMap> Gpsw<G> {
                 big_d_i.push(r_di.0);
                 raw_big_d_i.push(r_di.1);
             } else {
-                eyre::bail!("New attribute is not allowed");
+                return Err(FormatErr::InternalOperation(
+                    "new attribute is not allowed".to_string(),
+                ))
             }
         }
         Ok(GpswDecryptionKey::<G> {
@@ -425,10 +432,10 @@ impl<G: BilinearMap> Gpsw<G> {
         &self,
         user_key: &GpswDecryptionKey<G>,
         del_key: &GpswMasterPublicDelegationKey<G>,
-    ) -> eyre::Result<GpswDecryptionKey<G>> {
+    ) -> Result<GpswDecryptionKey<G>, FormatErr> {
         let msp = &user_key.msp;
         let u = match msp.cols() {
-            0 => eyre::bail!("Empty msp"),
+            0 => return Err(FormatErr::InternalOperation("empty MSP".to_string())),
             1 => vec![G::ZERO],
             x => {
                 let mut u = self.group.gen_random_scalar_vector(x - 1)?;
@@ -451,7 +458,9 @@ impl<G: BilinearMap> Gpsw<G> {
                 big_d_i.push(r_di.0);
                 raw_big_d_i.push(r_di.1);
             } else {
-                eyre::bail!("New attribute is not allowed");
+                return Err(FormatErr::InternalOperation(
+                    "new attribute is not allowed".to_string(),
+                ))
             }
         }
         Ok(GpswDecryptionKey::<G> {
@@ -461,7 +470,7 @@ impl<G: BilinearMap> Gpsw<G> {
         })
     }
 
-    pub fn msg_encode(&self, msg: &[u8]) -> eyre::Result<G::Gt> {
+    pub fn msg_encode(&self, msg: &[u8]) -> Result<G::Gt, FormatErr> {
         self.group.msg_to_gt(msg)
     }
 
@@ -470,13 +479,14 @@ impl<G: BilinearMap> Gpsw<G> {
         msg: &G::Gt,
         gamma: &[u32],
         pub_key: &GpswMasterPublicKey<G>,
-    ) -> eyre::Result<GpswCiphertext<G>> {
-        eyre::ensure!(
-            pub_key.t_i.len() > gamma.len(),
-            "Invalid attributes: gamma value incorrect (value: {}, max expected size: {})",
-            gamma.len(),
-            pub_key.t_i.len() - 1
-        );
+    ) -> Result<GpswCiphertext<G>, FormatErr> {
+        if pub_key.t_i.len() <= gamma.len() {
+            return Err(FormatErr::InternalOperation(format!(
+                "invalid attributes: gamma value incorrect (value: {}, max expected size: {})",
+                gamma.len(),
+                pub_key.t_i.len() - 1
+            )))
+        }
         let s = self.group.gen_random_scalar()?;
         let e_prime = self.group.gt_mul(msg, &self.group.gt_exp(&pub_key.y, &s));
         let e_i = gamma
@@ -495,7 +505,7 @@ impl<G: BilinearMap> Gpsw<G> {
         &self,
         enc: &GpswCiphertext<G>,
         key: &GpswDecryptionKey<G>,
-    ) -> eyre::Result<Option<G::Gt>> {
+    ) -> Result<Option<G::Gt>, FormatErr> {
         // extract the submatrix corresponding to gamma
         // and the corresponding d_i and e_i
         let mut matrix = Vec::new();
@@ -545,10 +555,14 @@ impl<G: BilinearMap> Gpsw<G> {
     // It is equivalent to solve the linear system: matrix⋅x = 1,⋯,1
     // We use a Gauss-Jordan Elimination
     // note that we do the elimination on the transpose
-    pub fn span_coefs(matrix: &mut Vec<Vec<G::Scalar>>) -> eyre::Result<Option<Vec<G::Scalar>>> {
+    pub fn span_coefs(
+        matrix: &mut Vec<Vec<G::Scalar>>,
+    ) -> Result<Option<Vec<G::Scalar>>, FormatErr> {
         // Add the result vector 1,⋯,1 to the matrix
         if matrix.is_empty() || matrix[0].is_empty() {
-            eyre::bail!("Empty input matrix.")
+            return Err(FormatErr::InternalOperation(
+                "empty input matrix".to_string(),
+            ))
         }
         let mut vec_res = Vec::with_capacity(matrix[0].len());
         vec_res.resize(matrix[0].len(), G::ONE);
@@ -659,7 +673,7 @@ mod tests {
     };
 
     #[test]
-    fn encrypt_decrypt() -> eyre::Result<()> {
+    fn encrypt_decrypt() -> Result<(), FormatErr> {
         let a = Box::new(Leaf(1));
         let b = Box::new(Leaf(2));
         let c = Box::new(Leaf(3));
@@ -686,7 +700,7 @@ mod tests {
     }
 
     #[test]
-    fn user_key_as_bytes() -> eyre::Result<()> {
+    fn user_key_as_bytes() -> Result<(), FormatErr> {
         let a = Box::new(Leaf(1));
         let b = Box::new(Leaf(2));
         let c = Box::new(Leaf(3));
@@ -710,7 +724,7 @@ mod tests {
     }
 
     #[test]
-    fn ciphertext_as_bytes() -> eyre::Result<()> {
+    fn ciphertext_as_bytes() -> Result<(), FormatErr> {
         let a = Box::new(Leaf(1));
         let b = Box::new(Leaf(2));
         let c = Box::new(Leaf(3));
@@ -737,7 +751,7 @@ mod tests {
     }
 
     #[test]
-    fn master_public_key_as_bytes() -> eyre::Result<()> {
+    fn master_public_key_as_bytes() -> Result<(), FormatErr> {
         let a = Box::new(Leaf(1));
         let b = Box::new(Leaf(2));
         let c = Box::new(Leaf(3));
@@ -761,7 +775,7 @@ mod tests {
     }
 
     #[test]
-    fn encrypt_decrypt_with_multiple_key_pair() -> eyre::Result<()> {
+    fn encrypt_decrypt_with_multiple_key_pair() -> Result<(), FormatErr> {
         let policy_1 = Node::parse("1 | 2")?.to_msp()?;
         let policy_2 = Node::parse("1 & 2")?.to_msp()?;
         let policy_3 = Node::parse("1")?.to_msp()?;
@@ -812,7 +826,7 @@ mod tests {
     }
 
     #[test]
-    fn master_private_key_as_bytes() -> eyre::Result<()> {
+    fn master_private_key_as_bytes() -> Result<(), FormatErr> {
         let abe = Gpsw {
             group: Bls12_381::default(),
         };
@@ -826,7 +840,7 @@ mod tests {
     }
 
     #[test]
-    fn master_public_delegation_key_as_bytes() -> eyre::Result<()> {
+    fn master_public_delegation_key_as_bytes() -> Result<(), FormatErr> {
         let abe = Gpsw {
             group: Bls12_381::default(),
         };

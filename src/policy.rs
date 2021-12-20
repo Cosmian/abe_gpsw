@@ -9,7 +9,10 @@ use std::{
 use serde::{Deserialize, Deserializer, Serialize};
 use tracing::debug;
 
-use crate::msp::{MonotoneSpanProgram, Node};
+use crate::{
+    error::FormatErr,
+    msp::{MonotoneSpanProgram, Node},
+};
 
 // An attribute in a policy group is characterized by the policy name (axis)
 // and its own particular name
@@ -24,6 +27,7 @@ impl Attribute {
         self.name.clone()
     }
 }
+
 /// Create a Policy Attribute.
 ///
 /// Shortcut for
@@ -166,7 +170,9 @@ impl AccessPolicy {
     /// The example above would generate the access policy
     ///
     /// `Department("HR" OR "FIN") AND Level("level_2")`
-    pub fn from_axes(axes_attributes: &HashMap<String, Vec<String>>) -> eyre::Result<AccessPolicy> {
+    pub fn from_axes(
+        axes_attributes: &HashMap<String, Vec<String>>,
+    ) -> Result<AccessPolicy, FormatErr> {
         let mut access_policies: Vec<AccessPolicy> = Vec::with_capacity(axes_attributes.len());
         for (axis, attributes) in axes_attributes {
             access_policies.push(
@@ -174,14 +180,17 @@ impl AccessPolicy {
                     .iter()
                     .map(|x| attr(axis, x).into())
                     .reduce(BitOr::bitor)
-                    .ok_or_else(|| eyre::eyre!("No attribute in axis"))?,
+                    .ok_or_else(|| FormatErr::MissingAttribute {
+                        item: None,
+                        axis_name: Some(axis.to_owned()),
+                    })?,
             );
         }
         let access_policy = access_policies
             .iter()
             .map(|ap| ap.to_owned())
             .reduce(BitAnd::bitand)
-            .ok_or_else(|| eyre::eyre!("No axes"))?;
+            .ok_or_else(|| FormatErr::MissingAxis("axis".to_string()))?;
 
         debug!(
             "Generating Access Policy for axes->attributes {:?} resulted in {:?}",
@@ -336,10 +345,10 @@ impl Policy {
         name: &str,
         attributes: &[&str],
         hierarchical: bool,
-    ) -> eyre::Result<Self> {
+    ) -> Result<Self, FormatErr> {
         let axis = PolicyAxis::new(name, attributes, hierarchical);
         if axis.len() + self.last_attribute > self.max_attribute {
-            eyre::bail!("Attribute capacity overflow");
+            return Err(FormatErr::CapacityOverflow)
         }
         // insert new policy
         if let Some(attr) = self.store.insert(
@@ -348,7 +357,7 @@ impl Policy {
         ) {
             // already exists, reinsert previous one
             self.store.insert(axis.name.clone(), attr);
-            eyre::bail!("Policy '{}' already exists !", axis.name);
+            return Err(FormatErr::ExistingPolicy(axis.name))
         } else {
             for attr in &axis.attributes {
                 self.last_attribute += 1;
@@ -361,7 +370,7 @@ impl Policy {
                     .is_some()
                 {
                     // must never occurs as policy is a new one
-                    eyre::bail!("unexpected error");
+                    return Err(FormatErr::ExistingPolicy(axis.name))
                 }
             }
             // add attribute is not a revocation
@@ -371,28 +380,31 @@ impl Policy {
     }
 
     // Update an attribute
-    pub fn update(&mut self, attr: &Attribute) -> eyre::Result<()> {
+    pub fn update(&mut self, attr: &Attribute) -> Result<(), FormatErr> {
         if self.last_attribute + 1 > self.max_attribute {
-            eyre::bail!("Attribute capacity overflow");
+            return Err(FormatErr::CapacityOverflow)
         }
         if let Some(uint) = self.attribute_to_int.get_mut(attr) {
             self.last_attribute += 1;
             uint.push(u32::try_from(self.last_attribute)?);
         } else {
-            eyre::bail!("Attribute not found");
+            return Err(FormatErr::AttributeNotFound)
         }
         Ok(())
     }
 
     // Verify the Policy Access and generate the corresponding msp
-    pub fn to_msp(&self, axis: &AccessPolicy) -> eyre::Result<MonotoneSpanProgram<i32>> {
+    pub fn to_msp(&self, axis: &AccessPolicy) -> Result<MonotoneSpanProgram<i32>, FormatErr> {
         if let AccessPolicy::All = axis {
             self.attribute_to_int
                 .values()
                 .flat_map(BinaryHeap::iter)
                 .map(|attr| Node::Leaf(*attr))
                 .reduce(BitOr::bitor)
-                .ok_or_else(|| eyre::eyre!("No Attribute in this PolicyGroup"))?
+                .ok_or(FormatErr::MissingAttribute {
+                    item: None,
+                    axis_name: None,
+                })?
                 .to_msp()
         } else {
             let formula = self.to_formula(axis)?;
@@ -401,29 +413,33 @@ impl Policy {
     }
 
     // Recursive function
-    fn to_formula(&self, axis: &AccessPolicy) -> eyre::Result<Node> {
+    fn to_formula(&self, axis: &AccessPolicy) -> Result<Node, FormatErr> {
         Ok(match axis {
             AccessPolicy::Attr(a) => self.to_node(a)?,
             AccessPolicy::And(a, b) => self.to_formula(a)? & self.to_formula(b)?,
             AccessPolicy::Or(a, b) => self.to_formula(a)? | self.to_formula(b)?,
-            AccessPolicy::All => eyre::bail!("`All` is not authorized inside a formula"),
+            AccessPolicy::All => {
+                return Err(FormatErr::InvalidFormula(
+                    "`All` is not authorized inside a formula".to_string(),
+                ))
+            }
         })
     }
 
     // Convert an Attribute to a Node for msp computation
     // take care of the hierarchical mode
     // In hierarchical, return the Or of all lower attributes
-    fn to_node(&self, attr: &Attribute) -> eyre::Result<Node> {
+    fn to_node(&self, attr: &Attribute) -> Result<Node, FormatErr> {
         if let Some((list, hierarchical)) = self.store.get(&attr.axis) {
             if list.contains(&attr.name) {
                 let res = list.iter().position(|r| r == &attr.name).ok_or_else(|| {
-                    eyre::eyre!("Attribute name {:?} expected in {:?}", attr.name, list)
+                    FormatErr::ExpectedAttribute(attr.name.clone(), list.to_vec())
                 })?;
                 let mut val = self.attribute_to_int[attr]
                     .iter()
                     .map(|attr| Node::Leaf(*attr))
                     .reduce(std::ops::BitOr::bitor)
-                    .ok_or_else(|| eyre::eyre!("No Attribute"))?;
+                    .ok_or(FormatErr::AttributeNotFound)?;
                 if *hierarchical {
                     for (at, elem) in list.iter().enumerate() {
                         if at >= res {
@@ -434,20 +450,19 @@ impl Policy {
                                 .iter()
                                 .map(|attr| Node::Leaf(*attr))
                                 .reduce(std::ops::BitOr::bitor)
-                                .ok_or_else(|| eyre::eyre!("No Attribute"))?;
+                                .ok_or(FormatErr::AttributeNotFound)?;
                     }
                 }
 
                 Ok(val)
             } else {
-                eyre::bail!(
-                    "The attribute {} is not present in {}",
-                    attr.name,
-                    attr.axis
-                );
+                Err(FormatErr::MissingAttribute {
+                    item: Some(attr.name.clone()),
+                    axis_name: Some(attr.axis.clone()),
+                })
             }
         } else {
-            eyre::bail!("The axis {} is not present", attr.axis);
+            Err(FormatErr::MissingAxis(attr.axis.clone()))
         }
     }
 }

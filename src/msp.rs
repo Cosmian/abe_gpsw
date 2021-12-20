@@ -7,7 +7,10 @@ use std::{
 
 use regex::Regex;
 
-use crate::gpsw::AsBytes;
+use crate::{
+    error::{FormatErr, ParsingError},
+    gpsw::AsBytes,
+};
 
 #[derive(Clone, PartialEq, Debug)]
 pub struct MonotoneSpanProgram<I> {
@@ -19,22 +22,26 @@ pub struct MonotoneSpanProgram<I> {
 }
 
 // Convert an string-array with only integer values to a real array
-pub fn attributes_parse(range: &str) -> eyre::Result<Vec<u32>> {
+pub fn attributes_parse(range: &str) -> Result<Vec<u32>, FormatErr> {
     // remove all whitespaces
     let mut clean_str: String = range.split_whitespace().collect();
     // check for outers bracket
     if let Some(c) = clean_str.pop() {
-        eyre::ensure!(
-            c == ']',
-            "attribute range parsing error: Last character must be `]`"
-        );
+        if c != ']' {
+            return Err(
+                ParsingError::UnexpectedCharacter("last character must be `]`".to_string()).into(),
+            )
+        }
     } else {
-        eyre::bail!("attribute range parsing error: empty string")
+        return Err(ParsingError::EmptyString.into())
     }
-    eyre::ensure!(
-        clean_str.remove(0) == '[',
-        "attribute range parsing error: First character must be `[`"
-    );
+
+    if clean_str.remove(0) != '[' {
+        return Err(
+            ParsingError::UnexpectedCharacter("first character must be `[`".to_string()).into(),
+        )
+    }
+
     let vec = clean_str
         .split(',')
         .map(|item| {
@@ -42,7 +49,7 @@ pub fn attributes_parse(range: &str) -> eyre::Result<Vec<u32>> {
             let start = if let Some(b) = interval.next() {
                 b.parse::<u32>()?
             } else {
-                eyre::bail!("wrong range")
+                return Err(FormatErr::from(ParsingError::RangeError))
             };
             let end = if let Some(b) = interval.next() {
                 b.parse::<u32>()?
@@ -51,7 +58,7 @@ pub fn attributes_parse(range: &str) -> eyre::Result<Vec<u32>> {
             };
             Ok((start..=end).collect::<Vec<u32>>())
         })
-        .collect::<eyre::Result<Vec<Vec<u32>>, _>>()?;
+        .collect::<Result<Vec<Vec<u32>>, _>>()?;
     // `flat_map` does not works with `Result` thus we must `flatten` after
     // `collect` above
     let vec = vec.into_iter().flatten().collect();
@@ -60,7 +67,7 @@ pub fn attributes_parse(range: &str) -> eyre::Result<Vec<u32>> {
 }
 
 impl<I: AsBytes> AsBytes for MonotoneSpanProgram<I> {
-    fn as_bytes(&self) -> eyre::Result<Vec<u8>> {
+    fn as_bytes(&self) -> Result<Vec<u8>, FormatErr> {
         let mut res = Vec::with_capacity(
             8 + (self.nb_row * self.nb_col * self.matrix[0][0].len_bytes()) + (self.nb_row * 4),
         );
@@ -78,9 +85,11 @@ impl<I: AsBytes> AsBytes for MonotoneSpanProgram<I> {
         Ok(res)
     }
 
-    fn from_bytes(bytes: &[u8]) -> eyre::Result<Self> {
+    fn from_bytes(bytes: &[u8]) -> Result<Self, FormatErr> {
         if bytes.len() < 8 {
-            eyre::bail!("wrong size");
+            return Err(FormatErr::InvalidSize(
+                "minimum len of 8 bytes is required for MSP".to_string(),
+            ))
         }
         let mut nb_row = [0_u8; 4];
         nb_row.copy_from_slice(&bytes[0..4]);
@@ -90,7 +99,9 @@ impl<I: AsBytes> AsBytes for MonotoneSpanProgram<I> {
         let nb_col = u32::from_be_bytes(nb_col) as usize;
 
         if bytes.len() < 8 + 4 * nb_row {
-            eyre::bail!("wrong size");
+            return Err(FormatErr::InvalidSize(
+                "invalid MSP size read from bytes".to_string(),
+            ))
         }
         let mut row_to_attr = Vec::with_capacity(nb_row);
         let mut attr_to_row = HashMap::with_capacity(nb_row);
@@ -100,7 +111,9 @@ impl<I: AsBytes> AsBytes for MonotoneSpanProgram<I> {
             let u = u32::from_be_bytes(u);
             row_to_attr.push(u);
             if attr_to_row.insert(u, i).is_some() {
-                eyre::bail!("Error deserialize MSP: leaf already inserted")
+                return Err(FormatErr::Deserialization(
+                    "error deserializing MSP, leaf already inserted".to_string(),
+                ))
             }
         }
 
@@ -108,7 +121,9 @@ impl<I: AsBytes> AsBytes for MonotoneSpanProgram<I> {
         let mut row = Vec::with_capacity(nb_col);
         row.push(I::from_bytes(&bytes[8 + (4 * nb_row)..])?);
         if bytes.len() < 8 + (4 * nb_row) + (nb_row * nb_col * row[0].len_bytes()) {
-            eyre::bail!("wrong size");
+            return Err(FormatErr::InvalidSize(
+                "invalid matrix size read from bytes".to_string(),
+            ))
         }
         for c in 1..nb_col {
             let index = 8 + (4 * nb_row) + (c * row[0].len_bytes());
@@ -183,7 +198,7 @@ impl<I: From<i32>> MonotoneSpanProgram<I>
 where
     MonotoneSpanProgram<I>: From<MonotoneSpanProgram<i32>>,
 {
-    pub fn parse(s: &str) -> eyre::Result<Self> {
+    pub fn parse(s: &str) -> Result<Self, FormatErr> {
         let msp = Node::parse(s)?.to_msp()?;
         Ok(Self::from(msp))
     }
@@ -245,7 +260,7 @@ impl Node {
     // from https://eprint.iacr.org/2010/351.pdf annex G
     // TODO: Ensure each Attribute appears only once in the Formula
     // TODO: Should we use Disjonctive Normal Form?
-    pub fn to_msp(&self) -> eyre::Result<MonotoneSpanProgram<i32>> {
+    pub fn to_msp(&self) -> Result<MonotoneSpanProgram<i32>, FormatErr> {
         let mut counter = 1;
         let mut queue = std::collections::VecDeque::new();
         let mut matrix = Vec::new();
@@ -295,10 +310,14 @@ impl Node {
                 msp_matrix.push(vec);
                 msp_vec.push(*attr);
                 if msp_map.insert(*attr, i).is_some() {
-                    eyre::bail!("Error constructing MSP: leaf already inserted")
+                    return Err(FormatErr::Deserialization(
+                        "error deserializing MSP, leaf already inserted".to_string(),
+                    ))
                 }
             } else {
-                eyre::bail!("Error constructing MSP: only leaf allowed")
+                return Err(FormatErr::Deserialization(
+                    "error deserializing MSP, only leaf allowed".to_string(),
+                ))
             }
         }
         Ok(MonotoneSpanProgram {
@@ -314,17 +333,18 @@ impl Node {
     // Example: convert the string "1 & (4 | (2 & 3))" to And(a, Box::new(Or(d,
     // Box::new(And(b, c))))) In this implementation, only digits are allowed
     // and parenthesis is expected to respect the operators priorities
-    pub fn parse(s: &str) -> eyre::Result<Self> {
+    pub fn parse(s: &str) -> Result<Self, FormatErr> {
         // Authorize only digits and operators & and |
         let authorized = [
             ' ', '(', ')', '&', '|', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9',
         ];
         if s.is_empty() || s.chars().any(|c| !authorized.contains(&c)) {
-            eyre::bail!(
-                "Formula must contain only digits, parenthesis and operators & and |. Given \
+            return Err(ParsingError::UnexpectedCharacter(format!(
+                "formula must contain only digits, parenthesis and operators & and |. Given \
                  formula: {}",
                 s
-            )
+            ))
+            .into())
         }
         // Remove all spaces
         let new_s = str::replace(s, " ", "");
@@ -333,12 +353,18 @@ impl Node {
         let int_reg = Regex::new(r"^\d+")?;
         if int_reg.is_match(&new_s) {
             if int_reg.captures_len() != 1 {
-                eyre::bail!("Invalid formula")
+                return Err(ParsingError::UnexpectedCharacter(
+                    "it must starts with an integer".to_string(),
+                )
+                .into())
             }
             let integer_str = int_reg
                 .find_at(&new_s, 0)
                 .ok_or_else(|| {
-                    eyre::eyre!("Integer detected by regex but not found in: {}", &new_s)
+                    ParsingError::UnexpectedCharacter(format!(
+                        "integer detected by regex but not found in: {}",
+                        new_s,
+                    ))
                 })?
                 .as_str();
             let integer = integer_str.parse::<u32>()?;
@@ -350,10 +376,10 @@ impl Node {
             }
             let a = Box::new(Node::Leaf(integer));
             let operator = new_s.chars().next().ok_or_else(|| {
-                eyre::eyre!(
-                    "No further character while detecting operator in: {}",
+                FormatErr::from(ParsingError::UnexpectedEnd(format!(
+                    "no further character while detecting operator in: {}",
                     &new_s
-                )
+                )))
             })?;
 
             // Remove operator from input string
@@ -361,25 +387,31 @@ impl Node {
             match operator {
                 '&' => Ok(Node::And(a, Box::new(Node::parse(new_s)?))),
                 '|' => Ok(Node::Or(a, Box::new(Node::parse(new_s)?))),
-                _ => eyre::bail!("Invalid formula: operator expected"),
+                _ => Err(FormatErr::UnsupportedOperator(operator.to_string())),
             }
         } else {
             // Remove parenthesis on current part of formula and continue
             let first_char = new_s.chars().next().ok_or_else(|| {
-                eyre::eyre!(
-                    "No further character while getting first char in: {}",
+                FormatErr::from(ParsingError::UnexpectedEnd(format!(
+                    "no further character while getting first char in: {}",
                     &new_s
-                )
+                )))
             })?;
             let new_s = &new_s[1..];
             if first_char != '(' {
-                eyre::bail!("Invalid formula: opening parenthesis expected")
+                return Err(ParsingError::UnexpectedCharacter(
+                    "opening parenthesis expected".to_string(),
+                )
+                .into())
             }
 
             // Check if formula contains a closing parenthesis
             let c = new_s.matches(')').count();
             if c == 0 {
-                eyre::bail!("Invalid formula: closing parenthesis expected")
+                return Err(ParsingError::UnexpectedCharacter(
+                    "closing parenthesis expected".to_string(),
+                )
+                .into())
             }
 
             // Search right closing parenthesis, avoiding false positive
@@ -406,10 +438,10 @@ impl Node {
                 return Node::parse(between_parenthesis)
             }
             let operator = new_s.chars().next().ok_or_else(|| {
-                eyre::eyre!(
-                    "No further character while detecting operator in: {}",
+                ParsingError::UnexpectedEnd(format!(
+                    "no further character while detecting operator in: {}",
                     &new_s
-                )
+                ))
             })?;
             let new_s = &new_s[1..];
 
@@ -422,7 +454,7 @@ impl Node {
                     Box::new(Node::parse(between_parenthesis)?),
                     Box::new(Node::parse(new_s)?),
                 )),
-                _ => eyre::bail!("Invalid formula: operator expected"),
+                _ => Err(FormatErr::UnsupportedOperator(operator.to_string())),
             }
         }
     }
