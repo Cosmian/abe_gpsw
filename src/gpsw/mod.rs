@@ -68,7 +68,7 @@ impl<T: AsBytes> AsBytes for Vec<T> {
         let mut len = [0_u8; 4];
         len.copy_from_slice(&bytes[0..4]);
         let len = u32::from_be_bytes(len) as usize;
-        if len > u32::MAX as usize {
+        if len >= u32::MAX as usize {
             return Err(FormatErr::Deserialization(
                 "deserializing element failed. Data altered?".to_string(),
             ))

@@ -3,6 +3,15 @@
 All notable changes to this project will be documented in this file.
 
 ---
+## [0.2.0] - 2021-12-22
+### Added
+### Changed
+- Update crate version du to last interface changes: introducing `thiserror`
+### Fixed
+- Regression in trait `AsBytes` function `from_bytes` for deserializing generic objects
+### Removed
+
+---
 ## [0.1.4] - 2021-12-20
 ### Added
 ### Changed
