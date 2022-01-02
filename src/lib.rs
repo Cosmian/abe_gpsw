@@ -89,7 +89,8 @@ impl<S: AbeScheme> Engine<S> {
         self.sch.decrypt(enc, key)
     }
 
-    pub fn generate_cleartext_ciphertext(
+    /// Generate a random clear text and corresponding cipher text
+    pub fn random_cleartext_ciphertext(
         &self,
         attrs: &[Attribute],
         pub_key: &S::MasterPublicKey,
@@ -114,7 +115,7 @@ impl<S: AbeScheme> Engine<S> {
         attrs: &[Attribute],
         pub_key: &S::MasterPublicKey,
     ) -> Result<([u8; 32], Vec<u8>), FormatErr> {
-        let (plaintext, ciphertext) = self.generate_cleartext_ciphertext(attrs, pub_key)?;
+        let (plaintext, ciphertext) = self.random_cleartext_ciphertext(attrs, pub_key)?;
 
         let hasher = Shake256::default();
         let mut sk = [0_u8; 32];
@@ -140,4 +141,4 @@ mod policy_tests;
 mod msp_tests;
 
 #[cfg(test)]
-mod mod_tests;
+mod demo;

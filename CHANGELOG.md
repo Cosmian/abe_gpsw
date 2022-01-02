@@ -3,6 +3,16 @@
 All notable changes to this project will be documented in this file.
 
 ---
+## [0.2.1] - 2022-01-02
+### Added
+### Changed
+- Updated edition to 2021
+- Clarified demo and made it more visible
+### Fixed
+- Documentation on hierarchical axes
+### Removed
+
+---
 ## [0.2.0] - 2021-12-22
 ### Added
 ### Changed

@@ -8,6 +8,11 @@ Fine-Grained Access Control of Encrypted Data](https://eprint.iacr.org/2006/309.
 [Latest Version]: https://img.shields.io/crates/v/abe_gpsw.svg
 [crates.io]: https://crates.io/crates/abe_gpsw
 
+
+# Quick start
+
+See the demo [code](./src/demo.rs) which contains a complete usage of the API with detailed comments. Run it as a test using `cargo test demo::abe -- --nocapture`.
+
 # Introduction
 
 In a standard public-key encryption scheme, each user has his own public key and secret key, so that if one wants to encrypt a message intended for several receivers (for example, according to their jobs in a company), it will be necessary to compute the ciphertext for each public key of each recipient, which implies a huge loss of time and space.
@@ -45,7 +50,7 @@ Policies in [GPSW](https://eprint.iacr.org/2006/309.pdf) use monotone access str
 
 In order to make policies more user friendly, Cosmian implements an indirection between the way the user expresses a policy and the actual attribute values used in GPSW.
 
-From a user perspective, the overall policy is expressed as a set of policy axes. Each axis can be optionally marked as being hierarchical, and contains an enumeration of the possible values for that axis.
+From a user perspective, the overall policy is expressed as a set of policy axes. Each axis can be optionally marked as being hierarchical, and contains an enumeration of the possible values for that axis. For an hierarchical axis the attributes must be provided in ascending order.
 
 For instance, the policy
 
@@ -53,7 +58,7 @@ For instance, the policy
 [
     "Security Level": {
         "hierarchical": true,
-        "attributes": ["high","medium","low"]
+        "attributes": ["low","medium","high"]
     },
     "Department": {
         "hierarchical": false,
@@ -66,7 +71,7 @@ defines 2 axis `Security Level` and `Department`.
 
 Here, the use of axis allows to handle access policies encoded as CNF formulas.
 
-Contrarily to the `Department` axis, the `Security Level` axis is hierarchical: a user that posesses a key with an attribute `Security Level::high` will have access to data encrypted with any of the attributes of the `Security Level`.
+Contrarily to the `Department` axis, the `Security Level` axis is hierarchical: a user that possesses a key with an attribute `Security Level::high` will have access to data encrypted with any of the attributes of the `Security Level`.
 
 All unique attribute names (7 in the example above) are derived by concatenating the axis names and the possible values for that axis, and are assigned a unique attribute value:
 
@@ -76,9 +81,9 @@ All unique attribute names (7 in the example above) are derived by concatenating
 | Department::FIN        | 2     |
 | Department::MKG        | 3     |
 | Department::R&D        | 4     |
-| Security Level::high   | 5     |
+| Security Level::low    | 5     |
 | Security Level::medium | 6     |
-| Security Level::low    | 7     |
+| Security Level::high   | 7     |
 
 From the master secret key, a derived decryption key for a user of the marketing department (`MKG`) with a `medium` security level will hold an access policy expressed as the boolean expression:
 
@@ -89,7 +94,7 @@ From the master secret key, a derived decryption key for a user of the marketing
 Finally, since attribute names are mapped to attribute values, the policy above is translated in GPSW as
 
 ```javascript
-3 & ( 6 | 7 )
+3 & ( 6 | 5 )
 ```
 
 # BLS12-381: Pairing-friendly elliptic curve

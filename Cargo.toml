@@ -7,11 +7,11 @@ authors = [
 ]
 description = "ABE GPSW scheme for BLS pairing implemented in rust"
 documentation = "https://docs.rs/abe_gpsw/"
-edition = "2018"
+edition = "2021"
 license = "MIT/Apache-2.0"
 name = "abe_gpsw"
 repository = "https://github.com/Cosmian/abe_gpsw"
-version = "0.2.0"
+version = "0.2.1"
 
 [lib]
 name = "abe_gpsw"
