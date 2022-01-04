@@ -3,6 +3,14 @@
 All notable changes to this project will be documented in this file.
 
 ---
+## [0.2.2] - 2022-01-04
+### Added
+### Changed
+- Stay on edition 2018
+### Fixed
+### Removed
+
+---
 ## [0.2.1] - 2022-01-02
 ### Added
 ### Changed

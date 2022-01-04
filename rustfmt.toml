@@ -1,6 +1,6 @@
 # Specifies which edition is used by the parser.
 # Default value: "2015"
-edition = "2021"
+edition = "2018"
 
 # How imports should be grouped into use statements. Imports will be merged or split to the configured level of granularity.
 # Default value: Preserve
