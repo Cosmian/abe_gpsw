@@ -10,13 +10,13 @@ use crate::{error::FormatErr, policy::ap};
 fn abe() -> Result<(), FormatErr> {
     // ## Policy
     // In this demo, we will create a Policy which combines two axes, a
-    // 'security level' and a 'department'. An user will be able to decrypt
+    // 'security level' and a 'department'. A user will be able to decrypt
     // data only if it possesses a key with a sufficient security level
     // and the code for the department.
     //
     // The parameter fixes the maximum number of revocations of attributes (see
     // below) for this Policy. This number influences the number of
-    // public keys which will be ultimately generated for this Security Group
+    // public keys which will be ultimately generated for this Policy
     // and must be kept to a "reasonable" level to reduce security risks associated
     // with multiplying the number of keys.
     //
@@ -25,8 +25,8 @@ fn abe() -> Result<(), FormatErr> {
     // matrix of authorizations. An user must possess keys with attributes
     // from these two axes to be able to decrypt files.
     //
-    // ### Security Level
-    // Axis The first Policy Axis is the 'Security Level' axis and is a
+    // ### Security Level Axis
+    // The first Policy Axis is the 'Security Level' axis and is a
     // hierarchical axis made of 5 levels: Protected, Low Secret , ...,
     // Top Secret. It is hierarchical: a user being granted access to level `n`
     // is automatically granted access to all levels below `n`. The attributes must
@@ -53,9 +53,9 @@ fn abe() -> Result<(), FormatErr> {
 
     // ## Master Authority
     // The Master Authority possesses the keys for the given Policy:
-    // a Secret Key which is used to delegate authority to "delegate authorities",
-    // which are the ones generating user keys and a Public key which is
-    // used to encrypt files with proper level of security.
+    // a Secret Key which is used to delegate authority to "delegate authorities" -
+    // which in turn generate user keys - and a Public key which is
+    // used to encrypt data with the proper attributes.
     let mut engine = Engine::<Gpsw<Bls12_381>>::new(&policy);
     println!("Instantiating the ABE Master Keys (only once)...");
     let (priv_key, pub_key, del_key) = engine.generate_master_key()?;
@@ -64,18 +64,18 @@ fn abe() -> Result<(), FormatErr> {
     // ## Delegate Authorities
     // The Master Authority will delegate part or all of its authority to "Delegate
     // Authorities" (a.k.a Delegates) which are the ones generating
-    // user keys.
+    // user decryption keys.
     // In this particular example, the Master Authority will delegate its authority
     // to 2 Delegates:
     //  - a "High Secret Marketing and Finance Delegate" which can only generate
-    //    User Keys for marketing (MKG) or finance (FIN) data of Security High
-    //    Secret and below
+    //    User Keys for marketing (MKG) and/or finance (FIN) data of Security Level
+    //    High Secret and below
     let high_secret_fin_mkg_access_policy =
         ap("Security Level", "High Secret") & (ap("Department", "MKG") | ap("Department", "FIN"));
     let high_secret_mkg_fin_delegate =
         engine.generate_user_key(&priv_key, &high_secret_fin_mkg_access_policy)?;
     //  - a Super Delegate which can issue User Keys for all Security Levels and all
-    //    Departments. The special Access Policy `All` does not have attributes and
+    //    Departments. The special Access Policy `All` does not carry attributes and
     //    is therefore not subject to attributes revocation (see revocation below)
     let super_delegate = engine.generate_user_key(&priv_key, &AccessPolicy::All)?;
 
@@ -102,7 +102,7 @@ fn abe() -> Result<(), FormatErr> {
         &top_secret_mkg_access_policy,
     );
     // FAILURE: as expected the High Secret marketing authority cannot generate user
-    // keys for Security Level 5
+    // keys for the Top Secret Security Level
     assert!(top_secret_user.is_err());
 
     let medium_secret_hr_access_policy =
@@ -117,7 +117,8 @@ fn abe() -> Result<(), FormatErr> {
     assert!(hr_user.is_err());
 
     // Let us create a super user as well, which can decrypt everything
-    // Note: the super_user holds a randomization of the super_delegate key
+    // Note: the super_user, having `AccessPolicy::All` holds a randomization of the
+    // super_delegate key
     let super_user = engine.delegate_user_key(&del_key, &super_delegate, &AccessPolicy::All)?;
 
     // ## Encryption and Decryption
@@ -129,8 +130,7 @@ fn abe() -> Result<(), FormatErr> {
     // the right access policy can decrypt data.
 
     // ### A Low Secret marketing message
-    // Let us create an encrypted marketing message with a security Confidential
-    // Country.
+    // Let us create an encrypted marketing message with a Low Secret level
     let (low_secret_mkg_message, low_secret_mkg_cipher_text) = engine.random_cleartext_ciphertext(
         &[
             ("Security Level", "Low Secret").into(),
@@ -157,7 +157,7 @@ fn abe() -> Result<(), FormatErr> {
 
     // ### A Top Secret marketing message
     // However in the case of a Top Secret marketing message, only the super user
-    // will succeed:
+    // will succeed decrypting:
     let (pt, ct) = engine.random_cleartext_ciphertext(
         &[
             ("Security Level", "Top Secret").into(),
@@ -177,7 +177,7 @@ fn abe() -> Result<(), FormatErr> {
 
     // ### A Low Secret HR message
     // Likewise, in the case of a Low Secret HR message, only the super
-    // user will succeed:
+    // user will succeed decrypting:
     let (pt, low_secret_hr_cipher_text) = engine.random_cleartext_ciphertext(
         &[
             ("Security Level", "Low Secret").into(),
@@ -195,13 +195,13 @@ fn abe() -> Result<(), FormatErr> {
         .expect("Decryption must works");
     assert_eq!(pt, result, "super_user_low_secret_hr_message");
 
-    // ## Revocation
-    // At anytime the Master Authority can revoke an attribute.
-    // When that happens future encryption of data for a given attribute cannot be
-    // decrypted with keys which are not "refreshed" for that attribute. Let
-    // us revoke the Security Level 2
+    // ## Revocation of attributes
+    // At anytime the Master Authority can revoke one or more attributes.
+    // When that happens future encryption of data for a "revoked" attribute cannot
+    // be decrypted with user decryption keys which are not "refreshed" for that
+    // attribute. Let us revoke the Security Level Low Secret
     engine.update(&("Security Level", "Low Secret").into())?;
-    // We now encrypt a new marketing message at Low Secret
+    // We now encrypt a new marketing message at (the new) Low Secret level
     let (new_low_level_mkg_message, new_low_level_mkg_cipher_text) = engine
         .random_cleartext_ciphertext(
             &[
@@ -218,7 +218,7 @@ fn abe() -> Result<(), FormatErr> {
         "old_medium_secret_mkg_user_new_low_secret_mkg_message"
     );
 
-    // The super user can still decrypt, because its key was generated by
+    // The super user can still decrypt, because its key was generated
     // with the special AccessPolicy `All`
     let result = engine
         .decrypt(&new_low_level_mkg_cipher_text, &super_user)?
