@@ -3,15 +3,15 @@ authors = [
   "Julien Doget <julien.doget@cosmian.com>",
   "Bruno Grieder <bruno.grieder@cosmian.com>",
   "Emmanuel Coste <emmanuel.coste@cosmian.com>",
-  "Thibaud Genty <thibaud.genty@cosmian.com>"
+  "Thibaud Genty <thibaud.genty@cosmian.com>",
 ]
 description = "ABE GPSW scheme for BLS pairing implemented in rust"
 documentation = "https://docs.rs/abe_gpsw/"
-edition = "2021"
+edition = "2018"
 license = "MIT/Apache-2.0"
 name = "abe_gpsw"
 repository = "https://github.com/Cosmian/abe_gpsw"
-version = "0.2.2"
+version = "0.2.3"
 
 [lib]
 name = "abe_gpsw"
@@ -19,13 +19,13 @@ name = "abe_gpsw"
 [dependencies]
 cosmian_bls12_381 = "0.4"
 ff = "0.9"
-getrandom = {version = "0.2", features = ["js"]}
+getrandom = { version = "0.2", features = ["js"] }
 group = "0.9"
 hex = "0.4"
 rand = "0.8"
 rand_hc = "0.3"
 regex = "1.5.4"
-serde = {version = "1.0", features = ["derive"]}
+serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 sha3 = "0.9"
 thiserror = "1"

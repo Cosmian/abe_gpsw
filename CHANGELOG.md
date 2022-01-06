@@ -3,6 +3,17 @@
 All notable changes to this project will be documented in this file.
 
 ---
+## [0.2.3] - 2022-01-06
+### Added
+### Changed
+- Demo doc improvements
+- Really Stay on edition 2018
+### Fixed
+### Removed
+
+---
+
+---
 ## [0.2.2] - 2022-01-04
 ### Added
 ### Changed
