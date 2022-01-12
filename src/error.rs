@@ -10,7 +10,7 @@ use thiserror::Error;
 pub enum FormatErr {
     #[error("attribute not found")]
     AttributeNotFound,
-    #[error("{} is missing{}", 
+    #[error("{} is missing{}",
         .item.clone().unwrap_or_else(|| "attribute".to_string()),
         match .axis_name {
             Some(axis) => format!(" in axis {}", axis),
@@ -28,6 +28,14 @@ pub enum FormatErr {
     UnsupportedOperand(String),
     #[error("unsupported operator {0}")]
     UnsupportedOperator(String),
+    #[error("symmetric key generation {0}")]
+    SymmetricKeyGeneration(String),
+    #[error("symmetric encryption {0}")]
+    SymmetricEncryption(String),
+    #[error("symmetric decryption {0}")]
+    SymmetricDecryption(String),
+    #[error("asymmetric encryption {0}")]
+    AsymmetricDecryption(String),
     #[error("attribute capacity overflow")]
     CapacityOverflow,
     #[error("attribute {0} for {1} already exists")]
@@ -36,12 +44,25 @@ pub enum FormatErr {
     ExistingPolicy(String),
     #[error("invalid size")]
     InvalidSize(String),
+    #[error("could not decode number of attributes in encrypted message")]
+    DecodingAttributeNumber,
+    #[error(
+        "Unable to decrypt the header size. User decryption key has not the right policy to \
+         decrypt this input."
+    )]
+    InsuffisentAccessPolicy,
     #[error("{0}")]
     Deserialization(String),
+    #[error("{0}")]
+    Serialization(String),
     #[error("{0}")]
     InternalOperation(String),
     #[error("invalid formula: {0}")]
     InvalidFormula(String),
+    #[error("encrypted data size cannot be less than {0} bytes")]
+    InvalidEncryptedDataSize(String),
+    #[error("invalid encrypted data")]
+    InvalidEncryptedData,
     #[error("conversion failed")]
     ConversionFailed,
     #[error("error parsing formula")]

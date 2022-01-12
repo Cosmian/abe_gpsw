@@ -3,6 +3,14 @@
 All notable changes to this project will be documented in this file.
 
 ---
+## [0.2.4] - 2022-01-13
+### Added
+- Asymmetric rust trait
+### Changed
+### Fixed
+### Removed
+
+---
 ## [0.2.3] - 2022-01-06
 ### Added
 ### Changed
@@ -10,8 +18,6 @@ All notable changes to this project will be documented in this file.
 - Really Stay on edition 2018
 ### Fixed
 ### Removed
-
----
 
 ---
 ## [0.2.2] - 2022-01-04
