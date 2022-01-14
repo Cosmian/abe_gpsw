@@ -157,7 +157,7 @@ pub fn generate_symmetric_key_and_header(
 /// - `first_block_number` is also part on the AES AEAD and is increased on
 ///   every AES block (4096 bytes)
 ///
-/// Returns the encrypted data (pre-pended with the header) ant the last AES
+/// Returns the encrypted data (pre-pended with the header) and the last AES
 /// block number
 pub fn encrypt(
     symmetric_key: &[u8],
