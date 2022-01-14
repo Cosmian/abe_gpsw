@@ -3,8 +3,10 @@
 pub mod bilinear_map;
 pub mod error;
 pub mod gpsw;
+pub mod hybrid_crypto;
 pub mod msp;
 pub mod policy;
+pub mod public_key;
 
 use std::convert::TryFrom;
 
