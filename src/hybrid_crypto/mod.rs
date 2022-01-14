@@ -323,8 +323,7 @@ pub fn symmetric_decryption(
 /// - `first_block_number` is part on the AES AEAD and is increased on every AES
 ///   block (4096 bytes)
 ///
-/// Returns the encrypted data (pre-pended with the header) ant the last AES
-/// block number
+/// Returns the decrypted data as a vector of bytes
 pub fn decrypt(
     user_decryption_key: &[u8],
     encrypted_header: &[u8],
