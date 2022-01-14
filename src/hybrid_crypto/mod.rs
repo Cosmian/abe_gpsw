@@ -107,7 +107,7 @@ pub fn revoke_attributes(
 }
 
 /// Generate a new random point on GT,
-///  encrypt the point for the given access policy
+/// and encrypt the point for the given access policy
 ///
 /// Returns the shake 256 hash of the point and the encrypted point
 pub fn generate_symmetric_key_and_header(
