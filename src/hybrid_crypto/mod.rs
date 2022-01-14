@@ -320,7 +320,7 @@ pub fn symmetric_decryption(
 /// - `user_decryption_key` is the user key holding an access policy
 /// - `encrypted_header` is the encypted symmetric key
 /// - `input` is the AESG GCM encrypted data
-/// - `first_block_number` is part on the AES AEAD and is increased on every AES
+/// - `first_block_number` is part of the AES AEAD and is increased on every AES
 ///   block (4096 bytes)
 ///
 /// Returns the decrypted data as a vector of bytes
