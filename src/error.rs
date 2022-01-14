@@ -34,7 +34,7 @@ pub enum FormatErr {
     SymmetricEncryption(String),
     #[error("symmetric decryption {0}")]
     SymmetricDecryption(String),
-    #[error("asymmetric encryption {0}")]
+    #[error("asymmetric decryption {0}")]
     AsymmetricDecryption(String),
     #[error("attribute capacity overflow")]
     CapacityOverflow,
