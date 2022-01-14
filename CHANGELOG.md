@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 ---
 ## [0.2.4] - 2022-01-13
 ### Added
-- Asymmetric rust trait
+- Asymmetric public key trait
 ### Changed
 ### Fixed
 ### Removed
