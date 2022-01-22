@@ -267,7 +267,7 @@ pub fn decrypt_header(private_key: &[u8], encrypted_header: &[u8]) -> Result<Hdr
     header.map_err(|e| FormatErr::AsymmetricDecryption(e.to_string()))
 }
 
-pub fn symmetric_decryption(
+fn symmetric_decryption(
     symmetric_key: &[u8],
     uid: &[u8; UID_LENGTH],
     input: &[u8],

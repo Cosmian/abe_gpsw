@@ -2,6 +2,8 @@
 
 pub mod bilinear_map;
 pub mod error;
+#[cfg(feature = "ffi")]
+pub mod ffi;
 pub mod gpsw;
 pub mod hybrid_crypto;
 pub mod msp;
