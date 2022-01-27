@@ -1,8 +1,11 @@
+#[cfg(test)]
+mod tests;
+
 use std::convert::TryFrom;
 
 use cosmian_crypto_base::{
     asymmetric::AsymmetricCrypto,
-    hybrid_crypto::{header::UID_LENGTH, Block, Header},
+    hybrid_crypto::{Block, Header},
     symmetric_crypto::{
         aes_256_gcm_pure::{Aes256GcmCrypto, Key, KEY_LENGTH, MAC_LENGTH, NONCE_LENGTH},
         SymmetricCrypto,
@@ -11,15 +14,17 @@ use cosmian_crypto_base::{
 use tracing::{debug, trace};
 
 use crate::{
-    bilinear_map::bls12_381::Bls12_381,
-    error::FormatErr,
-    gpsw::{
-        abe::{Gpsw, GpswDecryptionKey, GpswMasterPrivateKey, GpswMasterPublicDelegationKey},
-        AsBytes,
+    core::{
+        bilinear_map::bls12_381::Bls12_381,
+        engine::Engine,
+        gpsw::{
+            abe::{Gpsw, GpswDecryptionKey, GpswMasterPrivateKey, GpswMasterPublicDelegationKey},
+            AsBytes,
+        },
+        policy::{AccessPolicy, Attribute, Policy},
     },
-    policy::{AccessPolicy, Attribute, Policy},
-    public_key::{AbeCrypto, AbePrivateKey, AbePublicKey},
-    Engine,
+    error::FormatErr,
+    public::asymmetric_crypto::{AbeCrypto, AbePrivateKey, AbePublicKey},
 };
 
 pub const ATTRIBUTES_FIELD_SIZE: usize = 4; // size of integer: 4 bytes
@@ -129,23 +134,24 @@ pub fn generate_symmetric_key_and_header(
     let public_key = AbePublicKey::<Gpsw<Bls12_381>>::try_from(public_key)
         .map_err(|e| FormatErr::Deserialization(e.to_string()))?;
     //TODO maybe add a check that the proposed policy is compatible with the policy
-    let symmetric_key = engine.generate_symmetric_key(policy_attributes, &public_key.0)?;
+    let (clear_text_sk, encrypted_sk) =
+        engine.generate_symmetric_key(policy_attributes, &public_key.0)?;
 
     //
     // Format encrypted key to Header format
     //
-    let sym_key = Aes256GcmCrypto::generate_key_from_rnd(&symmetric_key.0)
+    let sym_key = Aes256GcmCrypto::generate_key_from_rnd(&clear_text_sk)
         .map_err(|e| FormatErr::SymmetricKeyGeneration(e.to_string()))?;
     let asymmetric_header = Hdr::new(resource_uid.to_owned(), sym_key);
     let attributes_length = i32::try_from(policy_attributes.len())?;
     let mut encrypted_header = attributes_length.to_be_bytes().to_vec();
     let header = asymmetric_header
-        .to_bytes(symmetric_key.1)
+        .to_bytes(encrypted_sk)
         .map_err(|e| FormatErr::Serialization(e.to_string()))?;
     trace!("Encryption: header size: {}", header.len());
     encrypted_header.extend_from_slice(&header[..]);
 
-    Ok((symmetric_key.0, encrypted_header))
+    Ok((clear_text_sk, encrypted_header))
 }
 
 /// Encrypt an `input` using an hybrid encryption scheme ABE+AES256GCM
@@ -157,7 +163,7 @@ pub fn generate_symmetric_key_and_header(
 /// - `first_block_number` is also part of the AES AEAD and is increased on
 ///   every AES block (4096 bytes)
 ///
-/// Returns the encrypted data (pre-pended with the header) and the last AES
+/// Returns the encrypted data and the last AES
 /// block number
 pub fn encrypt(
     symmetric_key: &[u8],
@@ -336,6 +342,3 @@ pub fn decrypt(
     let uid = header.uid;
     symmetric_decryption(&symmetric_key, &uid, input, first_block_number)
 }
-
-#[cfg(test)]
-mod tests;

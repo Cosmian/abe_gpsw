@@ -9,7 +9,7 @@ use group::Group;
 use rand::{CryptoRng, RngCore};
 
 use super::BilinearMap;
-use crate::{error::FormatErr, gpsw::AsBytes};
+use crate::{core::gpsw::AsBytes, error::FormatErr};
 
 #[derive(Default, Debug, PartialEq, Clone)]
 pub struct Bls12_381;
@@ -335,9 +335,11 @@ mod tests {
     use cosmian_bls12_381::{G1Affine, G2Affine, Gt};
 
     use crate::{
-        bilinear_map::bls12_381::{BilinearMap, Bls12_381, Scalar},
+        core::{
+            bilinear_map::bls12_381::{BilinearMap, Bls12_381, Scalar},
+            gpsw::AsBytes,
+        },
         error::FormatErr,
-        gpsw::AsBytes,
     };
 
     #[test]

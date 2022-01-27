@@ -13,6 +13,15 @@ pub enum FfiError {
 
     #[error("FFI error: {0}")]
     Generic(String),
+
+    #[error("Deserialize error: {0}")]
+    Deserialize(String),
+}
+
+impl From<anyhow::Report> for FfiError {
+    fn from(e: anyhow::Report) -> Self {
+        FfiError::Generic(e.to_string())
+    }
 }
 
 /// Return early with an error if a pointer is null
@@ -28,9 +37,9 @@ pub enum FfiError {
 macro_rules! ffi_not_null {
     ($ptr:expr, $msg:literal $(,)?) => {
         if $ptr.is_null() {
-            $crate::ffi::error::set_last_error($crate::ffi::error::FfiError::NullPointer(
-                $msg.to_owned(),
-            ));
+            $crate::interfaces::ffi::error::set_last_error(
+                $crate::interfaces::ffi::error::FfiError::NullPointer($msg.to_owned()),
+            );
             return 1_i32
         }
     };
@@ -45,7 +54,20 @@ macro_rules! ffi_unwrap {
         match $result {
             Ok(v) => v,
             Err(e) => {
-                set_last_error(FfiError::Generic(format!("{}: {}", $msg, e)));
+                $crate::interfaces::ffi::error::set_last_error(
+                    $crate::interfaces::ffi::error::FfiError::Generic(format!("{}: {}", $msg, e)),
+                );
+                return 1_i32
+            }
+        }
+    };
+    ($result:expr) => {
+        match $result {
+            Ok(v) => v,
+            Err(e) => {
+                $crate::interfaces::ffi::error::set_last_error(
+                    $crate::interfaces::ffi::error::FfiError::Generic(format!("{}", e)),
+                );
                 return 1_i32
             }
         }
@@ -58,19 +80,19 @@ macro_rules! ffi_unwrap {
 macro_rules! ffi_ensure {
     ($cond:expr, $msg:literal $(,)?) => {
         if !$cond {
-            $crate::ffi::error::set_last_error($crate::ffi::error::FfiError::Generic($msg.to_owned()));
+            $crate::interfaces::ffi::error::set_last_error($crate::interfaces::ffi::error::FfiError::Generic($msg.to_owned()));
             return 1_i32;
         }
     };
     ($cond:expr, $err:expr $(,)?) => {
         if !$cond {
-            $crate::ffi::error::set_last_error($crate::ffi::error::FfiError::Generic($err.to_string()));
+            $crate::interfaces::ffi::error::set_last_error($crate::interfaces::ffi::error::FfiError::Generic($err.to_string()));
             return 1_i32;
         }
     };
     ($cond:expr, $fmt:expr, $($arg:tt)*) => {
         if !$cond {
-            $crate::ffi::error::set_last_error($crate::ffi::error::FfiError::Generic(format!($fmt, $($arg)*)));
+            $crate::interfaces::ffi::error::set_last_error($crate::interfaces::ffi::error::FfiError::Generic(format!($fmt, $($arg)*)));
             return 1_i32;
         }
     };
@@ -80,13 +102,13 @@ macro_rules! ffi_ensure {
 #[macro_export]
 macro_rules! ffi_error {
     ($msg:literal $(,)?) => {
-        $crate::ffi::error::FfiError::Generic($msg.to_owned())
+        $crate::interfaces::ffi::error::FfiError::Generic($msg.to_owned())
     };
     ($err:expr $(,)?) => ({
-        $crate::ffi::error::FfiError::Generic($err.to_string())
+        $crate::interfaces::ffi::error::FfiError::Generic($err.to_string())
     });
     ($fmt:expr, $($arg:tt)*) => {
-        $crate::ffi::error::FfiError::Generic(format!($fmt, $($arg)*))
+        $crate::interfaces::ffi::error::FfiError::Generic(format!($fmt, $($arg)*))
     };
 }
 
@@ -94,15 +116,15 @@ macro_rules! ffi_error {
 #[macro_export]
 macro_rules! ffi_bail {
     ($msg:literal $(,)?) => {
-        $crate::ffi::error::set_last_error($crate::ffi::error::FfiError::Generic($msg.to_owned()));
+        $crate::interfaces::ffi::error::set_last_error($crate::interfaces::ffi::error::FfiError::Generic($msg.to_owned()));
         return 1_i32;
     };
     ($err:expr $(,)?) => {
-        $crate::ffi::error::set_last_error($crate::ffi::error::FfiError::Generic($err.to_string()));
+        $crate::interfaces::ffi::error::set_last_error($crate::interfaces::ffi::error::FfiError::Generic($err.to_string()));
         return 1_i32;
     };
     ($fmt:expr, $($arg:tt)*) => {
-        $crate::ffi::error::set_last_error($crate::ffi::error::FfiError::Generic(format!($fmt, $($arg)*)));
+        $crate::interfaces::ffi::error::set_last_error($crate::interfaces::ffi::error::FfiError::Generic(format!($fmt, $($arg)*)));
         return 1_i32;
     };
 }

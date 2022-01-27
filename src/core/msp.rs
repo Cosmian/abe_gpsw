@@ -8,8 +8,8 @@ use std::{
 use regex::Regex;
 
 use crate::{
+    core::gpsw::AsBytes,
     error::{FormatErr, ParsingError},
-    gpsw::AsBytes,
 };
 
 #[derive(Clone, PartialEq, Debug)]
@@ -21,50 +21,50 @@ pub struct MonotoneSpanProgram<I> {
     pub(crate) row_to_attr: Vec<u32>,
 }
 
-// Convert an string-array with only integer values to a real array
-pub fn attributes_parse(range: &str) -> Result<Vec<u32>, FormatErr> {
-    // remove all whitespaces
-    let mut clean_str: String = range.split_whitespace().collect();
-    // check for outers bracket
-    if let Some(c) = clean_str.pop() {
-        if c != ']' {
-            return Err(
-                ParsingError::UnexpectedCharacter("last character must be `]`".to_string()).into(),
-            )
-        }
-    } else {
-        return Err(ParsingError::EmptyString.into())
-    }
+// // Convert an string-array with only integer values to a real array
+// pub fn attributes_parse(range: &str) -> Result<Vec<u32>, FormatErr> {
+//     // remove all whitespaces
+//     let mut clean_str: String = range.split_whitespace().collect();
+//     // check for outers bracket
+//     if let Some(c) = clean_str.pop() {
+//         if c != ']' {
+//             return Err(
+//                 ParsingError::UnexpectedCharacter("last character must be `]`".to_string()).into(),
+//             )
+//         }
+//     } else {
+//         return Err(ParsingError::EmptyString.into())
+//     }
 
-    if clean_str.remove(0) != '[' {
-        return Err(
-            ParsingError::UnexpectedCharacter("first character must be `[`".to_string()).into(),
-        )
-    }
+//     if clean_str.remove(0) != '[' {
+//         return Err(
+//             ParsingError::UnexpectedCharacter("first character must be `[`".to_string()).into(),
+//         )
+//     }
 
-    let vec = clean_str
-        .split(',')
-        .map(|item| {
-            let mut interval = item.split('-');
-            let start = if let Some(b) = interval.next() {
-                b.parse::<u32>()?
-            } else {
-                return Err(FormatErr::from(ParsingError::RangeError))
-            };
-            let end = if let Some(b) = interval.next() {
-                b.parse::<u32>()?
-            } else {
-                start
-            };
-            Ok((start..=end).collect::<Vec<u32>>())
-        })
-        .collect::<Result<Vec<Vec<u32>>, _>>()?;
-    // `flat_map` does not works with `Result` thus we must `flatten` after
-    // `collect` above
-    let vec = vec.into_iter().flatten().collect();
+//     let vec = clean_str
+//         .split(',')
+//         .map(|item| {
+//             let mut interval = item.split('-');
+//             let start = if let Some(b) = interval.next() {
+//                 b.parse::<u32>()?
+//             } else {
+//                 return Err(FormatErr::from(ParsingError::RangeError))
+//             };
+//             let end = if let Some(b) = interval.next() {
+//                 b.parse::<u32>()?
+//             } else {
+//                 start
+//             };
+//             Ok((start..=end).collect::<Vec<u32>>())
+//         })
+//         .collect::<Result<Vec<Vec<u32>>, _>>()?;
+//     // `flat_map` does not works with `Result` thus we must `flatten` after
+//     // `collect` above
+//     let vec = vec.into_iter().flatten().collect();
 
-    Ok(vec)
-}
+//     Ok(vec)
+// }
 
 impl<I: AsBytes> AsBytes for MonotoneSpanProgram<I> {
     fn as_bytes(&self) -> Result<Vec<u8>, FormatErr> {
@@ -89,7 +89,7 @@ impl<I: AsBytes> AsBytes for MonotoneSpanProgram<I> {
         if bytes.len() < 8 {
             return Err(FormatErr::InvalidSize(
                 "minimum len of 8 bytes is required for MSP".to_string(),
-            ))
+            ));
         }
         let mut nb_row = [0_u8; 4];
         nb_row.copy_from_slice(&bytes[0..4]);
@@ -101,7 +101,7 @@ impl<I: AsBytes> AsBytes for MonotoneSpanProgram<I> {
         if bytes.len() < 8 + 4 * nb_row {
             return Err(FormatErr::InvalidSize(
                 "invalid MSP size read from bytes".to_string(),
-            ))
+            ));
         }
         let mut row_to_attr = Vec::with_capacity(nb_row);
         let mut attr_to_row = HashMap::with_capacity(nb_row);
@@ -113,7 +113,7 @@ impl<I: AsBytes> AsBytes for MonotoneSpanProgram<I> {
             if attr_to_row.insert(u, i).is_some() {
                 return Err(FormatErr::Deserialization(
                     "error deserializing MSP, leaf already inserted".to_string(),
-                ))
+                ));
             }
         }
 
@@ -123,7 +123,7 @@ impl<I: AsBytes> AsBytes for MonotoneSpanProgram<I> {
         if bytes.len() < 8 + (4 * nb_row) + (nb_row * nb_col * row[0].len_bytes()) {
             return Err(FormatErr::InvalidSize(
                 "invalid matrix size read from bytes".to_string(),
-            ))
+            ));
         }
         for c in 1..nb_col {
             let index = 8 + (4 * nb_row) + (c * row[0].len_bytes());
@@ -312,12 +312,12 @@ impl Node {
                 if msp_map.insert(*attr, i).is_some() {
                     return Err(FormatErr::Deserialization(
                         "error deserializing MSP, leaf already inserted".to_string(),
-                    ))
+                    ));
                 }
             } else {
                 return Err(FormatErr::Deserialization(
                     "error deserializing MSP, only leaf allowed".to_string(),
-                ))
+                ));
             }
         }
         Ok(MonotoneSpanProgram {
@@ -344,7 +344,7 @@ impl Node {
                  formula: {}",
                 s
             ))
-            .into())
+            .into());
         }
         // Remove all spaces
         let new_s = str::replace(s, " ", "");
@@ -356,7 +356,7 @@ impl Node {
                 return Err(ParsingError::UnexpectedCharacter(
                     "it must starts with an integer".to_string(),
                 )
-                .into())
+                .into());
             }
             let integer_str = int_reg
                 .find_at(&new_s, 0)
@@ -372,7 +372,7 @@ impl Node {
             // Remove integer from current formula
             let new_s = &new_s[integer_str.len()..];
             if new_s.is_empty() {
-                return Ok(Node::Leaf(integer))
+                return Ok(Node::Leaf(integer));
             }
             let a = Box::new(Node::Leaf(integer));
             let operator = new_s.chars().next().ok_or_else(|| {
@@ -402,7 +402,7 @@ impl Node {
                 return Err(ParsingError::UnexpectedCharacter(
                     "opening parenthesis expected".to_string(),
                 )
-                .into())
+                .into());
             }
 
             // Check if formula contains a closing parenthesis
@@ -411,7 +411,7 @@ impl Node {
                 return Err(ParsingError::UnexpectedCharacter(
                     "closing parenthesis expected".to_string(),
                 )
-                .into())
+                .into());
             }
 
             // Search right closing parenthesis, avoiding false positive
@@ -425,7 +425,7 @@ impl Node {
                 };
                 if count < 0 {
                     right_closing_parenthesis = index;
-                    break
+                    break;
                 }
             }
 
@@ -435,7 +435,7 @@ impl Node {
             // Skip closing parenthesis
             let new_s = &new_s[1..];
             if new_s.is_empty() {
-                return Node::parse(between_parenthesis)
+                return Node::parse(between_parenthesis);
             }
             let operator = new_s.chars().next().ok_or_else(|| {
                 ParsingError::UnexpectedEnd(format!(

@@ -7,11 +7,10 @@ use std::{
 };
 
 use serde::{Deserialize, Deserializer, Serialize};
-use tracing::debug;
 
 use crate::{
+    core::msp::{MonotoneSpanProgram, Node},
     error::FormatErr,
-    msp::{MonotoneSpanProgram, Node},
 };
 
 // An attribute in a policy group is characterized by the policy name (axis)
@@ -103,13 +102,9 @@ impl PartialEq for AccessPolicy {
         let mut attributes_mapping = HashMap::<Attribute, u32>::new();
         let left_to_u32 = self.to_u32(&mut attributes_mapping);
         let right_to_u32 = other.to_u32(&mut attributes_mapping);
-        debug!("left u32: {}", left_to_u32);
-        debug!("right u32: {}", right_to_u32);
         if left_to_u32 != right_to_u32 {
             false
         } else {
-            debug!("left attributes: {:?}", self.attributes());
-            debug!("right attributes: {:?}", other.attributes());
             self.attributes() == other.attributes()
         }
     }
@@ -134,7 +129,6 @@ impl AccessPolicy {
         match self {
             AccessPolicy::Attr(attr) => {
                 if let Some(integer_value) = attribute_mapping.get(attr) {
-                    debug!("found attribute: {:?}, value = {}", attr, *integer_value);
                     *integer_value
                 } else {
                     // To assign an integer value to a new attribute, we take the current max
@@ -146,7 +140,6 @@ impl AccessPolicy {
                         .map(|max| *max + 1)
                         .unwrap_or(1);
                     attribute_mapping.insert(attr.clone(), max);
-                    debug!("attribute: {:?}, value = {}", attr, max);
                     max
                 }
             }
@@ -191,12 +184,6 @@ impl AccessPolicy {
             .map(|ap| ap.to_owned())
             .reduce(BitAnd::bitand)
             .ok_or_else(|| FormatErr::MissingAxis("axis".to_string()))?;
-
-        debug!(
-            "Generating Access Policy for axes->attributes {:?} resulted in {:?}",
-            &axes_attributes, &access_policy,
-        );
-
         Ok(access_policy)
     }
 
@@ -464,5 +451,18 @@ impl Policy {
         } else {
             Err(FormatErr::MissingAxis(attr.axis.clone()))
         }
+    }
+
+    /// Retrieve the current attributes values for the `Attribute` list
+    pub fn attributes_values(&self, attributes: &[Attribute]) -> Vec<u32> {
+        attributes
+            .iter()
+            .filter_map(|a| {
+                self.attribute_to_int
+                    .get(a)
+                    .and_then(std::collections::BinaryHeap::peek)
+            })
+            .copied()
+            .collect::<Vec<_>>()
     }
 }

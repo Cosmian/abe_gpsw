@@ -2,7 +2,7 @@ use core::ops::{Add, Div, Mul, Neg, Sub};
 
 use rand::{CryptoRng, RngCore, SeedableRng};
 
-use crate::{error::FormatErr, gpsw::AsBytes};
+use crate::{core::gpsw::AsBytes, error::FormatErr};
 
 pub mod bls12_381;
 

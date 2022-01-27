@@ -20,13 +20,15 @@ crate-type = ["lib", "cdylib"]
 # This doues not seem te be actionnable conditionnally https://github.com/rust-lang/cargo/issues/4881
 
 [features]
-ffi = ["libc"]
+interfaces = ["cosmian_crypto_base"]
+ffi = ["interfaces", "libc"]
 
 
 [dependencies]
 anyhow = { package = "eyre", version = "0.6.0" }
 cosmian_bls12_381 = "0.4"
-cosmian_crypto_base = "0.1"
+# cosmian_crypto_base = { version = "0.3", optional = true }
+cosmian_crypto_base = { path = "../crypto_base", optional = true }
 ff = "0.9"
 getrandom = { version = "0.2", features = ["js"] }
 group = "0.9"
@@ -38,6 +40,6 @@ rand_hc = "0.3"
 regex = "1.5.4"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
-sha3 = "0.9"
+sha3 = "0.10"
 thiserror = "1"
-tracing = "0.1"
+# tracing = "0.1"

@@ -1,5 +1,12 @@
-use super::{bilinear_map::bls12_381::Bls12_381, gpsw::abe::Gpsw, AccessPolicy, Engine, Policy};
-use crate::{error::FormatErr, policy::ap};
+use crate::{
+    core::{
+        bilinear_map::bls12_381::Bls12_381,
+        engine::Engine,
+        gpsw::abe::Gpsw,
+        policy::{ap, AccessPolicy, Policy},
+    },
+    error::FormatErr,
+};
 
 /// # Encryption using an Authorization Policy
 /// This test demonstrates how data can be encrypted with policy attributes.
@@ -37,7 +44,7 @@ fn abe() -> Result<(), FormatErr> {
     // HR, MKG, FIN. This axis is not hierarchical: granting access to an
     // attribute of this axis to a user does not give access to any other
     // attribute. Each attribute must be granted individually.
-    let policy = Policy::new(1000)
+    let policy = Policy::new(100)
         .add_axis(
             "Security Level",
             &[
@@ -132,7 +139,9 @@ fn abe() -> Result<(), FormatErr> {
 
     // ### A Low Secret marketing message
     // Let us create an encrypted marketing message with a Low Secret level
-    let (low_secret_mkg_message, low_secret_mkg_cipher_text) = engine.random_cleartext_ciphertext(
+    let low_secret_mkg_message = engine.random_message()?;
+    let low_secret_mkg_cipher_text = engine.encrypt(
+        &low_secret_mkg_message,
         &[
             ("Security Level", "Low Secret").into(),
             ("Department", "MKG").into(),
@@ -159,27 +168,34 @@ fn abe() -> Result<(), FormatErr> {
     // ### A Top Secret marketing message
     // However in the case of a Top Secret marketing message, only the super user
     // will succeed decrypting:
-    let (pt, ct) = engine.random_cleartext_ciphertext(
+    let top_secret_mkg_message = engine.random_message()?;
+    let top_secret_mkg_cipher_text = engine.encrypt(
+        &top_secret_mkg_message,
         &[
             ("Security Level", "Top Secret").into(),
             ("Department", "MKG").into(),
         ],
         &pub_key,
     )?;
-    let result = engine.decrypt(&ct, &medium_secret_mkg_user)?;
+    let result = engine.decrypt(&top_secret_mkg_cipher_text, &medium_secret_mkg_user)?;
     assert!(
         result.is_none(),
         "medium_secret_mkg_user_top_secret_mkg_message"
     );
     let result = engine
-        .decrypt(&ct, &super_user)?
+        .decrypt(&top_secret_mkg_cipher_text, &super_user)?
         .expect("Decryption must works");
-    assert_eq!(pt, result, "super_user_top_secret_mkg_message");
+    assert_eq!(
+        top_secret_mkg_message, result,
+        "super_user_top_secret_mkg_message"
+    );
 
     // ### A Low Secret HR message
     // Likewise, in the case of a Low Secret HR message, only the super
     // user will succeed decrypting:
-    let (pt, low_secret_hr_cipher_text) = engine.random_cleartext_ciphertext(
+    let low_secret_hr_message = engine.random_message()?;
+    let low_secret_hr_cipher_text = engine.encrypt(
+        &low_secret_hr_message,
         &[
             ("Security Level", "Low Secret").into(),
             ("Department", "HR").into(),
@@ -194,23 +210,27 @@ fn abe() -> Result<(), FormatErr> {
     let result = engine
         .decrypt(&low_secret_hr_cipher_text, &super_user)?
         .expect("Decryption must works");
-    assert_eq!(pt, result, "super_user_low_secret_hr_message");
+    assert_eq!(
+        low_secret_hr_message, result,
+        "super_user_low_secret_hr_message"
+    );
 
     // ## Revocation of attributes
     // At anytime the Master Authority can revoke one or more attributes.
     // When that happens future encryption of data for a "revoked" attribute cannot
     // be decrypted with user decryption keys which are not "refreshed" for that
     // attribute. Let us revoke the Security Level Low Secret
-    engine.update(&("Security Level", "Low Secret").into())?;
+    engine.rotate(&("Security Level", "Low Secret").into())?;
     // We now encrypt a new marketing message at (the new) Low Secret level
-    let (new_low_level_mkg_message, new_low_level_mkg_cipher_text) = engine
-        .random_cleartext_ciphertext(
-            &[
-                ("Security Level", "Low Secret").into(),
-                ("Department", "MKG").into(),
-            ],
-            &pub_key,
-        )?;
+    let new_low_level_mkg_message = engine.random_message()?;
+    let new_low_level_mkg_cipher_text = engine.encrypt(
+        &new_low_level_mkg_message,
+        &[
+            ("Security Level", "Low Secret").into(),
+            ("Department", "MKG").into(),
+        ],
+        &pub_key,
+    )?;
 
     // The MKG user cannot decrypt the new message until its key is refreshed
     let result = engine.decrypt(&new_low_level_mkg_cipher_text, &medium_secret_mkg_user)?;

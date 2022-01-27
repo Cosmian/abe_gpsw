@@ -3,14 +3,16 @@ use cosmian_crypto_base::{
 };
 
 use crate::{
-    bilinear_map::bls12_381::Bls12_381,
+    core::{
+        bilinear_map::bls12_381::Bls12_381,
+        engine::Engine,
+        gpsw::{abe::Gpsw, AsBytes},
+        policy::{ap, attr, Policy},
+    },
     error::FormatErr,
-    gpsw::{abe::Gpsw, AsBytes},
-    hybrid_crypto::{
+    public::hybrid_crypto::{
         decrypt, encrypt, generate_symmetric_key_and_header, generate_user_decryption_key,
     },
-    policy::{ap, attr, Policy},
-    Engine,
 };
 
 type Bl = Block<Aes256GcmCrypto>;

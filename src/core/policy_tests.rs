@@ -1,7 +1,6 @@
-use super::{AccessPolicy, Policy};
 use crate::{
+    core::policy::{ap, attr, AccessPolicy, Policy},
     error::FormatErr,
-    policy::{ap, attr},
 };
 
 #[test]

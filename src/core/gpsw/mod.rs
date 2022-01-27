@@ -2,7 +2,7 @@ pub mod abe;
 
 use std::convert::{TryFrom, TryInto};
 
-use crate::{error::FormatErr, msp::MonotoneSpanProgram};
+use crate::{core::msp::MonotoneSpanProgram, error::FormatErr};
 
 // Todo: Use Serde ?
 pub trait AsBytes: Sized {

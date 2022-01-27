@@ -1,7 +1,13 @@
 use std::fmt::Display;
 
-use super::{AbeScheme, AsBytes};
-use crate::{bilinear_map::BilinearMap, error::FormatErr, msp::MonotoneSpanProgram};
+use crate::{
+    core::{
+        bilinear_map::BilinearMap,
+        gpsw::{AbeScheme, AsBytes},
+        msp::MonotoneSpanProgram,
+    },
+    error::FormatErr,
+};
 
 // Master Private Key
 #[derive(Debug, PartialEq)]
@@ -664,7 +670,7 @@ impl<G: BilinearMap> Gpsw<G> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{
+    use crate::core::{
         bilinear_map::bls12_381::Bls12_381,
         msp::{
             Node,

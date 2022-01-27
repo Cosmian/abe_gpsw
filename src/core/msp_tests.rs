@@ -1,10 +1,12 @@
 use crate::{
-    error::FormatErr,
-    gpsw::AsBytes,
-    msp::{
-        MonotoneSpanProgram, Node,
-        Node::{And, Leaf, Or},
+    core::{
+        gpsw::AsBytes,
+        msp::{
+            MonotoneSpanProgram, Node,
+            Node::{And, Leaf, Or},
+        },
     },
+    error::FormatErr,
 };
 
 fn to_msp(val: &str) -> Result<MonotoneSpanProgram<i32>, FormatErr> {
