@@ -376,7 +376,7 @@ impl<G: BilinearMap> Gpsw<G> {
                 return Err(FormatErr::InternalOperation(
                     "Monotone Span Program is invalid: msp-row larger than private-key-t_i"
                         .to_string(),
-                ))
+                ));
             }
             let t_rho_i = &priv_key.t_i[attribute];
             let di = self.group.g1_gen_exp(&(prod_scal / t_rho_i));
@@ -423,7 +423,7 @@ impl<G: BilinearMap> Gpsw<G> {
             } else {
                 return Err(FormatErr::InternalOperation(
                     "new attribute is not allowed".to_string(),
-                ))
+                ));
             }
         }
         Ok(GpswDecryptionKey::<G> {
@@ -466,7 +466,7 @@ impl<G: BilinearMap> Gpsw<G> {
             } else {
                 return Err(FormatErr::InternalOperation(
                     "new attribute is not allowed".to_string(),
-                ))
+                ));
             }
         }
         Ok(GpswDecryptionKey::<G> {
@@ -491,7 +491,7 @@ impl<G: BilinearMap> Gpsw<G> {
                 "invalid attributes: gamma value incorrect (value: {}, max expected size: {})",
                 gamma.len(),
                 pub_key.t_i.len() - 1
-            )))
+            )));
         }
         let s = self.group.gen_random_scalar()?;
         let e_prime = self.group.gt_mul(msg, &self.group.gt_exp(&pub_key.y, &s));
@@ -568,7 +568,7 @@ impl<G: BilinearMap> Gpsw<G> {
         if matrix.is_empty() || matrix[0].is_empty() {
             return Err(FormatErr::InternalOperation(
                 "empty input matrix".to_string(),
-            ))
+            ));
         }
         let mut vec_res = Vec::with_capacity(matrix[0].len());
         vec_res.resize(matrix[0].len(), G::ONE);
@@ -582,7 +582,7 @@ impl<G: BilinearMap> Gpsw<G> {
         let mut last_pivot_col = 0;
         loop {
             if curr_col == nb_col || curr_row == nb_row {
-                break
+                break;
             }
             // search for the first non-zero in the current columns
             let mut row = None;
@@ -591,7 +591,7 @@ impl<G: BilinearMap> Gpsw<G> {
                 let tmp = &matrix[curr_col][r];
                 if *tmp != G::ZERO {
                     row = Some(r);
-                    break
+                    break;
                 }
             }
 
@@ -640,7 +640,7 @@ impl<G: BilinearMap> Gpsw<G> {
 
         // the last pivot is in the last column so no solution
         if last_pivot_col == nb_col - 1 {
-            return Ok(None)
+            return Ok(None);
         }
         let mut sol = Vec::with_capacity(nb_col);
         let mut current_col = 0;
@@ -649,7 +649,7 @@ impl<G: BilinearMap> Gpsw<G> {
                 current_col += 1;
                 sol.push(G::ZERO);
                 if current_col == nb_col {
-                    break 'outer
+                    break 'outer;
                 }
             }
             if matrix[current_col][i] == G::ONE {
@@ -659,7 +659,7 @@ impl<G: BilinearMap> Gpsw<G> {
                 panic!("error");
             }
             if current_col == nb_col {
-                break 'outer
+                break 'outer;
             }
         }
         sol.resize(nb_col - 1, G::ZERO);

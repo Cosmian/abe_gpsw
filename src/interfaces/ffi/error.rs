@@ -40,7 +40,7 @@ macro_rules! ffi_not_null {
             $crate::interfaces::ffi::error::set_last_error(
                 $crate::interfaces::ffi::error::FfiError::NullPointer($msg.to_owned()),
             );
-            return 1_i32
+            return 1_i32;
         }
     };
 }
@@ -57,7 +57,7 @@ macro_rules! ffi_unwrap {
                 $crate::interfaces::ffi::error::set_last_error(
                     $crate::interfaces::ffi::error::FfiError::Generic(format!("{}: {}", $msg, e)),
                 );
-                return 1_i32
+                return 1_i32;
             }
         }
     };
@@ -68,7 +68,7 @@ macro_rules! ffi_unwrap {
                 $crate::interfaces::ffi::error::set_last_error(
                     $crate::interfaces::ffi::error::FfiError::Generic(format!("{}", e)),
                 );
-                return 1_i32
+                return 1_i32;
             }
         }
     };
@@ -156,7 +156,7 @@ pub unsafe extern "C" fn set_error(error_message_ptr: *const c_char) -> i32 {
             set_last_error(FfiError::Generic(
                 "sse_client_update: invalid error message".to_owned(),
             ));
-            return 1
+            return 1;
         }
     };
     set_last_error(FfiError::Generic(error_message));
@@ -171,15 +171,15 @@ pub unsafe extern "C" fn set_error(error_message_ptr: *const c_char) -> i32 {
 pub unsafe extern "C" fn get_last_error(error_msg: *mut c_char, error_len: *mut c_int) -> c_int {
     if error_msg.is_null() {
         eprintln!("get_last_error: must pass a pre-allocated buffer");
-        return 1
+        return 1;
     }
     if error_len.is_null() {
         eprintln!("get_last_error: must pass a pre-allocated len with the max buffer length");
-        return 1
+        return 1;
     }
     if *error_len < 1 {
         eprintln!("get_last_error: the buffer must be at leas one byte long");
-        return 1
+        return 1;
     }
     let err = LAST_ERROR.with(|prev| prev.borrow_mut().take());
 

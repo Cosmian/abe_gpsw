@@ -335,7 +335,7 @@ impl Policy {
     ) -> Result<Self, FormatErr> {
         let axis = PolicyAxis::new(name, attributes, hierarchical);
         if axis.len() + self.last_attribute > self.max_attribute {
-            return Err(FormatErr::CapacityOverflow)
+            return Err(FormatErr::CapacityOverflow);
         }
         // insert new policy
         if let Some(attr) = self.store.insert(
@@ -344,7 +344,7 @@ impl Policy {
         ) {
             // already exists, reinsert previous one
             self.store.insert(axis.name.clone(), attr);
-            return Err(FormatErr::ExistingPolicy(axis.name))
+            return Err(FormatErr::ExistingPolicy(axis.name));
         } else {
             for attr in &axis.attributes {
                 self.last_attribute += 1;
@@ -357,7 +357,7 @@ impl Policy {
                     .is_some()
                 {
                     // must never occurs as policy is a new one
-                    return Err(FormatErr::ExistingPolicy(axis.name))
+                    return Err(FormatErr::ExistingPolicy(axis.name));
                 }
             }
             // add attribute is not a revocation
@@ -369,13 +369,13 @@ impl Policy {
     // Update an attribute
     pub fn update(&mut self, attr: &Attribute) -> Result<(), FormatErr> {
         if self.last_attribute + 1 > self.max_attribute {
-            return Err(FormatErr::CapacityOverflow)
+            return Err(FormatErr::CapacityOverflow);
         }
         if let Some(uint) = self.attribute_to_int.get_mut(attr) {
             self.last_attribute += 1;
             uint.push(u32::try_from(self.last_attribute)?);
         } else {
-            return Err(FormatErr::AttributeNotFound)
+            return Err(FormatErr::AttributeNotFound);
         }
         Ok(())
     }
@@ -430,7 +430,7 @@ impl Policy {
                 if *hierarchical {
                     for (at, elem) in list.iter().enumerate() {
                         if at >= res {
-                            break
+                            break;
                         }
                         val = val
                             | self.attribute_to_int[&(attr.axis.clone(), elem.clone()).into()]

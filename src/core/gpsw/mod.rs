@@ -21,7 +21,7 @@ impl AsBytes for u32 {
             return Err(FormatErr::Deserialization(
                 "cannot deserialize u32 element since input bytes size is less than 4 bytes"
                     .to_string(),
-            ))
+            ));
         }
         Ok(u32::from_be_bytes(bytes[0..4].try_into()?))
     }
@@ -48,7 +48,7 @@ impl AsBytes for i32 {
 impl<T: AsBytes> AsBytes for Vec<T> {
     fn as_bytes(&self) -> Result<Vec<u8>, FormatErr> {
         if self.is_empty() {
-            return Ok(Vec::new())
+            return Ok(Vec::new());
         }
         // nb element in vector
         let mut bytes = Vec::new();
@@ -62,7 +62,7 @@ impl<T: AsBytes> AsBytes for Vec<T> {
 
     fn from_bytes(bytes: &[u8]) -> Result<Self, FormatErr> {
         if bytes.is_empty() {
-            return Ok(Vec::new())
+            return Ok(Vec::new());
         }
         // retrieve len of vector
         let mut len = [0_u8; 4];
@@ -71,7 +71,7 @@ impl<T: AsBytes> AsBytes for Vec<T> {
         if len >= u32::MAX as usize {
             return Err(FormatErr::Deserialization(
                 "deserializing element failed. Data altered?".to_string(),
-            ))
+            ));
         }
         let mut res = Vec::with_capacity(len);
         res.push(T::from_bytes(&bytes[4..])?);
