@@ -99,7 +99,7 @@ Finally, since attribute names are mapped to attribute values, the policy above 
 
 # BLS12-381: Pairing-friendly elliptic curve
 
-This KP-ABE implementation is based on the crate [bls12_381](https://crates.io/crates/cosmian_bls12_381), a pairing-friendly elliptic curve construction from the [BLS family](https://eprint.iacr.org/2002/088), with embedding degree 12. It is built over a 381-bit prime field `GF(p)` with...
+This KP-ABE implementation is based on the crate [cosmian_bls12_381](https://crates.io/crates/cosmian_bls12_381), a pairing-friendly elliptic curve construction from the [BLS family](https://eprint.iacr.org/2002/088), with embedding degree 12. It is built over a 381-bit prime field `GF(p)` with...
 
 * z = `-0xd201000000010000`
 * p = (z - 1)<sup>2</sup>(z<sup>4</sup> - z<sup>2</sup> + 1) / 3 + z
