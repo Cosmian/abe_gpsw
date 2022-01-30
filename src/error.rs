@@ -8,7 +8,7 @@ use thiserror::Error;
 
 #[derive(Error, Debug, Clone, PartialEq)]
 pub enum FormatErr {
-    #[error("attribute(s) not found: {0}")]
+    #[error("attribute not found: {0}")]
     AttributeNotFound(String),
     #[error("{} is missing{}",
         .item.clone().unwrap_or_else(|| "attribute".to_string()),

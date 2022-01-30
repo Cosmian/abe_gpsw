@@ -27,8 +27,7 @@ ffi = ["interfaces"]
 [dependencies]
 anyhow = { package = "eyre", version = "0.6.0" }
 cosmian_bls12_381 = "0.4"
-# cosmian_crypto_base = { version = "0.3", optional = true }
-cosmian_crypto_base = { path = "../crypto_base", optional = true }
+cosmian_crypto_base = { version = "0.4", optional = true }
 ff = "0.9"
 getrandom = { version = "0.2", features = ["js"] }
 group = "0.9"
