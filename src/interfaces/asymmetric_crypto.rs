@@ -53,17 +53,24 @@ pub struct PrivateKeyGenerationParameters<S>
 where
     S: AbeScheme + std::marker::Sync + std::marker::Send,
 {
-    master_private_key: S::MasterPrivateKey,
-    access_policy: AccessPolicy,
+    pub master_private_key: S::MasterPrivateKey,
+    pub policy: Policy,
+    pub access_policy: AccessPolicy,
 }
 
 pub struct KeyPairGenerationParameters<S>
 where
     S: AbeScheme + std::marker::Sync + std::marker::Send,
 {
-    master_private_key: S::MasterPrivateKey,
-    master_public_key: S::MasterPublicKey,
-    access_policy: AccessPolicy,
+    pub master_private_key: S::MasterPrivateKey,
+    pub policy: Policy,
+    pub master_public_key: S::MasterPublicKey,
+    pub access_policy: AccessPolicy,
+}
+
+pub struct EncryptionParameters {
+    pub policy: Policy,
+    pub policy_attributes: Vec<Attribute>,
 }
 
 pub struct AbeCrypto<S>
@@ -71,27 +78,36 @@ where
     S: AbeScheme + std::marker::Sync + std::marker::Send,
 {
     rng: Mutex<CsRng>,
-    engine: Option<Engine<S>>,
+    engine: Engine<S>,
+}
+
+impl<S> Default for AbeCrypto<S>
+where
+    S: AbeScheme + std::marker::Sync + std::marker::Send,
+{
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl<S> AbeCrypto<S>
 where
     S: AbeScheme + std::marker::Sync + std::marker::Send,
 {
-    fn ensure_engine(&self) -> anyhow::Result<&Engine<S>> {
-        self.engine.as_ref().ok_or_else(|| {
-            anyhow::anyhow!(
-                "The Policy must first be set on ABE scheme using set_scheme_parameters"
-            )
-        })
-    }
+    // fn ensure_engine(&self) -> anyhow::Result<&Engine<S>> {
+    //     self.engine.as_ref().ok_or_else(|| {
+    //         anyhow::anyhow!(
+    //             "The Policy must first be set on ABE scheme using set_scheme_parameters"
+    //         )
+    //     })
+    // }
 
     /// Generate an ABE master key pair for the Policy, returning a triple
     /// (private key, public key, public delegation key)
-    fn generate_master_keys(&self) -> anyhow::Result<AbeMasterKeys<S>> {
+    fn generate_master_keys(&self, policy: &Policy) -> anyhow::Result<AbeMasterKeys<S>> {
         let (msk, pk, mdk) = self
-            .ensure_engine()?
-            .generate_master_key()
+            .engine
+            .generate_master_key(policy)
             .map_err(|e| anyhow::anyhow!(e.to_string()))?;
         Ok(AbeMasterKeys {
             master_private_key: msk,
@@ -108,22 +124,16 @@ impl<S> AsymmetricCrypto for AbeCrypto<S>
 where
     S: AbeScheme + std::marker::Sync + std::marker::Send,
 {
-    type EncryptionParameters = Vec<Attribute>;
+    type EncryptionParameters = EncryptionParameters;
     type KeyPair = AbeKeyPair<S>;
     type KeyPairGenerationParameters = KeyPairGenerationParameters<S>;
     type PrivateKeyGenerationParameters = PrivateKeyGenerationParameters<S>;
-    type SchemeParameters = Policy;
 
     fn new() -> Self {
         AbeCrypto {
             rng: Mutex::new(CsRng::new()),
-            engine: None,
+            engine: Engine::<S>::new(),
         }
-    }
-
-    fn set_scheme_parameters(mut self, policy: Self::SchemeParameters) -> Self {
-        self.engine = Some(Engine::<S>::new(&policy));
-        self
     }
 
     fn description(&self) -> String {
@@ -137,9 +147,11 @@ where
         let parameters = parameters.ok_or_else(|| {
             anyhow::anyhow!("The private key generation parameters are mandatory")
         })?;
-        let engine = self.ensure_engine()?;
-        let private_key =
-            engine.generate_user_key(&parameters.master_private_key, &parameters.access_policy)?;
+        let private_key = self.engine.generate_user_key(
+            &parameters.policy,
+            &parameters.master_private_key,
+            &parameters.access_policy,
+        )?;
         Ok(private_key)
     }
 
@@ -149,9 +161,11 @@ where
     ) -> anyhow::Result<Self::KeyPair> {
         let parameters = parameters
             .ok_or_else(|| anyhow::anyhow!("The key pair generation parameters are mandatory"))?;
-        let engine = self.ensure_engine()?;
-        let private_key =
-            engine.generate_user_key(&parameters.master_private_key, &parameters.access_policy)?;
+        let private_key = self.engine.generate_user_key(
+            &parameters.policy,
+            &parameters.master_private_key,
+            &parameters.access_policy,
+        )?;
         Ok(AbeKeyPair {
             public_key: parameters.master_public_key.clone(),
             private_key,
@@ -161,17 +175,18 @@ where
     fn generate_symmetric_key<C: SymmetricCrypto>(
         &self,
         public_key: &<Self::KeyPair as KeyPair>::PublicKey,
-        policy_attributes: Option<&Self::EncryptionParameters>,
+        parameters: Option<&Self::EncryptionParameters>,
     ) -> anyhow::Result<(C::Key, Vec<u8>)> {
-        let policy_attributes = policy_attributes.ok_or_else(|| {
+        let parameters = parameters.ok_or_else(|| {
             anyhow::anyhow!(
                 "The Policy Attributes must be provided to generate a hybrid encryption symmetric \
                  key"
             )
         })?;
-        let (sk_bytes, encrypted_sk) = self.ensure_engine()?.generate_symmetric_key(
-            policy_attributes,
+        let (sk_bytes, encrypted_sk) = self.engine.generate_symmetric_key(
+            &parameters.policy,
             public_key,
+            &parameters.policy_attributes,
             C::Key::LENGTH,
         )?;
         let sk = C::Key::parse(sk_bytes)?;
@@ -183,7 +198,7 @@ where
         private_key: &<Self::KeyPair as KeyPair>::PrivateKey,
         encrypted_symmetric_key: &[u8],
     ) -> anyhow::Result<C::Key> {
-        let sk_bytes = self.ensure_engine()?.decrypt_symmetric_key(
+        let sk_bytes = self.engine.decrypt_symmetric_key(
             private_key,
             encrypted_symmetric_key,
             C::Key::LENGTH,
@@ -209,11 +224,10 @@ where
         data: &[u8],
     ) -> anyhow::Result<Vec<u8>> {
         let header = Header::<Self, Aes256GcmCrypto>::generate(
-            self,
             public_key,
             encryption_parameters,
             Metadata {
-                sec: vec![],
+                uid: vec![],
                 additional_data: vec![],
             },
         )?;
@@ -244,7 +258,6 @@ where
         let header_len = scanner.read_u32()?;
         let header = Header::<Self, Aes256GcmCrypto>::from_bytes(
             scanner.next(header_len as usize)?,
-            self,
             private_key,
         )?;
         let nonce = Nonce::try_from(
@@ -268,8 +281,11 @@ mod tests {
 
     use super::{AbeCrypto, PrivateKeyGenerationParameters};
     use crate::{
-        core::{bilinear_map::bls12_381::Bls12_381, gpsw::abe::Gpsw},
-        interfaces::policy::{ap, attr, Attribute, Policy},
+        core::{bilinear_map::bls12_381::Bls12_381, gpsw::Gpsw},
+        interfaces::{
+            asymmetric_crypto::EncryptionParameters,
+            policy::{ap, attr, Attribute, Policy},
+        },
     };
 
     #[test]
@@ -287,14 +303,15 @@ mod tests {
                 true,
             )?
             .add_axis("Department", &["R&D", "HR", "MKG", "FIN"], false)?;
-        let abe = AbeCrypto::<Gpsw<Bls12_381>>::new().set_scheme_parameters(policy);
-        let master_keys = abe.generate_master_keys()?;
+        let abe = AbeCrypto::<Gpsw<Bls12_381>>::new();
+        let master_keys = abe.generate_master_keys(&policy)?;
 
         let high_secret_fin_mkg_access_policy = ap("Security Level", "High Secret")
             & (ap("Department", "MKG") | ap("Department", "FIN"));
         let user_key = abe.generate_private_key(Some(&PrivateKeyGenerationParameters {
             master_private_key: master_keys.master_private_key,
             access_policy: high_secret_fin_mkg_access_policy,
+            policy: policy.clone(),
         }))?;
 
         let attributes: Vec<Attribute> = vec![
@@ -303,7 +320,10 @@ mod tests {
         ];
         let (sym_key, enc_sym_key) = abe.generate_symmetric_key::<Aes256GcmCrypto>(
             &master_keys.public_key,
-            Some(&attributes),
+            Some(&EncryptionParameters {
+                policy,
+                policy_attributes: attributes,
+            }),
         )?;
 
         let rec_sym_key = abe.decrypt_symmetric_key::<Aes256GcmCrypto>(&user_key, &enc_sym_key)?;
@@ -328,14 +348,15 @@ mod tests {
                 true,
             )?
             .add_axis("Department", &["R&D", "HR", "MKG", "FIN"], false)?;
-        let abe = AbeCrypto::<Gpsw<Bls12_381>>::new().set_scheme_parameters(policy);
-        let master_keys = abe.generate_master_keys()?;
+        let abe = AbeCrypto::<Gpsw<Bls12_381>>::new();
+        let master_keys = abe.generate_master_keys(&policy)?;
 
         let high_secret_fin_mkg_access_policy = ap("Security Level", "High Secret")
             & (ap("Department", "MKG") | ap("Department", "FIN"));
         let user_key = abe.generate_private_key(Some(&PrivateKeyGenerationParameters {
             master_private_key: master_keys.master_private_key,
             access_policy: high_secret_fin_mkg_access_policy,
+            policy: policy.clone(),
         }))?;
 
         let message = abe.generate_random_bytes(42);
@@ -343,7 +364,14 @@ mod tests {
             attr("Department", "FIN"),
             attr("Security Level", "Low Secret"),
         ];
-        let encrypted = abe.encrypt(&master_keys.public_key, Some(&attributes), &message)?;
+        let encrypted = abe.encrypt(
+            &master_keys.public_key,
+            Some(&EncryptionParameters {
+                policy,
+                policy_attributes: attributes,
+            }),
+            &message,
+        )?;
 
         let decrypted = abe.decrypt(&user_key, &encrypted)?;
 

@@ -1,10 +1,10 @@
-pub mod abe;
+pub(crate) mod scheme;
+pub use scheme::Gpsw;
 
 use std::convert::{TryFrom, TryInto};
 
 use crate::{core::msp::MonotoneSpanProgram, error::FormatErr};
 
-// Todo: Use Serde ?
 pub trait AsBytes: Sized {
     fn as_bytes(&self) -> Result<Vec<u8>, FormatErr>;
     fn from_bytes(bytes: &[u8]) -> Result<Self, FormatErr>;

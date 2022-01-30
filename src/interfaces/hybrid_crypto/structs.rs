@@ -11,7 +11,7 @@ use crate::{
         gpsw::AbeScheme,
         policy::{Attribute, Policy},
     },
-    interfaces::asymmetric_crypto::AbeCrypto,
+    interfaces::asymmetric_crypto::{AbeCrypto, EncryptionParameters},
 };
 
 pub struct HybridCipher<A, S>
@@ -37,12 +37,15 @@ where
         meta_data: Metadata,
     ) -> anyhow::Result<Self> {
         let attributes = attributes.to_vec();
-        let engine = AbeCrypto::<A>::new().set_scheme_parameters(policy);
-        let uid = meta_data.sec.clone();
+        let engine = AbeCrypto::<A>::new();
+        let uid = meta_data.uid.clone();
         let header = Header::<AbeCrypto<A>, S>::generate(
             &engine,
             &public_key,
-            Some(&attributes),
+            Some(&EncryptionParameters {
+                policy,
+                policy_attributes: attributes,
+            }),
             meta_data,
         )?;
         let symmetric_key = header.symmetric_key().to_owned();
@@ -82,10 +85,6 @@ where
             block_number,
         )
         .map_err(Into::into)
-    }
-
-    pub fn print_info(&self) {
-        println!("HELLO Hybrid Cipher")
     }
 }
 

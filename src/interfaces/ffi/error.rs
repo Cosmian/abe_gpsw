@@ -1,9 +1,9 @@
 use std::{
     cell::RefCell,
     ffi::{CStr, CString},
+    os::raw::{c_char, c_int},
 };
 
-use libc::{c_char, c_int};
 use thiserror::Error;
 
 #[derive(Error, Debug)]
@@ -168,8 +168,11 @@ pub unsafe extern "C" fn set_error(error_message_ptr: *const c_char) -> i32 {
 /// # Safety
 /// - `error_msg`: must be pre-allocated with a sufficient size
 #[no_mangle]
-pub unsafe extern "C" fn get_last_error(error_msg: *mut c_char, error_len: *mut c_int) -> c_int {
-    if error_msg.is_null() {
+pub unsafe extern "C" fn get_last_error(
+    error_msg_ptr: *mut c_char,
+    error_len: *mut c_int,
+) -> c_int {
+    if error_msg_ptr.is_null() {
         eprintln!("get_last_error: must pass a pre-allocated buffer");
         return 1;
     }
@@ -188,21 +191,24 @@ pub unsafe extern "C" fn get_last_error(error_msg: *mut c_char, error_len: *mut 
         CString::new(err.map_or("".to_string(), |e| e.to_string())),
         "failed to convert error to CString"
     );
-    // leave a space for a null byte at the end if the string exceeds the buffer
-    // size
+    // the CString as bytes
     let bytes = cs.as_bytes();
-    let chunk = if bytes.len() > (*error_len - 1) as usize {
-        &bytes[0..(*error_len - 1) as usize]
-    } else {
-        bytes
-    };
-    // strncpy will the remaining space with NULL
-    libc::strncpy(
-        error_msg,
-        chunk.as_ptr() as *const c_char,
-        *error_len as usize,
-    );
+
+    // leave a space for a null byte at the end if the string exceeds the buffer
     // The actual bytes size, not taking into accourt the final NULL
-    *error_len = std::cmp::min(*error_len - 1, chunk.len() as i32);
+    let actual_len = std::cmp::min((*error_len - 1) as usize, bytes.len());
+
+    // create a 0 initialized vector with the message
+    let mut result = vec![0; *error_len as usize];
+    {
+        let (left, _right) = result.split_at_mut(actual_len);
+        left.copy_from_slice(&bytes[0..actual_len]);
+    }
+
+    //copy the result in the OUT array
+    std::slice::from_raw_parts_mut(error_msg_ptr as *mut u8, *error_len as usize)
+        .copy_from_slice(&result);
+
+    *error_len = actual_len as i32;
     0
 }

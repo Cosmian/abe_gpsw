@@ -2,7 +2,7 @@
 use std::{
     collections::{BinaryHeap, HashMap},
     convert::TryFrom,
-    fmt::Display,
+    fmt::{Debug, Display},
     ops::{BitAnd, BitOr},
 };
 
@@ -15,7 +15,7 @@ use crate::{
 
 // An attribute in a policy group is characterized by the policy name (axis)
 // and its own particular name
-#[derive(Hash, PartialEq, Eq, Clone, Debug, PartialOrd, Ord)]
+#[derive(Hash, PartialEq, Eq, Clone, PartialOrd, Ord)]
 pub struct Attribute {
     axis: String,
     name: String,
@@ -24,6 +24,12 @@ pub struct Attribute {
 impl Attribute {
     pub fn name(&self) -> String {
         self.name.clone()
+    }
+}
+
+impl Debug for Attribute {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_fmt(format_args!("{}::{}", &self.axis, &self.name))
     }
 }
 
@@ -366,8 +372,8 @@ impl Policy {
         Ok(self)
     }
 
-    // Update an attribute
-    pub fn update(&mut self, attr: &Attribute) -> Result<(), FormatErr> {
+    /// Rotate an attribute, changing its underlying value with that of an unused slot
+    pub fn rotate(&mut self, attr: &Attribute) -> Result<(), FormatErr> {
         if self.last_attribute + 1 > self.max_attribute {
             return Err(FormatErr::CapacityOverflow);
         }
@@ -375,7 +381,7 @@ impl Policy {
             self.last_attribute += 1;
             uint.push(u32::try_from(self.last_attribute)?);
         } else {
-            return Err(FormatErr::AttributeNotFound);
+            return Err(FormatErr::AttributeNotFound(format!("{:?}", attr)));
         }
         Ok(())
     }
@@ -426,7 +432,7 @@ impl Policy {
                     .iter()
                     .map(|attr| Node::Leaf(*attr))
                     .reduce(std::ops::BitOr::bitor)
-                    .ok_or(FormatErr::AttributeNotFound)?;
+                    .ok_or_else(|| FormatErr::AttributeNotFound(format!("{:?}", attr)))?;
                 if *hierarchical {
                     for (at, elem) in list.iter().enumerate() {
                         if at >= res {
@@ -437,7 +443,9 @@ impl Policy {
                                 .iter()
                                 .map(|attr| Node::Leaf(*attr))
                                 .reduce(std::ops::BitOr::bitor)
-                                .ok_or(FormatErr::AttributeNotFound)?;
+                                .ok_or_else(|| {
+                                    FormatErr::AttributeNotFound(format!("{:?}", attr))
+                                })?;
                     }
                 }
 
@@ -454,15 +462,16 @@ impl Policy {
     }
 
     /// Retrieve the current attributes values for the `Attribute` list
-    pub fn attributes_values(&self, attributes: &[Attribute]) -> Vec<u32> {
-        attributes
-            .iter()
-            .filter_map(|a| {
-                self.attribute_to_int
-                    .get(a)
-                    .and_then(std::collections::BinaryHeap::peek)
-            })
-            .copied()
-            .collect::<Vec<_>>()
+    pub fn attributes_values(&self, attributes: &[Attribute]) -> Result<Vec<u32>, FormatErr> {
+        let mut values: Vec<u32> = Vec::with_capacity(attributes.len());
+        for att in attributes {
+            let v = self
+                .attribute_to_int
+                .get(att)
+                .and_then(std::collections::BinaryHeap::peek)
+                .ok_or_else(|| FormatErr::AttributeNotFound(format!("{:?}", att)))?;
+            values.push(*v);
+        }
+        Ok(values)
     }
 }
