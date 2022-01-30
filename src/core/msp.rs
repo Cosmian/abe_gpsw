@@ -1,3 +1,4 @@
+#![allow(dead_code)]
 use std::{
     collections::HashMap,
     convert::TryFrom,
@@ -20,51 +21,6 @@ pub struct MonotoneSpanProgram<I> {
     pub(crate) attr_to_row: HashMap<u32, usize>,
     pub(crate) row_to_attr: Vec<u32>,
 }
-
-// // Convert an string-array with only integer values to a real array
-// pub fn attributes_parse(range: &str) -> Result<Vec<u32>, FormatErr> {
-//     // remove all whitespaces
-//     let mut clean_str: String = range.split_whitespace().collect();
-//     // check for outers bracket
-//     if let Some(c) = clean_str.pop() {
-//         if c != ']' {
-//             return Err(
-//                 ParsingError::UnexpectedCharacter("last character must be `]`".to_string()).into(),
-//             )
-//         }
-//     } else {
-//         return Err(ParsingError::EmptyString.into())
-//     }
-
-//     if clean_str.remove(0) != '[' {
-//         return Err(
-//             ParsingError::UnexpectedCharacter("first character must be `[`".to_string()).into(),
-//         )
-//     }
-
-//     let vec = clean_str
-//         .split(',')
-//         .map(|item| {
-//             let mut interval = item.split('-');
-//             let start = if let Some(b) = interval.next() {
-//                 b.parse::<u32>()?
-//             } else {
-//                 return Err(FormatErr::from(ParsingError::RangeError))
-//             };
-//             let end = if let Some(b) = interval.next() {
-//                 b.parse::<u32>()?
-//             } else {
-//                 start
-//             };
-//             Ok((start..=end).collect::<Vec<u32>>())
-//         })
-//         .collect::<Result<Vec<Vec<u32>>, _>>()?;
-//     // `flat_map` does not works with `Result` thus we must `flatten` after
-//     // `collect` above
-//     let vec = vec.into_iter().flatten().collect();
-
-//     Ok(vec)
-// }
 
 impl<I: AsBytes> AsBytes for MonotoneSpanProgram<I> {
     fn as_bytes(&self) -> Result<Vec<u8>, FormatErr> {

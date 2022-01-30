@@ -1,3 +1,4 @@
+#![allow(dead_code)]
 use sha3::{
     digest::{ExtendableOutput, Update, XofReader},
     Shake256,

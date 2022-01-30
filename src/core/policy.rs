@@ -1,4 +1,5 @@
 #![allow(clippy::module_name_repetitions)]
+#![allow(dead_code)]
 use std::{
     collections::{BinaryHeap, HashMap},
     convert::TryFrom,
