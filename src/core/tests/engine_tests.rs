@@ -26,7 +26,7 @@ pub fn symmetric_key_test() {
     println!("{:?}", &policy);
     let policy_attributes = vec![
         attr("Department", "FIN"),
-        attr("Security Level", "ConfidentialZ"),
+        attr("Security Level", "Confidential"),
     ];
     let (symmetric_key, encrypted_symmetric_key) = abe
         .generate_symmetric_key(&policy, &public_key, &policy_attributes, 32)
