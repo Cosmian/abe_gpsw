@@ -18,11 +18,12 @@ The implementation uses the [BLS12-381](https://crates.io/crates/cosmian_bls12_3
   - [Key-Policy](#key-policy)
   - [Policies](#policies)
 - [BLS12-381: Pairing-friendly elliptic curve](#bls12-381-pairing-friendly-elliptic-curve)
-- [Foreign Function Interface](#foreign-function-interface)
 
 # Quick start
 
-See the [demo code](./src/core/demo.rs) which contains a complete usage of the API with detailed comments. Run it as a test using 
+See the [demo code](./src/core/demo.rs) which contains a complete usage of the API with detailed comments. 
+
+Run it as a test using 
 
 ```bash
 cargo test core::demo::abe -- --nocapture`
@@ -159,18 +160,3 @@ This KP-ABE implementation is based on the crate [bls12_381](https://crates.io/c
 ... yielding two **source groups** G<sub>1</sub> and G<sub>2</sub>, each of 255-bit prime order `q`, such that an efficiently computable non-degenerate bilinear pairing function `e` exists into a third **target group** G<sub>T</sub>. Specifically, G<sub>1</sub> is the `q`-order subgroup of E(F<sub>p</sub>) : y<sup>2</sup> = x<sup>3</sup> + 4 and G<sub>2</sub> is the `q`-order subgroup of E'(F<sub>p<sup>2</sup></sub>) : y<sup>2</sup> = x<sup>3</sup> + 4(u + 1) where the extension field F<sub>p<sup>2</sup></sub> is defined as F<sub>p</sub>(u) / (u<sup>2</sup> + 1).
 
 BLS12-381 is chosen so that `z` has small Hamming weight (to improve pairing performance) and also so that `GF(q)` has a large 2<sup>32</sup> primitive root of unity for performing radix-2 fast Fourier transforms for efficient multi-point evaluation and interpolation. It is also chosen so that it exists in a particularly efficient and rigid subfamily of BLS12 curves.
-
-# Foreign Function Interface
-
-By default this crate does not expose a foreign function interface.
-
-If you need to interface with C, C++, Python, Java, etc... the library must be built with the `--features ffi` flag to expose a C ABI i.e.
-
-```bash
-cargo b --release --features ffi
-```
-
-One can verify exported symbols are present (linux)
-```bash
-objdump -T  libabe_gpsw.so
-```
