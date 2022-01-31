@@ -64,10 +64,6 @@ pub unsafe extern "C" fn h_aes_encrypt_header(
         ffi_bail!("The public key should not be empty");
     }
     ffi_not_null!(attributes_ptr, "Attributes pointer should not be null");
-    ffi_not_null!(uid_ptr, "UID pointer should not be null");
-    if uid_len == 0 {
-        ffi_bail!("The UID should not be empty");
-    }
 
     // Policy
     let policy = match CStr::from_ptr(policy_ptr).to_str() {
@@ -99,10 +95,14 @@ pub unsafe extern "C" fn h_aes_encrypt_header(
     let attributes: Vec<Attribute> = ffi_unwrap!(serde_json::from_str(&attributes));
 
     // UID
-    let uid = std::slice::from_raw_parts(uid_ptr as *const u8, uid_len as usize).to_vec();
+    let uid = if uid_ptr.is_null() || uid_len == 0 {
+        vec![]
+    } else {
+        std::slice::from_raw_parts(uid_ptr as *const u8, uid_len as usize).to_vec()
+    };
 
     // additional data
-    let additional_data = if additional_data_ptr.is_null() {
+    let additional_data = if additional_data_ptr.is_null() || additional_data_len == 0 {
         vec![]
     } else {
         std::slice::from_raw_parts(
@@ -178,10 +178,6 @@ pub unsafe extern "C" fn h_aes_decrypt_header(
     if *symmetric_key_len == 0 {
         ffi_bail!("The symmetric key buffer should have a size greater than zero");
     }
-    ffi_not_null!(uid_ptr, "UID pointer to pre-allocated memory");
-    if *uid_len == 0 {
-        ffi_bail!("The UID buffer should have a size grater than zero");
-    }
     ffi_not_null!(
         encrypted_header_ptr,
         "Encrypted header bytes pointer should not be bull"
@@ -201,12 +197,17 @@ pub unsafe extern "C" fn h_aes_decrypt_header(
         encrypted_header_ptr as *const u8,
         encrypted_header_len as usize,
     );
+    println!("H encrypted bytes len {}", &encrypted_header_bytes.len());
 
     let user_decryption_key_bytes = std::slice::from_raw_parts(
         user_decryption_key_ptr as *const u8,
         user_decryption_key_len as usize,
     );
     let user_decryption_key = ffi_unwrap!(UserDecryptionKey::from_bytes(user_decryption_key_bytes));
+    println!(
+        "H udk len {}",
+        ffi_unwrap!(&user_decryption_key.as_bytes()).len()
+    );
 
     let header: ClearTextHeader<Aes256GcmCrypto> =
         ffi_unwrap!(decrypt_hybrid_header::<Gpsw<Bls12_381>, Aes256GcmCrypto>(
@@ -214,6 +215,7 @@ pub unsafe extern "C" fn h_aes_decrypt_header(
             encrypted_header_bytes
         ));
 
+    // Symmetric Key
     let allocated = *symmetric_key_len;
     let symmetric_key_bytes = header.symmetric_key.as_bytes();
     let len = symmetric_key_bytes.len();
@@ -227,33 +229,36 @@ pub unsafe extern "C" fn h_aes_decrypt_header(
         .copy_from_slice(&symmetric_key_bytes);
     *symmetric_key_len = len as c_int;
 
-    let allocated = *uid_len;
-    let uid_bytes = &header.meta_data.uid;
-    let len = uid_bytes.len();
-    if (allocated as usize) < len {
-        ffi_bail!(
-            "The pre-allocated uid buffer is too small; need {} bytes",
-            len
-        );
+    // UID - if expected
+    if !uid_ptr.is_null() && *uid_len > 0 {
+        let allocated = *uid_len;
+        let uid_bytes = &header.meta_data.uid;
+        let len = uid_bytes.len();
+        if (allocated as usize) < len {
+            ffi_bail!(
+                "The pre-allocated uid buffer is too small; need {} bytes",
+                len
+            );
+        }
+        std::slice::from_raw_parts_mut(uid_ptr as *mut u8, len).copy_from_slice(uid_bytes);
+        *uid_len = len as c_int;
     }
-    std::slice::from_raw_parts_mut(uid_ptr as *mut u8, len).copy_from_slice(uid_bytes);
-    *uid_len = len as c_int;
 
-    if additional_data_ptr.is_null() || *additional_data_len == 0 {
-        return 0;
+    // additional data - if expected
+    if !additional_data_ptr.is_null() && *additional_data_len > 0 {
+        let allocated = *additional_data_len;
+        let additional_data_bytes = &header.meta_data.additional_data;
+        let len = additional_data_bytes.len();
+        if (allocated as usize) < len {
+            ffi_bail!(
+                "The pre-allocated additional_data buffer is too small; need {} bytes",
+                len
+            );
+        }
+        std::slice::from_raw_parts_mut(additional_data_ptr as *mut u8, len)
+            .copy_from_slice(additional_data_bytes);
+        *additional_data_len = len as c_int;
     }
-    let allocated = *additional_data_len;
-    let additional_data_bytes = &header.meta_data.additional_data;
-    let len = additional_data_bytes.len();
-    if (allocated as usize) < len {
-        ffi_bail!(
-            "The pre-allocated additional_data buffer is too small; need {} bytes",
-            len
-        );
-    }
-    std::slice::from_raw_parts_mut(additional_data_ptr as *mut u8, len)
-        .copy_from_slice(additional_data_bytes);
-    *additional_data_len = len as c_int;
 
     0
 }

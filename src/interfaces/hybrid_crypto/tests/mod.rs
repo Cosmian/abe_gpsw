@@ -54,6 +54,7 @@ pub fn test_aes_hybrid_encryption() -> anyhow::Result<()> {
     let symmetric_key = &encrypted_header.symmetric_key;
     let encrypted_header_bytes = &encrypted_header.encrypted_header_bytes;
     assert_eq!(32, symmetric_key.as_bytes().len());
+    println!("Encrypted Header len {}", encrypted_header_bytes.len());
 
     let clear_text = vec![1, 2, 3, 4, 5, 6, 7, 8, 9];
     let encrypted_block = encrypt_hybrid_block::<
@@ -71,6 +72,10 @@ pub fn test_aes_hybrid_encryption() -> anyhow::Result<()> {
     let key_value = &user_decryption_key_json["value"][0]["value"][1]["value"];
     let hex_key = &key_value[0]["value"].as_str().unwrap();
     let user_decryption_key = UserDecryptionKey::from_bytes(&hex::decode(hex_key)?)?;
+    println!(
+        "User decryption Key len {}",
+        &user_decryption_key.as_bytes()?.len()
+    );
 
     let header_ = decrypt_hybrid_header::<Gpsw<Bls12_381>, Aes256GcmCrypto>(
         &user_decryption_key,

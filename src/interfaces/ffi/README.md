@@ -6,8 +6,3 @@ For the generated dynamic library to expose the external functions, the library 
 ```bash
 cargo b --release --features ffi
 ```
-
-One can verify symbols are present (linux)
-```bash
-objdump -T  libabe_gpsw.so
-```

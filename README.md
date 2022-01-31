@@ -9,9 +9,9 @@ Fine-Grained Access Control of Encrypted Data](https://eprint.iacr.org/2006/309.
 [crates.io]: https://crates.io/crates/abe_gpsw
 
 
-
 - [Quick start](#quick-start)
-- [Introduction](#introduction)
+- [Building](#building)
+- [Introduction to this repository cryptography](#introduction-to-this-repository-cryptography)
 - [Attribute-Based Encryption (ABE)](#attribute-based-encryption-abe)
   - [Ciphertext-Policy](#ciphertext-policy)
   - [Key-Policy](#key-policy)
@@ -19,13 +19,49 @@ Fine-Grained Access Control of Encrypted Data](https://eprint.iacr.org/2006/309.
 - [BLS12-381: Pairing-friendly elliptic curve](#bls12-381-pairing-friendly-elliptic-curve)
 - [Foreign Function Interface](#foreign-function-interface)
 
-
-
 # Quick start
 
-See the demo [code](./src/demo.rs) which contains a complete usage of the API with detailed comments. Run it as a test using `cargo test demo::abe -- --nocapture`.
+See the [demo code](./src/core/demo.rs) which contains a complete usage of the API with detailed comments. Run it as a test using 
 
-# Introduction
+```bash
+cargo test core::demo::abe -- --nocapture`
+```
+
+# Building and testing
+
+The crate is separated in 2 main modules:
+    
+ - `core`: contains the cryptographic code for GPSW. The main entry point is the [engine](./src/core/engine.rs) which use is demonstrated in the [demo code](./src/core/demo.rs).
+ - `interfaces`: contains interfaces useful for Cosmian matching those in [crypto_base](https://github.com/Cosmian/crypto_base) as well as a Foreign Function Interface (FFI) useful to integrate with other languages. In particular, the code in this module demonstrates the use of hybrid cryptography involving ABE and AES and exposes it as a FFI.
+
+ To build the core only, run 
+
+ ```bash
+ cargo build --release
+ ```
+
+ To build the Cosmian interfaces without FFI, pass the `interfaces` feature flag, i.e.
+ ```bash
+ cargo build --release --features interfaces
+ ```
+
+ To build everything, including the FFI, pass the `ffi` feature flag, or use `--all-features` i.e.
+ ```bash
+ cargo build --release --all-features
+ ```
+
+The latter will build a shared library and one can verify that the FFI symbols are present using (linux)
+```bash
+objdump -T  target/release/libabe_gpsw.so
+```
+
+The code contains numerous tests that you can run using 
+
+ ```bash
+ cargo test --release --all-features
+ ```
+
+# Introduction to this repository cryptography
 
 In a standard public-key encryption scheme, each user has his own public key and secret key, so that if one wants to encrypt a message intended for several receivers (for example, according to their jobs in a company), it will be necessary to compute the ciphertext for each public key of each recipient, which implies a huge loss of time and space.
 
