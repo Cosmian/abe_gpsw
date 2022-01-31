@@ -197,17 +197,12 @@ pub unsafe extern "C" fn h_aes_decrypt_header(
         encrypted_header_ptr as *const u8,
         encrypted_header_len as usize,
     );
-    println!("H encrypted bytes len {}", &encrypted_header_bytes.len());
 
     let user_decryption_key_bytes = std::slice::from_raw_parts(
         user_decryption_key_ptr as *const u8,
         user_decryption_key_len as usize,
     );
     let user_decryption_key = ffi_unwrap!(UserDecryptionKey::from_bytes(user_decryption_key_bytes));
-    println!(
-        "H udk len {}",
-        ffi_unwrap!(&user_decryption_key.as_bytes()).len()
-    );
 
     let header: ClearTextHeader<Aes256GcmCrypto> =
         ffi_unwrap!(decrypt_hybrid_header::<Gpsw<Bls12_381>, Aes256GcmCrypto>(
