@@ -1,7 +1,8 @@
 # abe_gpsw &emsp; [![Build Status]][actions] [![Latest Version]][crates.io]
 
-This crate gives a Key-Policy Attribute-Based Encryption implementation based on the eprint [Attribute-Based Encryption for
-Fine-Grained Access Control of Encrypted Data](https://eprint.iacr.org/2006/309.pdf) written by Vipul Goyal, Omkant Pandey, Amit Sahai, Brent Waters. The implementation uses [BLS12-381](https://crates.io/crates/cosmian_bls12_381) for the elliptic pairing.
+This crate provides a Key-Policy Attribute-Based Encryption implementation based on [Attribute-Based Encryption for Fine-Grained Access Control of Encrypted Data](https://eprint.iacr.org/2006/309.pdf) written by Vipul Goyal, Omkant Pandey, Amit Sahai, Brent Waters. 
+
+The implementation uses the [BLS12-381](https://crates.io/crates/cosmian_bls12_381) elliptic curve for pairing.
 
 [Build Status]: https://img.shields.io/github/workflow/status/Cosmian/abe_gpsw/CI%20checks/main
 [actions]: https://github.com/Cosmian/abe_gpsw/actions?query=branch%3Amain
