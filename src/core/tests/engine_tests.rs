@@ -1,7 +1,7 @@
 use crate::core::{
     bilinear_map::bls12_381::Bls12_381,
     gpsw::{AbeScheme, AsBytes, Gpsw},
-    policy::{attr, Policy},
+    policy::{ap, attr, AccessPolicy, Policy},
     Engine,
 };
 
@@ -38,4 +38,70 @@ pub fn symmetric_key_test() {
         .decrypt_symmetric_key(&user_decryption_key, &encrypted_symmetric_key, 32)
         .unwrap();
     assert_eq!(&symmetric_key, &symmetric_key_);
+}
+
+#[test]
+pub fn complex_access_policy_test() {
+    let policy = Policy::new(100)
+        .add_axis("Entity", &["BCEF", "BNPPF", "CIB", "CashMgt"], false)
+        .unwrap()
+        .add_axis(
+            "Country",
+            &["France", "Germany", "Italy", "Hungary", "Spain", "Belgium"],
+            false,
+        )
+        .unwrap();
+
+    let engine = Engine::<Gpsw<Bls12_381>>::new();
+    let (master_private_key, public_key, _delegation_key) =
+        engine.generate_master_key(&policy).unwrap();
+
+    let bnppf_all_access_policy = ap("Entity", "BNPPF")
+        & (ap("Country", "France")
+            | ap("Country", "Germany")
+            | ap("Country", "Italy")
+            | ap("Country", "Hungary")
+            | ap("Country", "Spain")
+            | ap("Country", "Belgium"));
+
+    println!(
+        "{}",
+        serde_json::to_string(&bnppf_all_access_policy).unwrap()
+    );
+
+    let bnppf_all_user = engine
+        .generate_user_key(&policy, &master_private_key, &bnppf_all_access_policy)
+        .unwrap();
+
+    let bnppf_france_message = engine.random_message().unwrap();
+    let bnppf_france_cipher_text = engine
+        .encrypt(
+            &policy,
+            &public_key,
+            &[("Entity", "BNPPF").into(), ("Country", "France").into()],
+            &bnppf_france_message,
+        )
+        .unwrap();
+
+    // check it can decrypt
+    let clear_text = engine
+        .decrypt(&bnppf_france_cipher_text, &bnppf_all_user)
+        .unwrap()
+        .unwrap();
+    assert_eq!(bnppf_france_message, clear_text);
+
+    // recreate user key vie access policy serde
+
+    let bnppf_all_access_policy_: AccessPolicy =
+        serde_json::from_str(&serde_json::to_string(&bnppf_all_access_policy).unwrap()).unwrap();
+
+    let bnppf_all_user_ = engine
+        .generate_user_key(&policy, &master_private_key, &bnppf_all_access_policy_)
+        .unwrap();
+
+    let clear_text_ = engine
+        .decrypt(&bnppf_france_cipher_text, &bnppf_all_user_)
+        .unwrap()
+        .unwrap();
+    assert_eq!(bnppf_france_message, clear_text_);
 }
