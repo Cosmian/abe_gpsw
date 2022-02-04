@@ -16,8 +16,8 @@ version = "0.2.4"
 [lib]
 name = "abe_gpsw"
 crate-type = ["lib", "cdylib"]
-# The cdylib is only intersting if the `--features ffi` flag is set on build
-# This does not seem to be actionnable conditionnally https://github.com/rust-lang/cargo/issues/4881
+# The cdylib is only interesting if the `--features ffi` flag is set on build
+# This does not seem to be actionable conditionally https://github.com/rust-lang/cargo/issues/4881
 
 [features]
 interfaces = ["cosmian_crypto_base"]

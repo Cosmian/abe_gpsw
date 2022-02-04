@@ -47,7 +47,7 @@ impl<S: AbeScheme> Engine<S> {
     }
 
     /// Generate a user decryption key
-    /// from the supplied Master Private Key andAccess Policy
+    /// from the supplied Master Private Key and Access Policy
     pub fn generate_user_key(
         &self,
         policy: &Policy,
@@ -61,13 +61,12 @@ impl<S: AbeScheme> Engine<S> {
     /// Allows a user to generate a new key for a more restrictive policy
     ///
     /// A more restrictive policy is a policy that must always satisfy
-    /// the original policy when satisfied.. In other words, we can only modify a policy by changing
+    /// the original policy when satisfied. In other words, we can only modify a policy by changing
     /// an `Or` node by either an `And` or replace it by one of its child.
     ///
     /// Remark: It is also possible to merge 2 keys by `Or` node, this latter
     /// functionality is not yet supported
     // Not exposed to public FFI API yet: hence he dead_code
-    #[allow(dead_code)]
     pub fn delegate_user_key(
         &self,
         policy: &Policy,
