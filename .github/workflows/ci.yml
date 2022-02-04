@@ -28,7 +28,7 @@ jobs:
           args: -- -D warnings
 
   test:
-    name: Test on ${{ matrix.os }}
+    name: Test and build with all features on ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
@@ -49,7 +49,7 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command: build
-          args: --verbose --release --features ffi
+          args: --verbose --all-features
 
   no-std:
     name: Check no-std target ${{ matrix.target }}
