@@ -2,7 +2,7 @@ use core::ops::{Add, Div, Mul, Neg, Sub};
 
 use rand::{CryptoRng, RngCore, SeedableRng};
 
-use crate::{error::FormatErr, gpsw::AsBytes};
+use crate::{core::gpsw::AsBytes, error::FormatErr};
 
 pub mod bls12_381;
 
@@ -54,7 +54,7 @@ pub trait BilinearMap: Default {
     ) -> Result<Self::Scalar, FormatErr>;
 
     fn gen_rand_gt_inner<R: CryptoRng + RngCore>(&self, rng: &mut R)
-    -> Result<Self::Gt, FormatErr>;
+        -> Result<Self::Gt, FormatErr>;
 
     fn msg_to_scalar(&self, msg: &[u8]) -> Result<Self::Scalar, FormatErr>;
 

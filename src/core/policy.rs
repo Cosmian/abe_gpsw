@@ -1,22 +1,22 @@
 #![allow(clippy::module_name_repetitions)]
+#![allow(dead_code)]
 use std::{
     collections::{BinaryHeap, HashMap},
     convert::TryFrom,
-    fmt::Display,
+    fmt::{Debug, Display},
     ops::{BitAnd, BitOr},
 };
 
 use serde::{Deserialize, Deserializer, Serialize};
-use tracing::debug;
 
 use crate::{
+    core::msp::{MonotoneSpanProgram, Node},
     error::FormatErr,
-    msp::{MonotoneSpanProgram, Node},
 };
 
 // An attribute in a policy group is characterized by the policy name (axis)
 // and its own particular name
-#[derive(Hash, PartialEq, Eq, Clone, Debug, PartialOrd, Ord)]
+#[derive(Hash, PartialEq, Eq, Clone, PartialOrd, Ord)]
 pub struct Attribute {
     axis: String,
     name: String,
@@ -25,6 +25,12 @@ pub struct Attribute {
 impl Attribute {
     pub fn name(&self) -> String {
         self.name.clone()
+    }
+}
+
+impl Debug for Attribute {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_fmt(format_args!("{}::{}", &self.axis, &self.name))
     }
 }
 
@@ -103,13 +109,9 @@ impl PartialEq for AccessPolicy {
         let mut attributes_mapping = HashMap::<Attribute, u32>::new();
         let left_to_u32 = self.to_u32(&mut attributes_mapping);
         let right_to_u32 = other.to_u32(&mut attributes_mapping);
-        debug!("left u32: {}", left_to_u32);
-        debug!("right u32: {}", right_to_u32);
         if left_to_u32 != right_to_u32 {
             false
         } else {
-            debug!("left attributes: {:?}", self.attributes());
-            debug!("right attributes: {:?}", other.attributes());
             self.attributes() == other.attributes()
         }
     }
@@ -134,7 +136,6 @@ impl AccessPolicy {
         match self {
             AccessPolicy::Attr(attr) => {
                 if let Some(integer_value) = attribute_mapping.get(attr) {
-                    debug!("found attribute: {:?}, value = {}", attr, *integer_value);
                     *integer_value
                 } else {
                     // To assign an integer value to a new attribute, we take the current max
@@ -146,7 +147,6 @@ impl AccessPolicy {
                         .map(|max| *max + 1)
                         .unwrap_or(1);
                     attribute_mapping.insert(attr.clone(), max);
-                    debug!("attribute: {:?}, value = {}", attr, max);
                     max
                 }
             }
@@ -191,12 +191,6 @@ impl AccessPolicy {
             .map(|ap| ap.to_owned())
             .reduce(BitAnd::bitand)
             .ok_or_else(|| FormatErr::MissingAxis("axis".to_string()))?;
-
-        debug!(
-            "Generating Access Policy for axes->attributes {:?} resulted in {:?}",
-            &axes_attributes, &access_policy,
-        );
-
         Ok(access_policy)
     }
 
@@ -348,7 +342,7 @@ impl Policy {
     ) -> Result<Self, FormatErr> {
         let axis = PolicyAxis::new(name, attributes, hierarchical);
         if axis.len() + self.last_attribute > self.max_attribute {
-            return Err(FormatErr::CapacityOverflow)
+            return Err(FormatErr::CapacityOverflow);
         }
         // insert new policy
         if let Some(attr) = self.store.insert(
@@ -357,7 +351,7 @@ impl Policy {
         ) {
             // already exists, reinsert previous one
             self.store.insert(axis.name.clone(), attr);
-            return Err(FormatErr::ExistingPolicy(axis.name))
+            return Err(FormatErr::ExistingPolicy(axis.name));
         } else {
             for attr in &axis.attributes {
                 self.last_attribute += 1;
@@ -370,7 +364,7 @@ impl Policy {
                     .is_some()
                 {
                     // must never occurs as policy is a new one
-                    return Err(FormatErr::ExistingPolicy(axis.name))
+                    return Err(FormatErr::ExistingPolicy(axis.name));
                 }
             }
             // add attribute is not a revocation
@@ -379,16 +373,16 @@ impl Policy {
         Ok(self)
     }
 
-    // Update an attribute
-    pub fn update(&mut self, attr: &Attribute) -> Result<(), FormatErr> {
+    /// Rotate an attribute, changing its underlying value with that of an unused slot
+    pub fn rotate(&mut self, attr: &Attribute) -> Result<(), FormatErr> {
         if self.last_attribute + 1 > self.max_attribute {
-            return Err(FormatErr::CapacityOverflow)
+            return Err(FormatErr::CapacityOverflow);
         }
         if let Some(uint) = self.attribute_to_int.get_mut(attr) {
             self.last_attribute += 1;
             uint.push(u32::try_from(self.last_attribute)?);
         } else {
-            return Err(FormatErr::AttributeNotFound)
+            return Err(FormatErr::AttributeNotFound(format!("{:?}", attr)));
         }
         Ok(())
     }
@@ -439,18 +433,20 @@ impl Policy {
                     .iter()
                     .map(|attr| Node::Leaf(*attr))
                     .reduce(std::ops::BitOr::bitor)
-                    .ok_or(FormatErr::AttributeNotFound)?;
+                    .ok_or_else(|| FormatErr::AttributeNotFound(format!("{:?}", attr)))?;
                 if *hierarchical {
                     for (at, elem) in list.iter().enumerate() {
                         if at >= res {
-                            break
+                            break;
                         }
                         val = val
                             | self.attribute_to_int[&(attr.axis.clone(), elem.clone()).into()]
                                 .iter()
                                 .map(|attr| Node::Leaf(*attr))
                                 .reduce(std::ops::BitOr::bitor)
-                                .ok_or(FormatErr::AttributeNotFound)?;
+                                .ok_or_else(|| {
+                                    FormatErr::AttributeNotFound(format!("{:?}", attr))
+                                })?;
                     }
                 }
 
@@ -464,5 +460,19 @@ impl Policy {
         } else {
             Err(FormatErr::MissingAxis(attr.axis.clone()))
         }
+    }
+
+    /// Retrieve the current attributes values for the `Attribute` list
+    pub fn attributes_values(&self, attributes: &[Attribute]) -> Result<Vec<u32>, FormatErr> {
+        let mut values: Vec<u32> = Vec::with_capacity(attributes.len());
+        for att in attributes {
+            let v = self
+                .attribute_to_int
+                .get(att)
+                .and_then(std::collections::BinaryHeap::peek)
+                .ok_or_else(|| FormatErr::AttributeNotFound(format!("{:?}", att)))?;
+            values.push(*v);
+        }
+        Ok(values)
     }
 }

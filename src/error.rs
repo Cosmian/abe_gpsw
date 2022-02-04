@@ -8,8 +8,8 @@ use thiserror::Error;
 
 #[derive(Error, Debug, Clone, PartialEq)]
 pub enum FormatErr {
-    #[error("attribute not found")]
-    AttributeNotFound,
+    #[error("attribute not found: {0}")]
+    AttributeNotFound(String),
     #[error("{} is missing{}",
         .item.clone().unwrap_or_else(|| "attribute".to_string()),
         match .axis_name {

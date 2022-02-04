@@ -9,7 +9,7 @@ use group::Group;
 use rand::{CryptoRng, RngCore};
 
 use super::BilinearMap;
-use crate::{error::FormatErr, gpsw::AsBytes};
+use crate::{core::gpsw::AsBytes, error::FormatErr};
 
 #[derive(Default, Debug, PartialEq, Clone)]
 pub struct Bls12_381;
@@ -102,7 +102,7 @@ impl AsBytes for Scalar {
                  to deserialize this scalar element.",
                 bytes.len(),
                 32
-            )))
+            )));
         }
 
         let inner = cosmian_bls12_381::Scalar::from_bytes(bytes[0..32].try_into()?);
@@ -132,7 +132,7 @@ impl AsBytes for cosmian_bls12_381::G1Affine {
                  unable to deserialize this G1 element.",
                 bytes.len(),
                 48
-            )))
+            )));
         }
         let res = cosmian_bls12_381::G1Affine::from_compressed(&bytes[0..48].try_into()?);
         if res.is_none().into() {
@@ -161,7 +161,7 @@ impl AsBytes for cosmian_bls12_381::G2Affine {
                  unable to deserialize this G2 element.",
                 bytes.len(),
                 96
-            )))
+            )));
         }
         let res = cosmian_bls12_381::G2Affine::from_compressed(&bytes[0..96].try_into()?);
         if res.is_none().into() {
@@ -195,7 +195,7 @@ impl AsBytes for cosmian_bls12_381::Gt {
                  unable to deserialize this Gt element.",
                 bytes.len(),
                 288
-            )))
+            )));
         }
         let res = cosmian_bls12_381::Gt::from_compressed(&bytes[0..288].try_into()?);
         if res.is_none().into() {
@@ -248,13 +248,13 @@ impl BilinearMap for Bls12_381 {
 
     fn msg_to_scalar(&self, msg: &[u8]) -> Result<Scalar, FormatErr> {
         if msg.len() > 32 {
-            return Err(FormatErr::InvalidSize("message too long".to_string()))
+            return Err(FormatErr::InvalidSize("message too long".to_string()));
         }
         let mut vec = msg.to_vec();
         vec.resize(32, 0);
         let scl = cosmian_bls12_381::Scalar::from_bytes(&(vec.as_slice().try_into()?));
         if scl.is_none().into() {
-            return Err(FormatErr::ConversionFailed)
+            return Err(FormatErr::ConversionFailed);
         }
         Ok(Scalar(scl.unwrap()))
     }
@@ -335,9 +335,11 @@ mod tests {
     use cosmian_bls12_381::{G1Affine, G2Affine, Gt};
 
     use crate::{
-        bilinear_map::bls12_381::{BilinearMap, Bls12_381, Scalar},
+        core::{
+            bilinear_map::bls12_381::{BilinearMap, Bls12_381, Scalar},
+            gpsw::AsBytes,
+        },
         error::FormatErr,
-        gpsw::AsBytes,
     };
 
     #[test]
