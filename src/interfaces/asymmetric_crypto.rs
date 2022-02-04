@@ -1,4 +1,3 @@
-#![allow(dead_code)]
 use std::{convert::TryFrom, sync::Mutex};
 
 use cosmian_crypto_base::{
@@ -94,16 +93,9 @@ impl<S> AbeCrypto<S>
 where
     S: AbeScheme + std::marker::Sync + std::marker::Send,
 {
-    // fn ensure_engine(&self) -> anyhow::Result<&Engine<S>> {
-    //     self.engine.as_ref().ok_or_else(|| {
-    //         anyhow::anyhow!(
-    //             "The Policy must first be set on ABE scheme using set_scheme_parameters"
-    //         )
-    //     })
-    // }
-
     /// Generate an ABE master key pair for the Policy, returning a triple
     /// (private key, public key, public delegation key)
+    #[cfg(test)]
     fn generate_master_keys(&self, policy: &Policy) -> anyhow::Result<AbeMasterKeys<S>> {
         let (msk, pk, mdk) = self
             .engine

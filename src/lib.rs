@@ -2,7 +2,7 @@
 
 pub mod error;
 
-pub(crate) mod core;
+pub mod core;
 
 #[cfg(feature = "interfaces")]
 pub mod interfaces;

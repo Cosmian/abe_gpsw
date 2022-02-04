@@ -136,7 +136,6 @@ thread_local! {
 
 /// Set the most recent error, clearing whatever may have been there before.
 pub(crate) fn set_last_error(err: FfiError) {
-    eprintln!("{}", err);
     LAST_ERROR.with(|prev| {
         *prev.borrow_mut() = Some(Box::new(err));
     });
@@ -195,7 +194,7 @@ pub unsafe extern "C" fn get_last_error(
     let bytes = cs.as_bytes();
 
     // leave a space for a null byte at the end if the string exceeds the buffer
-    // The actual bytes size, not taking into accourt the final NULL
+    // The actual bytes size, not taking into account the final NULL
     let actual_len = std::cmp::min((*error_len - 1) as usize, bytes.len());
 
     // create a 0 initialized vector with the message

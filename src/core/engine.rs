@@ -1,4 +1,3 @@
-#![allow(dead_code)]
 use sha3::{
     digest::{ExtendableOutput, Update, XofReader},
     Shake256,
@@ -26,7 +25,7 @@ pub struct Engine<S: AbeScheme> {
 }
 
 impl<S: AbeScheme> Engine<S> {
-    /// Instantiate a new ABE engine for the given Plicy
+    /// Instantiate a new ABE engine for the given Policy
     #[must_use]
     pub fn new() -> Self {
         Self { sch: S::default() }
@@ -47,6 +46,8 @@ impl<S: AbeScheme> Engine<S> {
         self.sch.generate_master_key(policy.max_attr())
     }
 
+    /// Generate a user decryption key
+    /// from the supplied Master Private Key andAccess Policy
     pub fn generate_user_key(
         &self,
         policy: &Policy,
@@ -59,8 +60,8 @@ impl<S: AbeScheme> Engine<S> {
 
     /// Allows a user to generate a new key for a more restrictive policy
     ///
-    /// A more restrictive policy is a policy for which when it is satisfy, the less
-    /// restrictive also. In other words, we can only modify a policy by changing
+    /// A more restrictive policy is a policy that must always satisfy
+    /// the original policy when satisfied.. In other words, we can only modify a policy by changing
     /// an `Or` node by either an `And` or replace it by one of its child.
     ///
     /// Remark: It is also possible to merge 2 keys by `Or` node, this latter
@@ -86,7 +87,8 @@ impl<S: AbeScheme> Engine<S> {
         self.sch.generate_random_plaintext()
     }
 
-    /// Encrypt a plain test (a pont on GT) with the given list of attributes
+    /// Encrypt a plain text (a point on GT)
+    /// with the given list of policy attributes
     pub fn encrypt(
         &self,
         policy: &Policy,
@@ -107,9 +109,9 @@ impl<S: AbeScheme> Engine<S> {
         self.sch.decrypt(enc, key)
     }
 
-    /// Generate a random symmetric key of `symmetric_key_len` to be used n
-    /// hybrid encryption scheme and its ABE encrypted version with the
-    /// supplied `attributes`
+    /// Generate a random symmetric key of `symmetric_key_len` to be used in an
+    /// hybrid encryption scheme and generate its ABE encrypted version with the
+    /// supplied policy `attributes`
     pub fn generate_symmetric_key(
         &self,
         policy: &Policy,
@@ -149,5 +151,11 @@ impl<S: AbeScheme> Engine<S> {
             .finalize_xof()
             .read_boxed(symmetric_key_len)
             .into_vec())
+    }
+}
+
+impl<S: AbeScheme> Default for Engine<S> {
+    fn default() -> Self {
+        Self::new()
     }
 }

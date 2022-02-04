@@ -10,7 +10,6 @@ type UserDecryptionKey = <Gpsw<Bls12_381> as AbeScheme>::UserDecryptionKey;
 
 #[test]
 pub fn symmetric_key_test() {
-    //-> anyhow::Result<()> {
     let public_key_str = include_str!("master_public_key.txt");
     let public_key = PublicKey::from_bytes(&hex::decode(public_key_str).unwrap()).unwrap();
 
