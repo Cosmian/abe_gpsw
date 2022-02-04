@@ -45,6 +45,11 @@ jobs:
         with:
           command: test
           args: --verbose --release
+      - name: Build with feature FFI
+        uses: actions-rs/cargo@v1
+        with:
+          command: build
+          args: --verbose --release --features ffi
 
   no-std:
     name: Check no-std target ${{ matrix.target }}
@@ -68,14 +73,14 @@ jobs:
           args: --verbose --target ${{ matrix.target }}
 
   doc-links:
-    name: Nightly lint
+    name: Stable lint
     runs-on: ubuntu-latest
 
     steps:
       - uses: actions/checkout@v1
       - uses: actions-rs/toolchain@v1
         with:
-          toolchain: nightly
+          toolchain: stable
           override: true
 
       # Ensure intra-documentation links all resolve correctly
