@@ -66,7 +66,6 @@ impl<S: AbeScheme> Engine<S> {
     ///
     /// Remark: It is also possible to merge 2 keys by `Or` node, this latter
     /// functionality is not yet supported
-    // Not exposed to public FFI API yet: hence he dead_code
     pub fn delegate_user_key(
         &self,
         policy: &Policy,
