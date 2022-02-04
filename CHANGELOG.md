@@ -2,6 +2,23 @@
 
 All notable changes to this project will be documented in this file.
 
+
+---
+## [0.3.0] - 2022-02-04
+### Added
+FFI to be able to interface with other languages
+### Changed
+- Re-organized crate in two main modules 
+  - crypto ony in `core`
+  - cosmian and FFI in `interfaces`
+-> see the build instructions
+Improved hybrid crypto 
+
+### Fixed
+### Removed
+
+---
+
 ---
 ## [0.2.4] - 2022-01-13
 ### Added

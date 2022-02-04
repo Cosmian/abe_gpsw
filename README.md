@@ -10,14 +10,19 @@ The implementation uses the [BLS12-381](https://crates.io/crates/cosmian_bls12_3
 [crates.io]: https://crates.io/crates/abe_gpsw
 
 
+
+- [abe_gpsw &emsp; [![Build Status]][actions] [![Latest Version]][crates.io]](#abe_gpsw-emsp-build-statusactions-latest-versioncratesio)
 - [Quick start](#quick-start)
-- [Building](#building)
+- [Building and testing](#building-and-testing)
 - [Introduction to this repository cryptography](#introduction-to-this-repository-cryptography)
 - [Attribute-Based Encryption (ABE)](#attribute-based-encryption-abe)
   - [Ciphertext-Policy](#ciphertext-policy)
   - [Key-Policy](#key-policy)
   - [Policies](#policies)
 - [BLS12-381: Pairing-friendly elliptic curve](#bls12-381-pairing-friendly-elliptic-curve)
+
+
+
 
 # Quick start
 
