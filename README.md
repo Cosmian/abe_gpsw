@@ -11,7 +11,6 @@ The implementation uses the [BLS12-381](https://crates.io/crates/cosmian_bls12_3
 
 
 
-- [abe_gpsw &emsp; [![Build Status]][actions] [![Latest Version]][crates.io]](#abe_gpsw-emsp-build-statusactions-latest-versioncratesio)
 - [Quick start](#quick-start)
 - [Building and testing](#building-and-testing)
 - [Introduction to this repository cryptography](#introduction-to-this-repository-cryptography)
