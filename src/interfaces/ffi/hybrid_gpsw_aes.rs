@@ -103,13 +103,15 @@ pub unsafe extern "C" fn h_aes_encrypt_header(
 
     // additional data
     let additional_data = if additional_data_ptr.is_null() || additional_data_len == 0 {
-        vec![]
+        None
     } else {
-        std::slice::from_raw_parts(
-            additional_data_ptr as *const u8,
-            additional_data_len as usize,
+        Some(
+            std::slice::from_raw_parts(
+                additional_data_ptr as *const u8,
+                additional_data_len as usize,
+            )
+            .to_vec(),
         )
-        .to_vec()
     };
 
     let meta_data = Metadata {
@@ -243,16 +245,19 @@ pub unsafe extern "C" fn h_aes_decrypt_header(
     if !additional_data_ptr.is_null() && *additional_data_len > 0 {
         let allocated = *additional_data_len;
         let additional_data_bytes = &header.meta_data.additional_data;
-        let len = additional_data_bytes.len();
-        if (allocated as usize) < len {
-            ffi_bail!(
-                "The pre-allocated additional_data buffer is too small; need {} bytes",
-                len
-            );
+        if let Some(ad) = additional_data_bytes {
+            let len = ad.len();
+            if (allocated as usize) < len {
+                ffi_bail!(
+                    "The pre-allocated additional_data buffer is too small; need {} bytes",
+                    len
+                );
+            }
+            std::slice::from_raw_parts_mut(additional_data_ptr as *mut u8, len).copy_from_slice(ad);
+            *additional_data_len = len as c_int;
+        } else {
+            *additional_data_len = 0_i32;
         }
-        std::slice::from_raw_parts_mut(additional_data_ptr as *mut u8, len)
-            .copy_from_slice(additional_data_bytes);
-        *additional_data_len = len as c_int;
     }
 
     0
@@ -303,11 +308,11 @@ pub unsafe extern "C" fn h_aes_encrypt_block(
             .to_vec();
 
     // UID
-    ffi_not_null!(uid_ptr, "UID pointer should not be null");
-    if uid_len == 0 {
-        ffi_bail!("The UID should not be empty");
-    }
-    let uid = std::slice::from_raw_parts(uid_ptr as *const u8, uid_len as usize).to_vec();
+    let uid = if !uid_ptr.is_null() && uid_len > 0 {
+        std::slice::from_raw_parts(uid_ptr as *const u8, uid_len as usize).to_vec()
+    } else {
+        vec![]
+    };
 
     // Data
     ffi_not_null!(data_ptr, "Data pointer should not be null");
@@ -374,11 +379,11 @@ pub unsafe extern "C" fn h_aes_decrypt_block(
             .to_vec();
 
     // UID
-    ffi_not_null!(uid_ptr, "UID pointer should not be null");
-    if uid_len == 0 {
-        ffi_bail!("The UID should not be empty");
-    }
-    let uid = std::slice::from_raw_parts(uid_ptr as *const u8, uid_len as usize).to_vec();
+    let uid = if !uid_ptr.is_null() && uid_len > 0 {
+        std::slice::from_raw_parts(uid_ptr as *const u8, uid_len as usize).to_vec()
+    } else {
+        vec![]
+    };
 
     // Data
     ffi_not_null!(encrypted_bytes_ptr, "Data pointer should not be null");

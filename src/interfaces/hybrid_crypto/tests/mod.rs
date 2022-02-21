@@ -42,7 +42,7 @@ pub fn test_aes_hybrid_encryption() -> anyhow::Result<()> {
     ];
     let meta_data = Metadata {
         uid: vec![1, 2, 3, 4, 5, 6, 7, 8, 9],
-        additional_data: vec![10, 11, 12, 13, 14],
+        additional_data: Some(vec![10, 11, 12, 13, 14]),
     };
     let encrypted_header = encrypt_hybrid_header::<Gpsw<Bls12_381>, Aes256GcmCrypto>(
         &policy,

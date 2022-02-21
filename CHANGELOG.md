@@ -4,6 +4,18 @@ All notable changes to this project will be documented in this file.
 
 
 ---
+## [0.4.0] - 2022-02-21
+### Added
+### Changed
+- Updated crypto_base to 0.5.1 which introduces a breaking change to hybrid MetaData
+
+### Fixed
+- hybrid crypto: allow empty resource UIDs
+### Removed
+
+---
+
+---
 ## [0.3.0] - 2022-02-04
 ### Added
 FFI to be able to interface with other languages

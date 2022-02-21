@@ -220,7 +220,7 @@ where
             encryption_parameters,
             Metadata {
                 uid: vec![],
-                additional_data: vec![],
+                additional_data: None,
             },
         )?;
         let header_bytes = header.as_bytes()?;

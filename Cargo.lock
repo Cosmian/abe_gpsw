@@ -4,7 +4,7 @@ version = 3
 
 [[package]]
 name = "abe_gpsw"
-version = "0.3.0"
+version = "0.4.0"
 dependencies = [
  "cosmian_bls12_381",
  "cosmian_crypto_base",
@@ -236,9 +236,9 @@ dependencies = [
 
 [[package]]
 name = "cosmian_crypto_base"
-version = "0.4.0"
+version = "0.5.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1285365efa9ae910ad216ce987d26a3970ea1a1186c4d8439411a99ee1d09511"
+checksum = "3dea27a1074651efe6e05f73ecbe456a69076a31cd722abeb08434e307b188d1"
 dependencies = [
  "aes",
  "aes-gcm",
