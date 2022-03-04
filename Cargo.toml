@@ -23,6 +23,9 @@ crate-type = ["lib", "cdylib", "staticlib"]
 interfaces = ["cosmian_crypto_base"]
 ffi = ["interfaces"]
 wasm_bindgen = ["interfaces", "js-sys", "wasm-bindgen", "wasm-bindgen-test"]
+wasi = ["interfaces"]
+wasi_impl = ["wit-bindgen-rust", "wasi", "witgen"]
+wit = ["witgen", "wasi"]
 
 [dependencies]
 anyhow = { package = "eyre", version = "0.6.0" }
@@ -46,6 +49,8 @@ wasm-bindgen = { version = "0.2", features = [
   "serde-serialize",
 ], optional = true }
 wasm-bindgen-test = { version = "0.3", optional = true }
+wit-bindgen-rust = {git = "https://github.com/bytecodealliance/wit-bindgen", rev = "2c4ec937cab8c23131d644d2fcaf4705a08f9b01", optional = true}
+witgen = {version = "0.4.0", optional = true}
 
 
 [[bin]]

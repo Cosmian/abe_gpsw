@@ -5,3 +5,6 @@ pub mod hybrid_crypto;
 #[cfg(feature = "wasm_bindgen")]
 pub mod wasm_bindgen;
 pub use crate::core::policy;
+
+#[cfg(feature = "wasi")]
+pub mod wasi;
