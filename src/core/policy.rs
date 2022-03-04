@@ -194,6 +194,40 @@ impl AccessPolicy {
         Ok(access_policy)
     }
 
+    /// Convert a boolean expression into `AccessPolicy`.
+    /// Example:
+    ///     input boolean expression: (Department::HR | Department::R&D) & Level::level_2
+    ///     output: corresponding access policy: And(Attr(Level::level2), Or(Attr(Department::HR), Attr(Department::R&D)))
+    ///
+    /// # Arguments
+    ///
+    /// * `boolean_expression`: expression with operators & and |
+    ///
+    /// # Returns
+    ///
+    /// the corresponding `AccessPolicy`
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// let boolean_expression = "(Department::HR | Department::R&D) & Level::level_2";
+    /// let access_policy = abe_gpsw::core::policy::AccessPolicy::from_boolean_expression(boolean_expression);
+    /// ```
+    /// # Errors
+    ///
+    /// HMAC creation can fail
+    pub fn from_boolean_expression(boolean_expression: &str) -> Result<Self, FormatErr> {
+        let result = AccessPolicy::All;
+        // Remove all spaces
+        let boolean_expression = str::replace(boolean_expression, " ", "");
+
+        // if first char is parenthesis
+
+        // else
+
+        Ok(result)
+    }
+
     pub fn attributes(&self) -> Vec<Attribute> {
         let mut attributes = AccessPolicy::_attributes(self);
         attributes.sort();
