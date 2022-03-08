@@ -11,7 +11,7 @@ edition = "2018"
 license = "MIT/Apache-2.0"
 name = "abe_gpsw"
 repository = "https://github.com/Cosmian/abe_gpsw"
-version = "0.4.0"
+version = "0.4.1"
 
 [lib]
 name = "abe_gpsw"
@@ -22,13 +22,14 @@ crate-type = ["lib", "cdylib"]
 [features]
 interfaces = ["cosmian_crypto_base"]
 ffi = ["interfaces"]
-
+wasm_bindgen = ["interfaces", "js-sys", "wasm-bindgen", "wasm-bindgen-test"]
 
 [dependencies]
 anyhow = { package = "eyre", version = "0.6.0" }
 cosmian_bls12_381 = "0.4"
-cosmian_crypto_base = { version = "0.5.1", optional = true }
+cosmian_crypto_base = { version = "0.5.2", optional = true }
 ff = "0.9"
+js-sys = { version = "0.3", optional = true }
 getrandom = { version = "0.2", features = ["js"] }
 group = "0.9"
 hex = "0.4"
@@ -40,3 +41,5 @@ serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 sha3 = "0.10"
 thiserror = "1"
+wasm-bindgen = { version = "0.2", features = ["serde-serialize"], optional = true }
+wasm-bindgen-test = { version = "0.3", optional = true }
