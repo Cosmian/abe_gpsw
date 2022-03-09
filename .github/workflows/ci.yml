@@ -45,7 +45,7 @@ jobs:
         with:
           command: test
           args: --verbose --release
-      - name: Build with feature FFI
+      - name: Build with all features
         uses: actions-rs/cargo@v1
         with:
           command: build
@@ -70,7 +70,7 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command: build
-          args: --verbose --target ${{ matrix.target }}
+          args: --verbose --target ${{ matrix.target }} --features wasm_bindgen
 
   doc-links:
     name: Stable lint
