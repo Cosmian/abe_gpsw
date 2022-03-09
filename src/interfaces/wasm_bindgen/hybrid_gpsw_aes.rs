@@ -93,8 +93,8 @@ pub fn webassembly_decrypt_hybrid_header(
 #[wasm_bindgen]
 pub fn webassembly_decrypt_hybrid_block(
     symmetric_key_bytes: js_sys::Uint8Array,
-    uid_bytes: js_sys::Uint8Array,
-    block_number: usize,
+    uid_bytes: Option<js_sys::Uint8Array>,
+    block_number: Option<usize>,
     encrypted_bytes: js_sys::Uint8Array,
 ) -> Result<js_sys::Uint8Array, JsValue> {
     //
@@ -121,26 +121,14 @@ pub fn webassembly_decrypt_hybrid_block(
         ));
     })?;
 
-    log(&format!(
-        "webassembly: symmetric_key: {:?}",
-        hex::encode(symmetric_key_bytes.to_vec())
-    ));
-    log(&format!(
-        "webassembly: uid_bytes {:?}",
-        hex::encode(uid_bytes.to_vec())
-    ));
-    log(&format!("webassembly: block_number {:?}", block_number));
-    log(&format!(
-        "webassembly: encrypted_bytes: {:?}",
-        hex::encode(encrypted_bytes.to_vec())
-    ));
-
+    let uid = uid_bytes.map_or(vec![], |v| v.to_vec());
+    let block_number_value = block_number.unwrap_or(0);
     //
     // Decrypt block
     let cleartext = decrypt_hybrid_block::<Gpsw<Bls12_381>, Aes256GcmCrypto, MAX_CLEAR_TEXT_SIZE>(
         &symmetric_key,
-        &uid_bytes.to_vec(),
-        block_number as usize,
+        &uid,
+        block_number_value as usize,
         &encrypted_bytes.to_vec(),
     )
     .map_err(|e| {
