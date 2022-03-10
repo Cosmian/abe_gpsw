@@ -4,7 +4,16 @@ All notable changes to this project will be documented in this file.
 
 
 ---
-## [0.4.1] - 2022-02-21
+## [0.5.0] - 2022-03-09
+### Added
+### Changed
+- [wasm-bindgen]: make optional uid and block_number in decrypt_block function
+### Fixed
+### Removed
+- Useless logs
+
+---
+## [0.4.1] - 2022-03-08
 ### Added
 - Add wasm-bindgen bindings for javascript use
 ### Changed
