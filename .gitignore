@@ -1,3 +1,5 @@
 .cargo_check
 target
 *nix
+flamegraph*.svg
+perf.data*
