@@ -1,0 +1,44 @@
+name: Release
+
+on:
+  release:
+    types: [created]
+
+jobs:
+  release:
+    name: release ${{ matrix.target }} for feature ${{ matrix.feature }}
+    env:
+      PROJECT_NAME_UNDERSCORE: abe_gpsw
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: x86_64-pc-windows-gnu
+            feature: ffi
+          - target: x86_64-unknown-linux-musl
+            feature: ffi
+          - target: x86_64-unknown-linux-gnu
+            feature: ffi
+          - target: wasm32-unknown-unknown
+            feature: wasm_bindgen
+          - target: wasm32-wasi
+            feature: wasm_bindgen
+    steps:
+      - uses: actions/checkout@v1
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          override: true
+      - run: sudo apt-get install gcc-mingw-w64
+      - run: rustup target add ${{ matrix.target }}
+      - name: Build release with all features
+        uses: actions-rs/cargo@v1
+        with:
+          command: build
+          args: --release --verbose --features ${{ matrix.feature }} --target ${{ matrix.target }}
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v2
+        with:
+          name: ${{ env.PROJECT_NAME_UNDERSCORE }}_${{ matrix.target }}_${{ matrix.feature }}
+          path: target/${{ matrix.target }}/release/*${{ env.PROJECT_NAME_UNDERSCORE }}*
