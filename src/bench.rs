@@ -20,7 +20,7 @@ use std::ffi::CStr;
 use std::time::Instant;
 
 type PublicKey = <Gpsw<Bls12_381> as AbeScheme>::MasterPublicKey;
-type UserDecryptionKey = <Gpsw<Bls12_381> as AbeScheme>::UserDecryptionKey;
+//type UserDecryptionKey = <Gpsw<Bls12_381> as AbeScheme>::UserDecryptionKey;
 
 #[allow(clippy::if_same_then_else)]
 fn main() -> anyhow::Result<()> {
