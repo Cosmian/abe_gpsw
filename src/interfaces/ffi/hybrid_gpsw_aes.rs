@@ -6,7 +6,7 @@ use std::{
 use crate::{
     core::{
         bilinear_map::bls12_381::Bls12_381,
-        gpsw::{AbeScheme, AsBytes, Gpsw},
+        gpsw::{scheme::GpswMasterPublicKey, AbeScheme, AsBytes, Gpsw},
         policy::{Attribute, Policy},
     },
     ffi_bail, ffi_not_null, ffi_unwrap,
@@ -26,6 +26,22 @@ use cosmian_crypto_base::{
 
 type PublicKey = <Gpsw<Bls12_381> as AbeScheme>::MasterPublicKey;
 type UserDecryptionKey = <Gpsw<Bls12_381> as AbeScheme>::UserDecryptionKey;
+
+#[repr(c)]
+pub struct EncryptionHeader {
+    policy: Policy,
+    public_key: GpswMasterPublicKey<Bls12_381>,
+}
+
+#[no_mangle]
+///
+/// # Safety
+pub unsafe extern "C" fn h_aes_create_encrypt_header(
+    policy_ptr: *const c_char,
+    public_key_ptr: *const c_char,
+    public_key_len: c_int,
+) {
+}
 
 #[no_mangle]
 ///
