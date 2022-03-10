@@ -89,4 +89,4 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command: doc
-          args: --document-private-items
+          args: --all-features --document-private-items
