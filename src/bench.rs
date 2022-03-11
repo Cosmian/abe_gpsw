@@ -4,19 +4,39 @@
 // for online help
 
 #[cfg(feature = "interfaces")]
-use abe_gpsw::core::gpsw::{AbeScheme, Gpsw};
-use std::env;
-
-#[cfg(feature = "interfaces")]
-use abe_gpsw::{
-    core::bilinear_map::bls12_381::Bls12_381,
-    core::gpsw::AsBytes,
-    core::policy::{attr, Policy},
-    interfaces::hybrid_crypto::{decrypt_hybrid_header, encrypt_hybrid_header, EncryptedHeader},
+use {
+    abe_gpsw::{
+        core::{
+            bilinear_map::bls12_381::Bls12_381,
+            gpsw::{AbeScheme, AsBytes, Gpsw},
+            policy::{attr, Policy},
+        },
+        interfaces::hybrid_crypto::{
+            decrypt_hybrid_header, encrypt_hybrid_header, EncryptedHeader,
+        },
+    },
+    cosmian_crypto_base::{
+        hybrid_crypto::Metadata, symmetric_crypto::aes_256_gcm_pure::Aes256GcmCrypto,
+    },
+    std::env,
 };
-#[cfg(feature = "interfaces")]
-use cosmian_crypto_base::{
-    hybrid_crypto::Metadata, symmetric_crypto::aes_256_gcm_pure::Aes256GcmCrypto,
+
+#[cfg(feature = "ffi")]
+use {
+    abe_gpsw::interfaces::ffi::{
+        error::get_last_error,
+        hybrid_gpsw_aes::{
+            h_aes_create_decryption_cache, h_aes_create_encryption_cache, h_aes_decrypt_header,
+            h_aes_decrypt_header_using_cache, h_aes_destroy_decryption_cache,
+            h_aes_destroy_encryption_cache, h_aes_encrypt_header, h_aes_encrypt_header_using_cache,
+        },
+    },
+    serde_json::Value,
+    std::{
+        ffi::{c_void, CStr, CString},
+        os::raw::{c_char, c_int},
+        time::Instant,
+    },
 };
 
 #[cfg(feature = "interfaces")]
@@ -45,37 +65,36 @@ fn main() -> anyhow::Result<()> {
             bench_ffi_header_encryption()?;
         }
     } else if selector == "ffi_header_enc_using_cache" {
+        #[cfg(feature = "ffi")]
         unsafe {
-            #[cfg(feature = "ffi")]
             bench_ffi_header_encryption_using_cache()?;
         }
     } else if selector == "header_decryption" {
         #[cfg(feature = "interfaces")]
         bench_header_decryption()?;
     } else if selector == "ffi_header_decryption" {
+        #[cfg(feature = "ffi")]
         unsafe {
-            #[cfg(feature = "ffi")]
             bench_ffi_header_decryption()?;
         }
     } else if selector == "ffi_header_dec_using_cache" {
+        #[cfg(feature = "ffi")]
         unsafe {
-            #[cfg(feature = "ffi")]
             bench_ffi_header_decryption_using_cache()?;
         }
     } else if selector == "all" {
         #[cfg(feature = "interfaces")]
         bench_header_encryption()?;
+        #[cfg(feature = "ffi")]
         unsafe {
             bench_ffi_header_encryption()?;
-            #[cfg(feature = "ffi")]
             bench_ffi_header_encryption_using_cache()?;
         }
         #[cfg(feature = "interfaces")]
         bench_header_decryption()?;
+        #[cfg(feature = "ffi")]
         unsafe {
-            #[cfg(feature = "ffi")]
             bench_ffi_header_decryption()?;
-            #[cfg(feature = "ffi")]
             bench_ffi_header_decryption_using_cache()?;
         }
     } else {
@@ -112,9 +131,6 @@ see above for the OPTION values
 
 #[cfg(feature = "interfaces")]
 pub fn bench_header_encryption() -> anyhow::Result<()> {
-    use serde_json::Value;
-    use std::time::Instant;
-
     print!("Running 'direct' header encryption bench...");
     let public_key_json: Value = serde_json::from_str(include_str!(
         "./interfaces/hybrid_crypto/tests/public_master_key.json"
@@ -157,7 +173,6 @@ pub fn bench_header_encryption() -> anyhow::Result<()> {
 
 #[cfg(feature = "interfaces")]
 fn generate_encrypted_header() -> anyhow::Result<EncryptedHeader<Aes256GcmCrypto>> {
-    use serde_json::Value;
     let public_key_json: Value = serde_json::from_str(include_str!(
         "./interfaces/hybrid_crypto/tests/public_master_key.json"
     ))?;
@@ -195,13 +210,6 @@ fn generate_encrypted_header() -> anyhow::Result<EncryptedHeader<Aes256GcmCrypto
 /// # Safety
 #[cfg(feature = "ffi")]
 pub unsafe fn bench_ffi_header_encryption() -> anyhow::Result<()> {
-    use abe_gpsw::interfaces::ffi::hybrid_gpsw_aes::h_aes_encrypt_header;
-    use serde_json::Value;
-    use std::{
-        ffi::CString,
-        os::raw::{c_char, c_int},
-        time::Instant,
-    };
     print!("Running 'FFI' header encryption bench...");
     let public_key_json: Value = serde_json::from_str(include_str!(
         "./interfaces/hybrid_crypto/tests/public_master_key.json"
@@ -274,16 +282,6 @@ pub unsafe fn bench_ffi_header_encryption() -> anyhow::Result<()> {
 /// # Safety
 #[cfg(feature = "ffi")]
 pub unsafe fn bench_ffi_header_encryption_using_cache() -> anyhow::Result<()> {
-    use abe_gpsw::interfaces::ffi::hybrid_gpsw_aes::{
-        h_aes_create_encryption_cache, h_aes_destroy_encryption_cache,
-        h_aes_encrypt_header_using_cache,
-    };
-    use serde_json::Value;
-    use std::{
-        ffi::{c_void, CString},
-        os::raw::{c_char, c_int},
-        time::Instant,
-    };
     print!("Running 'FFI' header encryption with cache bench...");
     let public_key_json: Value = serde_json::from_str(include_str!(
         "./interfaces/hybrid_crypto/tests/public_master_key.json"
@@ -366,9 +364,6 @@ pub unsafe fn bench_ffi_header_encryption_using_cache() -> anyhow::Result<()> {
 /// # Safety
 #[cfg(feature = "interfaces")]
 pub fn bench_header_decryption() -> anyhow::Result<()> {
-    use serde_json::Value;
-    use std::time::Instant;
-
     print!("Running direct header decryption...");
     let encrypted_header = generate_encrypted_header()?;
 
@@ -397,13 +392,6 @@ pub fn bench_header_decryption() -> anyhow::Result<()> {
 /// # Safety
 #[cfg(feature = "ffi")]
 pub unsafe fn bench_ffi_header_decryption() -> anyhow::Result<()> {
-    use abe_gpsw::interfaces::ffi::hybrid_gpsw_aes::h_aes_decrypt_header;
-    use serde_json::Value;
-    use std::{
-        os::raw::{c_char, c_int},
-        time::Instant,
-    };
-
     print!("Running FFI header decryption...");
     let encrypted_header = generate_encrypted_header()?;
 
@@ -456,17 +444,6 @@ pub unsafe fn bench_ffi_header_decryption() -> anyhow::Result<()> {
 /// # Safety
 #[cfg(feature = "ffi")]
 pub unsafe fn bench_ffi_header_decryption_using_cache() -> anyhow::Result<()> {
-    use abe_gpsw::interfaces::ffi::hybrid_gpsw_aes::{
-        h_aes_create_decryption_cache, h_aes_decrypt_header_using_cache,
-        h_aes_destroy_decryption_cache,
-    };
-    use serde_json::Value;
-    use std::{
-        ffi::c_void,
-        os::raw::{c_char, c_int},
-        time::Instant,
-    };
-
     print!("Running FFI header decryption using cache...");
     let encrypted_header = generate_encrypted_header()?;
 
@@ -527,13 +504,6 @@ pub unsafe fn bench_ffi_header_decryption_using_cache() -> anyhow::Result<()> {
 
 #[cfg(feature = "ffi")]
 unsafe fn unwrap_ffi_error(val: i32) -> anyhow::Result<()> {
-    use std::{
-        ffi::CStr,
-        os::raw::{c_char, c_int},
-    };
-
-    use abe_gpsw::interfaces::ffi::error::get_last_error;
-
     if val != 0 {
         let mut message_bytes_key = vec![0u8; 4096];
         let message_bytes_ptr = message_bytes_key.as_mut_ptr() as *mut c_char;
