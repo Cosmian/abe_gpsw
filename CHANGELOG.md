@@ -2,6 +2,24 @@
 
 All notable changes to this project will be documented in this file.
 
+---
+## [0.6.0] - 2022-03-11
+### Added
+- FFI hybrid encryption using a cache to speed up encryption/decryption (x4 on encryption, x2 on decryption)
+- FFI tests
+- benchmarks and profiling- see `bench.rs` for details
+
+Run benchmarks:
+
+```sh
+cargo run --release --features ffi --bin bench_abe_gpsw
+```
+### Changed
+### Fixed
+### Removed
+
+---
+
 
 ---
 ## [0.5.0] - 2022-03-09
