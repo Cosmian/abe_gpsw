@@ -26,7 +26,6 @@ type PublicKey = <Gpsw<Bls12_381> as AbeScheme>::MasterPublicKey;
 type UserDecryptionKey = <Gpsw<Bls12_381> as AbeScheme>::UserDecryptionKey;
 
 #[allow(unused_unsafe)]
-#[allow(clippy::if_same_then_else)]
 fn main() -> anyhow::Result<()> {
     let args: Vec<String> = env::args().collect();
 
