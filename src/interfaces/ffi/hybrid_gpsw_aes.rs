@@ -42,12 +42,6 @@ pub struct EncryptionCache {
     public_key: GpswMasterPublicKey<Bls12_381>,
 }
 
-impl Drop for EncryptionCache {
-    fn drop(&mut self) {
-        println!("Dropped encryption cache")
-    }
-}
-
 #[no_mangle]
 /// Create a cache of the Public Key and Policy which can be re-used
 /// when encrypting multiple messages. This avoids having to re-instantiate
@@ -355,12 +349,6 @@ pub unsafe extern "C" fn h_aes_encrypt_header(
 #[repr(C)]
 pub struct DecryptionCache {
     user_decryption_key: GpswDecryptionKey<Bls12_381>,
-}
-
-impl Drop for DecryptionCache {
-    fn drop(&mut self) {
-        println!("Dropped decryption cache")
-    }
 }
 
 #[no_mangle]

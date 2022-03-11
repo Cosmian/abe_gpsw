@@ -66,12 +66,14 @@ fn main() -> anyhow::Result<()> {
     } else if selector == "all" {
         #[cfg(feature = "interfaces")]
         bench_header_encryption()?;
-        #[cfg(feature = "interfaces")]
-        bench_header_decryption()?;
         unsafe {
             bench_ffi_header_encryption()?;
             #[cfg(feature = "ffi")]
             bench_ffi_header_encryption_using_cache()?;
+        }
+        #[cfg(feature = "interfaces")]
+        bench_header_decryption()?;
+        unsafe {
             #[cfg(feature = "ffi")]
             bench_ffi_header_decryption()?;
             #[cfg(feature = "ffi")]
@@ -84,10 +86,10 @@ Usage: cargo run --release --features ffi --bin bench_abe_gpsw -- [OPTION]
 where [OPTION] is:
 
 all                        : (or none) run all benches
-header_encryption          : direct hybrid header encryption
+header_encryption          : reference hybrid header encryption
 ffi_header_encryption      : hybrid header encryption via FFI
 ffi_header_enc_using_cache : hybrid header encryption via FFI using a cache
-header_decryption          : direct hybrid header decryption
+header_decryption          : reference hybrid header decryption
 ffi_header_decryption      : hybrid header decryption via FFI
 ffi_header_dec_using_cache : hybrid header decryption via FFI using a cache
 
@@ -125,7 +127,6 @@ pub fn bench_header_encryption() -> anyhow::Result<()> {
     let public_key = PublicKey::from_bytes(&hex::decode(hex_key)?)?;
 
     // Policy
-
     let policy_hex = key_value[1]["value"][4]["value"][0]["value"][2]["value"]
         .as_str()
         .unwrap();
@@ -223,10 +224,10 @@ pub unsafe fn bench_ffi_header_encryption() -> anyhow::Result<()> {
         attr("Department", "FIN"),
         attr("Security Level", "Confidential"),
     ];
-    // let meta_data = Metadata {
-    //     uid: vec![1, 2, 3, 4, 5, 6, 7, 8, 9],
-    //     additional_data: Some(vec![10, 11, 12, 13, 14]),
-    // };
+    let meta_data = Metadata {
+        uid: vec![1, 2, 3, 4, 5, 6, 7, 8, 9],
+        additional_data: Some(vec![10, 11, 12, 13, 14]),
+    };
 
     let mut symmetric_key = vec![0u8; 32];
     let symmetric_key_ptr = symmetric_key.as_mut_ptr() as *mut c_char;
@@ -246,7 +247,7 @@ pub unsafe fn bench_ffi_header_encryption() -> anyhow::Result<()> {
     let attributes_json = CString::new(serde_json::to_string(&policy_attributes)?.as_str())?;
     let attributes_ptr = attributes_json.as_ptr();
 
-    let loops = 100;
+    let loops = 5000;
     let before = Instant::now();
     for _i in 0..loops {
         unwrap_ffi_error(h_aes_encrypt_header(
@@ -258,10 +259,10 @@ pub unsafe fn bench_ffi_header_encryption() -> anyhow::Result<()> {
             public_key_ptr as *const i8,
             public_key_len,
             attributes_ptr,
-            std::ptr::null(),
-            0,
-            std::ptr::null(),
-            0,
+            meta_data.uid.as_ptr() as *const c_char,
+            meta_data.uid.len() as i32,
+            meta_data.additional_data.as_ref().unwrap().as_ptr() as *const c_char,
+            meta_data.additional_data.as_ref().unwrap().len() as i32,
         ))?;
     }
     let avg_time = before.elapsed().as_micros() / loops;
@@ -306,6 +307,11 @@ pub unsafe fn bench_ffi_header_encryption_using_cache() -> anyhow::Result<()> {
         attr("Security Level", "Confidential"),
     ];
 
+    let meta_data = Metadata {
+        uid: vec![1, 2, 3, 4, 5, 6, 7, 8, 9],
+        additional_data: Some(vec![10, 11, 12, 13, 14]),
+    };
+
     let mut cache_ptr: *mut c_void = std::ptr::null_mut();
     let cache_ptr_ptr: *mut *mut c_void = &mut cache_ptr;
 
@@ -344,10 +350,10 @@ pub unsafe fn bench_ffi_header_encryption_using_cache() -> anyhow::Result<()> {
             &mut header_bytes_len,
             cache_ptr_ptr,
             attributes_ptr,
-            std::ptr::null(),
-            0,
-            std::ptr::null(),
-            0,
+            meta_data.uid.as_ptr() as *const c_char,
+            meta_data.uid.len() as i32,
+            meta_data.additional_data.as_ref().unwrap().as_ptr() as *const c_char,
+            meta_data.additional_data.as_ref().unwrap().len() as i32,
         ))?;
     }
     let avg_time = before.elapsed().as_micros() / loops;
