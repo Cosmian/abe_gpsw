@@ -28,11 +28,16 @@ jobs:
           args: --all-features -- -D warnings
 
   test:
-    name: Test and build with all features on ${{ matrix.os }}
-    runs-on: ${{ matrix.os }}
+    name: Test on ${{ matrix.target }} for feature ${{ matrix.feature }}
+    runs-on: ubuntu-latest
     strategy:
+      fail-fast: false
       matrix:
-        os: [ubuntu-latest]
+        include:
+          - target: x86_64-unknown-linux-gnu
+            feature: ffi
+          - target: wasm32-unknown-unknown
+            feature: wasm_bindgen
 
     steps:
       - uses: actions/checkout@v1
@@ -40,37 +45,13 @@ jobs:
         with:
           toolchain: stable
           override: true
+      - run: cargo install wasm-bindgen-cli
+      - run: rustup target add ${{ matrix.target }}
       - name: Run tests
         uses: actions-rs/cargo@v1
         with:
           command: test
-          args:  --all-features --verbose --release
-      - name: Build with all features
-        uses: actions-rs/cargo@v1
-        with:
-          command: build
-          args: --verbose --all-features
-
-  no-std:
-    name: Check no-std target ${{ matrix.target }}
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        target:
-          - wasm32-unknown-unknown
-
-    steps:
-      - uses: actions/checkout@v1
-      - uses: actions-rs/toolchain@v1
-        with:
-          toolchain: stable
-          override: true
-      - run: rustup target add ${{ matrix.target }}
-      - name: Build
-        uses: actions-rs/cargo@v1
-        with:
-          command: build
-          args: --verbose --target ${{ matrix.target }} --features wasm_bindgen
+          args: --verbose --release --features ${{ matrix.feature }} --target ${{ matrix.target }}
 
   doc-links:
     name: Stable lint

@@ -12,6 +12,7 @@
         "rustup",
         "strncpy",
         "thiserror",
+        "wasi",
         "webassembly"
     ],
 }
