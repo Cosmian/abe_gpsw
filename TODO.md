@@ -2,6 +2,7 @@
 
 - split file handling and crypto implementation
 - remove anyhow (eyre)
+- use `cargo bench` to run `bench.rs` file
 
 # CSPN Features
 - ABE engine
