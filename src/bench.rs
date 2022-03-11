@@ -3,22 +3,35 @@
 //   cargo run --release --features interfaces --bin bench_abe_gpsw -- --help
 // for online help
 
-use abe_gpsw::{
-    core::{
-        bilinear_map::bls12_381::Bls12_381,
-        gpsw::{AbeScheme, AsBytes, Gpsw},
-        policy::{attr, Policy},
-    },
-    interfaces::hybrid_crypto::encrypt_hybrid_header,
-};
-use cosmian_crypto_base::{
-    hybrid_crypto::Metadata, symmetric_crypto::aes_256_gcm_pure::Aes256GcmCrypto,
-};
-use serde_json::Value;
 use std::env;
-use std::ffi::CStr;
-use std::time::Instant;
+#[cfg(any(feature = "interfaces", feature = "ffi"))]
+use {
+    abe_gpsw::core::gpsw::AsBytes,
+    abe_gpsw::core::{
+        bilinear_map::bls12_381::Bls12_381,
+        gpsw::{AbeScheme, Gpsw},
+    },
+    serde_json::Value,
+    std::time::Instant,
+};
+#[cfg(feature = "interfaces")]
+use {
+    abe_gpsw::core::policy::{attr, Policy},
+    abe_gpsw::interfaces::hybrid_crypto::encrypt_hybrid_header,
+    cosmian_crypto_base::{
+        hybrid_crypto::Metadata, symmetric_crypto::aes_256_gcm_pure::Aes256GcmCrypto,
+    },
+};
+#[cfg(feature = "ffi")]
+use {
+    abe_gpsw::interfaces::ffi::{error::get_last_error, hybrid_gpsw_aes::h_aes_encrypt_header},
+    std::{
+        ffi::{CStr, CString},
+        os::raw::{c_char, c_int},
+    },
+};
 
+#[cfg(any(feature = "interfaces", feature = "ffi"))]
 type PublicKey = <Gpsw<Bls12_381> as AbeScheme>::MasterPublicKey;
 //type UserDecryptionKey = <Gpsw<Bls12_381> as AbeScheme>::UserDecryptionKey;
 
@@ -38,15 +51,16 @@ fn main() -> anyhow::Result<()> {
         #[cfg(feature = "interfaces")]
         bench_header_encryption()?;
     } else if selector == "ffi_header_encryption" {
+        #[cfg(feature = "ffi")]
         unsafe {
-            #[cfg(feature = "ffi")]
             bench_ffi_header_encryption()?;
         }
     } else if selector == "all" {
         #[cfg(feature = "interfaces")]
         bench_header_encryption()?;
+
+        #[cfg(feature = "ffi")]
         unsafe {
-            #[cfg(feature = "ffi")]
             bench_ffi_header_encryption()?;
         }
     } else {
@@ -134,12 +148,6 @@ pub unsafe fn bench_ffi_header_encryption() -> anyhow::Result<()> {
 
     // Policy
 
-    use std::{
-        ffi::CString,
-        os::raw::{c_char, c_int},
-    };
-
-    use abe_gpsw::interfaces::ffi::{error::get_last_error, hybrid_gpsw_aes::h_aes_encrypt_header};
     let policy_hex = key_value[1]["value"][4]["value"][0]["value"][2]["value"]
         .as_str()
         .unwrap();
