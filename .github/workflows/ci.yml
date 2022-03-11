@@ -51,7 +51,7 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command: test
-          args: --verbose --release --features ${{ matrix.feature }} --target ${{ matrix.target }}
+          args: --lib --verbose --release --features ${{ matrix.feature }} --target ${{ matrix.target }}
 
   doc-links:
     name: Stable lint
