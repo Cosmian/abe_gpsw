@@ -3,6 +3,22 @@
 //   cargo run --release --features interfaces --bin bench_abe_gpsw -- --help
 // for online help
 
+use std::env;
+#[cfg(feature = "ffi")]
+use {
+    abe_gpsw::interfaces::ffi::{
+        error::get_last_error,
+        hybrid_gpsw_aes::{
+            h_aes_create_decryption_cache, h_aes_create_encryption_cache, h_aes_decrypt_header,
+            h_aes_decrypt_header_using_cache, h_aes_destroy_decryption_cache,
+            h_aes_destroy_encryption_cache, h_aes_encrypt_header, h_aes_encrypt_header_using_cache,
+        },
+    },
+    std::{
+        ffi::{c_void, CStr, CString},
+        os::raw::{c_char, c_int},
+    },
+};
 #[cfg(feature = "interfaces")]
 use {
     abe_gpsw::{
@@ -18,26 +34,9 @@ use {
     cosmian_crypto_base::{
         hybrid_crypto::Metadata, symmetric_crypto::aes_256_gcm_pure::Aes256GcmCrypto,
     },
-    std::env,
 };
-
-#[cfg(feature = "ffi")]
-use {
-    abe_gpsw::interfaces::ffi::{
-        error::get_last_error,
-        hybrid_gpsw_aes::{
-            h_aes_create_decryption_cache, h_aes_create_encryption_cache, h_aes_decrypt_header,
-            h_aes_decrypt_header_using_cache, h_aes_destroy_decryption_cache,
-            h_aes_destroy_encryption_cache, h_aes_encrypt_header, h_aes_encrypt_header_using_cache,
-        },
-    },
-    serde_json::Value,
-    std::{
-        ffi::{c_void, CStr, CString},
-        os::raw::{c_char, c_int},
-        time::Instant,
-    },
-};
+#[cfg(any(feature = "interfaces", feature = "ffi"))]
+use {serde_json::Value, std::time::Instant};
 
 #[cfg(feature = "interfaces")]
 type PublicKey = <Gpsw<Bls12_381> as AbeScheme>::MasterPublicKey;
@@ -45,7 +44,7 @@ type PublicKey = <Gpsw<Bls12_381> as AbeScheme>::MasterPublicKey;
 #[cfg(feature = "interfaces")]
 type UserDecryptionKey = <Gpsw<Bls12_381> as AbeScheme>::UserDecryptionKey;
 
-#[allow(unused_unsafe)]
+#[allow(clippy::if_same_then_else)]
 fn main() -> anyhow::Result<()> {
     let args: Vec<String> = env::args().collect();
 
