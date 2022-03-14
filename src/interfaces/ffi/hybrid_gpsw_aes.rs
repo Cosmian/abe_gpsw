@@ -54,15 +54,27 @@ pub struct EncryptionCache {
 /// to reclaim the memory of the cache when done
 /// # Safety
 pub unsafe extern "C" fn h_aes_create_encryption_cache(
-    cache_ptr_ptr: *mut *mut c_void,
     policy_ptr: *const c_char,
     public_key_ptr: *const c_char,
     public_key_len: c_int,
-) -> c_int {
-    ffi_not_null!(policy_ptr, "Policy pointer should not be null");
-    ffi_not_null!(public_key_ptr, "Policy pointer should not be null");
+) -> *mut c_void {
+    if policy_ptr.is_null() {
+        set_last_error(FfiError::NullPointer(
+            "Policy pointer should not be null".to_owned(),
+        ));
+        return std::ptr::null_mut();
+    }
+    if public_key_ptr.is_null() {
+        set_last_error(FfiError::NullPointer(
+            "Public key pointer should not be null".to_owned(),
+        ));
+        return std::ptr::null_mut();
+    }
     if public_key_len == 0 {
-        ffi_bail!("The public key should not be empty");
+        set_last_error(FfiError::NullPointer(
+            "The public key should not be empty".to_owned(),
+        ));
+        return std::ptr::null_mut();
     }
     // Policy
     let policy = match CStr::from_ptr(policy_ptr).to_str() {
@@ -71,29 +83,45 @@ pub unsafe extern "C" fn h_aes_create_encryption_cache(
             set_last_error(FfiError::Generic(
                 "Hybrid Cipher: invalid Policy".to_owned(),
             ));
-            return 1;
+            return std::ptr::null_mut();
         }
     };
-    let policy: Policy = ffi_unwrap!(serde_json::from_str(&policy));
+    let policy: Policy = match serde_json::from_str(&policy) {
+        Ok(p) => p,
+        Err(e) => {
+            set_last_error(FfiError::Generic(format!(
+                "Hybrid Cipher: invalid Policy: {:?}",
+                e
+            )));
+            return std::ptr::null_mut();
+        }
+    };
 
     // Public Key
     let public_key_bytes =
         std::slice::from_raw_parts(public_key_ptr as *const u8, public_key_len as usize);
-    let public_key = ffi_unwrap!(PublicKey::from_bytes(public_key_bytes));
+    let public_key = match PublicKey::from_bytes(public_key_bytes) {
+        Ok(key) => key,
+        Err(e) => {
+            set_last_error(FfiError::Generic(format!(
+                "Hybrid Cipher: invalid public key: {:?}",
+                e
+            )));
+            return std::ptr::null_mut();
+        }
+    };
 
     let cache = Box::new(EncryptionCache { policy, public_key });
-    *cache_ptr_ptr = Box::into_raw(cache) as *mut c_void;
-    0
+    Box::into_raw(cache) as *mut c_void
 }
 
 #[no_mangle]
 /// The function MUST be called to reclaim memory
 /// of the cache created using h_aes_create_encrypt_cache()
 /// # Safety
-pub unsafe extern "C" fn h_aes_destroy_encryption_cache(cache_ptr: *const *mut c_void) -> c_int {
+pub unsafe extern "C" fn h_aes_destroy_encryption_cache(cache_ptr: *mut c_void) -> c_int {
     ffi_not_null!(cache_ptr, "Cache pointer should not be null");
-    ffi_not_null!(*cache_ptr, "Cache pointer should not be null");
-    let _cache = Box::from_raw(*cache_ptr as *mut EncryptionCache);
+    let _cache = Box::from_raw(cache_ptr as *mut EncryptionCache);
     0
 }
 
@@ -106,7 +134,7 @@ pub unsafe extern "C" fn h_aes_encrypt_header_using_cache(
     symmetric_key_len: *mut c_int,
     header_bytes_ptr: *mut c_char,
     header_bytes_len: *mut c_int,
-    cache_ptr_ptr: *mut *mut c_void,
+    cache_ptr: *const c_void,
     attributes_ptr: *const c_char,
     uid_ptr: *const c_char,
     uid_len: c_int,
@@ -127,11 +155,10 @@ pub unsafe extern "C" fn h_aes_encrypt_header_using_cache(
     if *header_bytes_len == 0 {
         ffi_bail!("The header bytes buffer should have a size greater than zero");
     }
-    ffi_not_null!(cache_ptr_ptr, "Cache pointer should not be null");
-    ffi_not_null!(*cache_ptr_ptr, "Cache pointer should not be null");
+    ffi_not_null!(cache_ptr, "Cache pointer should not be null");
     ffi_not_null!(attributes_ptr, "Attributes pointer should not be null");
 
-    let cache = Box::from_raw(*cache_ptr_ptr as *mut EncryptionCache);
+    let cache = &*(cache_ptr as *const EncryptionCache);
 
     // Policy
 
@@ -203,9 +230,6 @@ pub unsafe extern "C" fn h_aes_encrypt_header_using_cache(
     std::slice::from_raw_parts_mut(header_bytes_ptr as *mut u8, len)
         .copy_from_slice(&encrypted_header.encrypted_header_bytes);
     *header_bytes_len = len as c_int;
-
-    //re-assign the cache pointer
-    *cache_ptr_ptr = Box::into_raw(cache) as *mut c_void;
 
     0
 }
@@ -363,13 +387,20 @@ pub struct DecryptionCache {
 /// to reclaim the memory of the cache when done
 /// # Safety
 pub unsafe extern "C" fn h_aes_create_decryption_cache(
-    cache_ptr_ptr: *mut *mut c_void,
     user_decryption_key_ptr: *const c_char,
     user_decryption_key_len: c_int,
-) -> c_int {
-    ffi_not_null!(user_decryption_key_ptr, "Policy pointer should not be null");
+) -> *mut c_void {
+    if user_decryption_key_ptr.is_null() {
+        set_last_error(FfiError::NullPointer(
+            "User decryption key pointer should not be null".to_owned(),
+        ));
+        return std::ptr::null_mut();
+    }
     if user_decryption_key_len == 0 {
-        ffi_bail!("The public key should not be empty");
+        set_last_error(FfiError::NullPointer(
+            "The user decryption key should not be empty".to_owned(),
+        ));
+        return std::ptr::null_mut();
     }
 
     // Public Key
@@ -377,23 +408,30 @@ pub unsafe extern "C" fn h_aes_create_decryption_cache(
         user_decryption_key_ptr as *const u8,
         user_decryption_key_len as usize,
     );
-    let user_decryption_key = ffi_unwrap!(UserDecryptionKey::from_bytes(user_decryption_key_bytes));
+    let user_decryption_key = match UserDecryptionKey::from_bytes(user_decryption_key_bytes) {
+        Ok(key) => key,
+        Err(e) => {
+            set_last_error(FfiError::Generic(format!(
+                "Hybrid Cipher: invalid user decryption key: {:?}",
+                e
+            )));
+            return std::ptr::null_mut();
+        }
+    };
 
     let cache = Box::new(DecryptionCache {
         user_decryption_key,
     });
-    *cache_ptr_ptr = Box::into_raw(cache) as *mut c_void;
-    0
+    Box::into_raw(cache) as *mut c_void
 }
 
 #[no_mangle]
 /// The function MUST be called to reclaim memory
 /// of the cache created using h_aes_create_decryption_cache()
 /// # Safety
-pub unsafe extern "C" fn h_aes_destroy_decryption_cache(cache_ptr: *const *mut c_void) -> c_int {
+pub unsafe extern "C" fn h_aes_destroy_decryption_cache(cache_ptr: *mut c_void) -> c_int {
     ffi_not_null!(cache_ptr, "Cache pointer should not be null");
-    ffi_not_null!(*cache_ptr, "Cache pointer should not be null");
-    let _cache = Box::from_raw(*cache_ptr as *mut DecryptionCache);
+    let _cache = Box::from_raw(cache_ptr as *mut DecryptionCache);
     0
 }
 
@@ -414,7 +452,7 @@ pub unsafe extern "C" fn h_aes_decrypt_header_using_cache(
     additional_data_len: *mut c_int,
     encrypted_header_ptr: *const c_char,
     encrypted_header_len: c_int,
-    cache_ptr_ptr: *mut *mut c_void,
+    cache_ptr_ptr: *const c_void,
 ) -> c_int {
     ffi_not_null!(
         symmetric_key_ptr,
@@ -431,14 +469,13 @@ pub unsafe extern "C" fn h_aes_decrypt_header_using_cache(
         ffi_bail!("The encrypted header bytes size should be greater than zero");
     }
     ffi_not_null!(cache_ptr_ptr, "The cache pointer should not be null");
-    ffi_not_null!(*cache_ptr_ptr, "The cache pointer should not be null");
 
     let encrypted_header_bytes = std::slice::from_raw_parts(
         encrypted_header_ptr as *const u8,
         encrypted_header_len as usize,
     );
 
-    let cache = Box::from_raw(*cache_ptr_ptr as *mut DecryptionCache);
+    let cache = &*(cache_ptr_ptr as *const DecryptionCache);
 
     let header: ClearTextHeader<Aes256GcmCrypto> =
         ffi_unwrap!(decrypt_hybrid_header::<Gpsw<Bls12_381>, Aes256GcmCrypto>(
@@ -493,9 +530,6 @@ pub unsafe extern "C" fn h_aes_decrypt_header_using_cache(
             *additional_data_len = 0_i32;
         }
     }
-
-    //re-assign the cache pointer
-    *cache_ptr_ptr = Box::into_raw(cache) as *mut c_void;
 
     0
 }
