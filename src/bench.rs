@@ -315,7 +315,13 @@ pub unsafe fn bench_ffi_header_encryption_using_cache() -> anyhow::Result<()> {
     let public_key_ptr = public_key_bytes.as_ptr() as *const c_char;
     let public_key_len = public_key_bytes.len() as i32;
 
-    let cache_ptr = h_aes_create_encryption_cache(policy_ptr, public_key_ptr, public_key_len);
+    let mut cache_handle: i32 = 0;
+    unwrap_ffi_error(h_aes_create_encryption_cache(
+        &mut cache_handle,
+        policy_ptr,
+        public_key_ptr,
+        public_key_len,
+    ))?;
 
     let mut symmetric_key = vec![0u8; 32];
     let symmetric_key_ptr = symmetric_key.as_mut_ptr() as *mut c_char;
@@ -336,7 +342,7 @@ pub unsafe fn bench_ffi_header_encryption_using_cache() -> anyhow::Result<()> {
             &mut symmetric_key_len,
             header_bytes_ptr,
             &mut header_bytes_len,
-            cache_ptr,
+            cache_handle,
             attributes_ptr,
             meta_data.uid.as_ptr() as *const c_char,
             meta_data.uid.len() as i32,
@@ -347,7 +353,7 @@ pub unsafe fn bench_ffi_header_encryption_using_cache() -> anyhow::Result<()> {
     let avg_time = before.elapsed().as_micros() / loops;
     println!("avg time: {} micro seconds", avg_time);
 
-    unwrap_ffi_error(h_aes_destroy_encryption_cache(cache_ptr))?;
+    unwrap_ffi_error(h_aes_destroy_encryption_cache(cache_handle))?;
     Ok(())
 }
 
@@ -461,7 +467,13 @@ pub unsafe fn bench_ffi_header_decryption_using_cache() -> anyhow::Result<()> {
     let user_decryption_key_ptr = user_decryption_key_bytes.as_ptr() as *const c_char;
     let user_decryption_key_len = user_decryption_key_bytes.len() as i32;
 
-    let cache_ptr = h_aes_create_decryption_cache(user_decryption_key_ptr, user_decryption_key_len);
+    let mut cache_handle: i32 = 0;
+
+    unwrap_ffi_error(h_aes_create_decryption_cache(
+        &mut cache_handle,
+        user_decryption_key_ptr,
+        user_decryption_key_len,
+    ))?;
 
     let loops = 5000;
     let before = Instant::now();
@@ -475,13 +487,13 @@ pub unsafe fn bench_ffi_header_decryption_using_cache() -> anyhow::Result<()> {
             &mut additional_data_len,
             encrypted_header.encrypted_header_bytes.as_ptr() as *const c_char,
             encrypted_header.encrypted_header_bytes.len() as c_int,
-            cache_ptr,
+            cache_handle,
         ))?;
     }
     let avg_time = before.elapsed().as_micros() / loops;
     println!("avg time: {} micro seconds", avg_time);
 
-    unwrap_ffi_error(h_aes_destroy_decryption_cache(cache_ptr))?;
+    unwrap_ffi_error(h_aes_destroy_decryption_cache(cache_handle))?;
 
     Ok(())
 }

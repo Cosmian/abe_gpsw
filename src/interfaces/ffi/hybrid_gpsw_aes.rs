@@ -1,6 +1,11 @@
 use std::{
-    ffi::{c_void, CStr},
+    collections::HashMap,
+    ffi::CStr,
     os::raw::{c_char, c_int},
+    sync::{
+        atomic::{AtomicI32, Ordering},
+        RwLock,
+    },
 };
 
 use crate::{
@@ -26,6 +31,7 @@ use cosmian_crypto_base::{
     hybrid_crypto::Metadata,
     symmetric_crypto::{aes_256_gcm_pure::Aes256GcmCrypto, SymmetricCrypto},
 };
+use lazy_static::lazy_static;
 
 type PublicKey = <Gpsw<Bls12_381> as AbeScheme>::MasterPublicKey;
 type UserDecryptionKey = <Gpsw<Bls12_381> as AbeScheme>::UserDecryptionKey;
@@ -34,9 +40,15 @@ type UserDecryptionKey = <Gpsw<Bls12_381> as AbeScheme>::UserDecryptionKey;
 //         Encryption
 // -------------------------------
 
+// A static cache of the Encryption Caches
+lazy_static! {
+    static ref ENCRYPTION_CACHE_MAP: RwLock<HashMap<i32, EncryptionCache>> =
+        RwLock::new(HashMap::new());
+    static ref NEXT_ENCRYPTION_CACHE_ID: std::sync::atomic::AtomicI32 = AtomicI32::new(0);
+}
+
 /// An Encryption Cache that will be used to cache Rust side
 /// the Public Key and the Policy when doing multiple serial encryptions
-#[repr(C)]
 pub struct EncryptionCache {
     policy: Policy,
     public_key: GpswMasterPublicKey<Bls12_381>,
@@ -50,50 +62,31 @@ pub struct EncryptionCache {
 /// This method is to be used in conjonction with
 ///     h_aes_encrypt_header_using_cache
 ///
-/// WARN: h_aes_destroy_encrypt_cache() MUST be called
+/// WARN: h_aes_destroy_encrypt_cache() should be called
 /// to reclaim the memory of the cache when done
 /// # Safety
 pub unsafe extern "C" fn h_aes_create_encryption_cache(
+    cache_handle: *mut c_int,
     policy_ptr: *const c_char,
     public_key_ptr: *const c_char,
     public_key_len: c_int,
-) -> *mut c_void {
-    if policy_ptr.is_null() {
-        set_last_error(FfiError::NullPointer(
-            "Policy pointer should not be null".to_owned(),
-        ));
-        return std::ptr::null_mut();
-    }
-    if public_key_ptr.is_null() {
-        set_last_error(FfiError::NullPointer(
-            "Public key pointer should not be null".to_owned(),
-        ));
-        return std::ptr::null_mut();
-    }
+) -> i32 {
+    ffi_not_null!(policy_ptr, "Policy pointer should not be null");
+    ffi_not_null!(public_key_ptr, "Public key pointer should not be null");
     if public_key_len == 0 {
-        set_last_error(FfiError::NullPointer(
-            "The public key should not be empty".to_owned(),
-        ));
-        return std::ptr::null_mut();
+        ffi_bail!("The public key should not be empty");
     }
     // Policy
     let policy = match CStr::from_ptr(policy_ptr).to_str() {
         Ok(msg) => msg.to_owned(),
         Err(_e) => {
-            set_last_error(FfiError::Generic(
-                "Hybrid Cipher: invalid Policy".to_owned(),
-            ));
-            return std::ptr::null_mut();
+            ffi_bail!("Hybrid Cipher: invalid Policy".to_owned(),);
         }
     };
     let policy: Policy = match serde_json::from_str(&policy) {
         Ok(p) => p,
         Err(e) => {
-            set_last_error(FfiError::Generic(format!(
-                "Hybrid Cipher: invalid Policy: {:?}",
-                e
-            )));
-            return std::ptr::null_mut();
+            ffi_bail!(format!("Hybrid Cipher: invalid Policy: {:?}", e));
         }
     };
 
@@ -103,25 +96,29 @@ pub unsafe extern "C" fn h_aes_create_encryption_cache(
     let public_key = match PublicKey::from_bytes(public_key_bytes) {
         Ok(key) => key,
         Err(e) => {
-            set_last_error(FfiError::Generic(format!(
-                "Hybrid Cipher: invalid public key: {:?}",
-                e
-            )));
-            return std::ptr::null_mut();
+            ffi_bail!(format!("Hybrid Cipher: invalid public key: {:?}", e));
         }
     };
 
-    let cache = Box::new(EncryptionCache { policy, public_key });
-    Box::into_raw(cache) as *mut c_void
+    let cache = EncryptionCache { policy, public_key };
+    let id = NEXT_ENCRYPTION_CACHE_ID.fetch_add(1, Ordering::Acquire);
+    let mut map = ENCRYPTION_CACHE_MAP
+        .write()
+        .expect("A write mutex on encryption cache failed");
+    map.insert(id, cache);
+    *cache_handle = id;
+    0
 }
 
 #[no_mangle]
-/// The function MUST be called to reclaim memory
+/// The function should be called to reclaim memory
 /// of the cache created using h_aes_create_encrypt_cache()
 /// # Safety
-pub unsafe extern "C" fn h_aes_destroy_encryption_cache(cache_ptr: *mut c_void) -> c_int {
-    ffi_not_null!(cache_ptr, "Cache pointer should not be null");
-    let _cache = Box::from_raw(cache_ptr as *mut EncryptionCache);
+pub unsafe extern "C" fn h_aes_destroy_encryption_cache(cache_handle: c_int) -> c_int {
+    let mut map = ENCRYPTION_CACHE_MAP
+        .write()
+        .expect("A write mutex on encryption cache failed");
+    map.remove(&cache_handle);
     0
 }
 
@@ -134,7 +131,7 @@ pub unsafe extern "C" fn h_aes_encrypt_header_using_cache(
     symmetric_key_len: *mut c_int,
     header_bytes_ptr: *mut c_char,
     header_bytes_len: *mut c_int,
-    cache_ptr: *const c_void,
+    cache_handle: c_int,
     attributes_ptr: *const c_char,
     uid_ptr: *const c_char,
     uid_len: c_int,
@@ -155,12 +152,21 @@ pub unsafe extern "C" fn h_aes_encrypt_header_using_cache(
     if *header_bytes_len == 0 {
         ffi_bail!("The header bytes buffer should have a size greater than zero");
     }
-    ffi_not_null!(cache_ptr, "Cache pointer should not be null");
     ffi_not_null!(attributes_ptr, "Attributes pointer should not be null");
 
-    let cache = &*(cache_ptr as *const EncryptionCache);
-
-    // Policy
+    let map = ENCRYPTION_CACHE_MAP
+        .read()
+        .expect("a read mutex on the encryption cache failed");
+    let cache = match map.get(&cache_handle) {
+        Some(cache) => cache,
+        None => {
+            set_last_error(FfiError::Generic(format!(
+                "Hybrid Cipher: no encryption cache with handle: {}",
+                cache_handle
+            )));
+            return 1;
+        }
+    };
 
     // Attributes
     let attributes = match CStr::from_ptr(attributes_ptr).to_str() {
@@ -230,13 +236,12 @@ pub unsafe extern "C" fn h_aes_encrypt_header_using_cache(
     std::slice::from_raw_parts_mut(header_bytes_ptr as *mut u8, len)
         .copy_from_slice(&encrypted_header.encrypted_header_bytes);
     *header_bytes_len = len as c_int;
-
     0
 }
 
 #[no_mangle]
 /// Encrypt a header without using an encryption cache.
-/// It is slower but does not require destroying the cache when done.
+/// It is slower but does not require destroying any cache when done.
 ///
 /// The symmetric key and header bytes are returned in the first OUT parameters
 /// # Safety
@@ -368,9 +373,15 @@ pub unsafe extern "C" fn h_aes_encrypt_header(
 //         Decryption
 // -------------------------------
 
+// A cache of the encryption caches
+lazy_static! {
+    static ref DECRYPTION_CACHE_MAP: RwLock<HashMap<i32, DecryptionCache>> =
+        RwLock::new(HashMap::new());
+    static ref NEXT_DECRYPTION_CACHE_ID: std::sync::atomic::AtomicI32 = AtomicI32::new(0);
+}
+
 /// A Decryption Cache that will be used to cache Rust side
 /// the User Decryption Key when performing serial decryptions
-#[repr(C)]
 pub struct DecryptionCache {
     user_decryption_key: GpswDecryptionKey<Bls12_381>,
 }
@@ -383,24 +394,20 @@ pub struct DecryptionCache {
 /// This method is to be used in conjonction with
 ///     h_aes_decrypt_header_using_cache()
 ///
-/// WARN: h_aes_destroy_decryption_cache() MUST be called
+/// WARN: h_aes_destroy_decryption_cache() should be called
 /// to reclaim the memory of the cache when done
 /// # Safety
 pub unsafe extern "C" fn h_aes_create_decryption_cache(
+    cache_handle: *mut c_int,
     user_decryption_key_ptr: *const c_char,
     user_decryption_key_len: c_int,
-) -> *mut c_void {
-    if user_decryption_key_ptr.is_null() {
-        set_last_error(FfiError::NullPointer(
-            "User decryption key pointer should not be null".to_owned(),
-        ));
-        return std::ptr::null_mut();
-    }
+) -> i32 {
+    ffi_not_null!(
+        user_decryption_key_ptr,
+        "User decryption key pointer should not be null"
+    );
     if user_decryption_key_len == 0 {
-        set_last_error(FfiError::NullPointer(
-            "The user decryption key should not be empty".to_owned(),
-        ));
-        return std::ptr::null_mut();
+        ffi_bail!("The user decryption key should not be empty");
     }
 
     // Public Key
@@ -411,27 +418,34 @@ pub unsafe extern "C" fn h_aes_create_decryption_cache(
     let user_decryption_key = match UserDecryptionKey::from_bytes(user_decryption_key_bytes) {
         Ok(key) => key,
         Err(e) => {
-            set_last_error(FfiError::Generic(format!(
+            ffi_bail!(format!(
                 "Hybrid Cipher: invalid user decryption key: {:?}",
                 e
-            )));
-            return std::ptr::null_mut();
+            ));
         }
     };
 
-    let cache = Box::new(DecryptionCache {
+    let cache = DecryptionCache {
         user_decryption_key,
-    });
-    Box::into_raw(cache) as *mut c_void
+    };
+    let id = NEXT_DECRYPTION_CACHE_ID.fetch_add(1, Ordering::Acquire);
+    let mut map = DECRYPTION_CACHE_MAP
+        .write()
+        .expect("A write mutex on decryption cache failed");
+    map.insert(id, cache);
+    *cache_handle = id;
+    0
 }
 
 #[no_mangle]
-/// The function MUST be called to reclaim memory
+/// The function should be called to reclaim memory
 /// of the cache created using h_aes_create_decryption_cache()
 /// # Safety
-pub unsafe extern "C" fn h_aes_destroy_decryption_cache(cache_ptr: *mut c_void) -> c_int {
-    ffi_not_null!(cache_ptr, "Cache pointer should not be null");
-    let _cache = Box::from_raw(cache_ptr as *mut DecryptionCache);
+pub unsafe extern "C" fn h_aes_destroy_decryption_cache(cache_handle: c_int) -> c_int {
+    let mut map = DECRYPTION_CACHE_MAP
+        .write()
+        .expect("A write mutex on decryption cache failed");
+    map.remove(&cache_handle);
     0
 }
 
@@ -452,7 +466,7 @@ pub unsafe extern "C" fn h_aes_decrypt_header_using_cache(
     additional_data_len: *mut c_int,
     encrypted_header_ptr: *const c_char,
     encrypted_header_len: c_int,
-    cache_ptr_ptr: *const c_void,
+    cache_handle: c_int,
 ) -> c_int {
     ffi_not_null!(
         symmetric_key_ptr,
@@ -468,14 +482,25 @@ pub unsafe extern "C" fn h_aes_decrypt_header_using_cache(
     if encrypted_header_len == 0 {
         ffi_bail!("The encrypted header bytes size should be greater than zero");
     }
-    ffi_not_null!(cache_ptr_ptr, "The cache pointer should not be null");
 
     let encrypted_header_bytes = std::slice::from_raw_parts(
         encrypted_header_ptr as *const u8,
         encrypted_header_len as usize,
     );
 
-    let cache = &*(cache_ptr_ptr as *const DecryptionCache);
+    let map = DECRYPTION_CACHE_MAP
+        .read()
+        .expect("a read mutex on the decryption cache failed");
+    let cache = match map.get(&cache_handle) {
+        Some(cache) => cache,
+        None => {
+            set_last_error(FfiError::Generic(format!(
+                "Hybrid Cipher: no decryption cache with handle: {}",
+                cache_handle
+            )));
+            return 1;
+        }
+    };
 
     let header: ClearTextHeader<Aes256GcmCrypto> =
         ffi_unwrap!(decrypt_hybrid_header::<Gpsw<Bls12_381>, Aes256GcmCrypto>(
@@ -537,6 +562,8 @@ pub unsafe extern "C" fn h_aes_decrypt_header_using_cache(
 #[no_mangle]
 /// Decrypt an encrypted header returning the symmetric key,
 /// the uid and additional data if available.
+///
+/// Slower tha using a cache but avoids handling the cache creation and destruction.
 ///
 /// No additional data will be returned if the `additional_data_ptr` is NULL.
 ///
