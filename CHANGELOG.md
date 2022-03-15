@@ -3,6 +3,18 @@
 All notable changes to this project will be documented in this file.
 
 ---
+## [0.6.1] - 2022-03-15
+### Added
+### Changed
+- FFI made caches use int handle ids rather than pointers
+### Fixed
+- FFI made caches thread safe
+### Removed
+
+---
+
+
+---
 ## [0.6.0] - 2022-03-11
 ### Added
 - FFI hybrid encryption using a cache to speed up encryption/decryption (x4 on encryption, x2 on decryption)
