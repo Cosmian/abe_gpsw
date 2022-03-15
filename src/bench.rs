@@ -15,7 +15,7 @@ use {
         },
     },
     std::{
-        ffi::{c_void, CStr, CString},
+        ffi::{CStr, CString},
         os::raw::{c_char, c_int},
     },
 };
@@ -308,9 +308,6 @@ pub unsafe fn bench_ffi_header_encryption_using_cache() -> anyhow::Result<()> {
         additional_data: Some(vec![10, 11, 12, 13, 14]),
     };
 
-    let mut cache_ptr: *mut c_void = std::ptr::null_mut();
-    let cache_ptr_ptr: *mut *mut c_void = &mut cache_ptr;
-
     let policy_cs = CString::new(serde_json::to_string(&policy)?.as_str())?;
     let policy_ptr = policy_cs.as_ptr();
 
@@ -318,8 +315,9 @@ pub unsafe fn bench_ffi_header_encryption_using_cache() -> anyhow::Result<()> {
     let public_key_ptr = public_key_bytes.as_ptr() as *const c_char;
     let public_key_len = public_key_bytes.len() as i32;
 
+    let mut cache_handle: i32 = 0;
     unwrap_ffi_error(h_aes_create_encryption_cache(
-        cache_ptr_ptr,
+        &mut cache_handle,
         policy_ptr,
         public_key_ptr,
         public_key_len,
@@ -344,7 +342,7 @@ pub unsafe fn bench_ffi_header_encryption_using_cache() -> anyhow::Result<()> {
             &mut symmetric_key_len,
             header_bytes_ptr,
             &mut header_bytes_len,
-            cache_ptr_ptr,
+            cache_handle,
             attributes_ptr,
             meta_data.uid.as_ptr() as *const c_char,
             meta_data.uid.len() as i32,
@@ -355,7 +353,7 @@ pub unsafe fn bench_ffi_header_encryption_using_cache() -> anyhow::Result<()> {
     let avg_time = before.elapsed().as_micros() / loops;
     println!("avg time: {} micro seconds", avg_time);
 
-    unwrap_ffi_error(h_aes_destroy_encryption_cache(cache_ptr_ptr))?;
+    unwrap_ffi_error(h_aes_destroy_encryption_cache(cache_handle))?;
     Ok(())
 }
 
@@ -469,11 +467,10 @@ pub unsafe fn bench_ffi_header_decryption_using_cache() -> anyhow::Result<()> {
     let user_decryption_key_ptr = user_decryption_key_bytes.as_ptr() as *const c_char;
     let user_decryption_key_len = user_decryption_key_bytes.len() as i32;
 
-    let mut cache_ptr: *mut c_void = std::ptr::null_mut();
-    let cache_ptr_ptr: *mut *mut c_void = &mut cache_ptr;
+    let mut cache_handle: i32 = 0;
 
     unwrap_ffi_error(h_aes_create_decryption_cache(
-        cache_ptr_ptr,
+        &mut cache_handle,
         user_decryption_key_ptr,
         user_decryption_key_len,
     ))?;
@@ -490,13 +487,13 @@ pub unsafe fn bench_ffi_header_decryption_using_cache() -> anyhow::Result<()> {
             &mut additional_data_len,
             encrypted_header.encrypted_header_bytes.as_ptr() as *const c_char,
             encrypted_header.encrypted_header_bytes.len() as c_int,
-            cache_ptr_ptr,
+            cache_handle,
         ))?;
     }
     let avg_time = before.elapsed().as_micros() / loops;
     println!("avg time: {} micro seconds", avg_time);
 
-    unwrap_ffi_error(h_aes_destroy_decryption_cache(cache_ptr_ptr))?;
+    unwrap_ffi_error(h_aes_destroy_decryption_cache(cache_handle))?;
 
     Ok(())
 }

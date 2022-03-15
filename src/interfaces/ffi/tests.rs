@@ -11,7 +11,7 @@ use cosmian_crypto_base::{
     hybrid_crypto::Metadata,
     symmetric_crypto::{aes_256_gcm_pure::Aes256GcmCrypto, SymmetricCrypto},
 };
-use std::ffi::{c_void, CStr};
+use std::ffi::CStr;
 
 type PublicKey = <Gpsw<Bls12_381> as AbeScheme>::MasterPublicKey;
 
@@ -195,9 +195,6 @@ unsafe fn encrypt_header_using_cache(
         .unwrap();
     let policy: Policy = serde_json::from_slice(&hex::decode(policy_hex)?)?;
 
-    let mut cache_ptr: *mut c_void = std::ptr::null_mut();
-    let cache_ptr_ptr: *mut *mut c_void = &mut cache_ptr;
-
     let policy_cs = CString::new(serde_json::to_string(&policy)?.as_str())?;
     let policy_ptr = policy_cs.as_ptr();
 
@@ -205,8 +202,10 @@ unsafe fn encrypt_header_using_cache(
     let public_key_ptr = public_key_bytes.as_ptr() as *const c_char;
     let public_key_len = public_key_bytes.len() as i32;
 
+    let mut cache_handle: i32 = 0;
+
     unwrap_ffi_error(h_aes_create_encryption_cache(
-        cache_ptr_ptr,
+        &mut cache_handle,
         policy_ptr,
         public_key_ptr,
         public_key_len,
@@ -233,7 +232,7 @@ unsafe fn encrypt_header_using_cache(
         &mut symmetric_key_len,
         encrypted_header_ptr,
         &mut encrypted_header_len,
-        cache_ptr_ptr,
+        cache_handle,
         attributes_ptr,
         meta_data.uid.as_ptr() as *const c_char,
         meta_data.uid.len() as i32,
@@ -252,7 +251,7 @@ unsafe fn encrypt_header_using_cache(
     )
     .to_vec();
 
-    unwrap_ffi_error(h_aes_destroy_encryption_cache(cache_ptr_ptr))?;
+    unwrap_ffi_error(h_aes_destroy_encryption_cache(cache_handle))?;
 
     Ok(EncryptedHeader {
         symmetric_key: symmetric_key_,
@@ -274,11 +273,10 @@ unsafe fn decrypt_header_using_cache(
     let user_decryption_key_ptr = user_decryption_key_bytes.as_ptr() as *const c_char;
     let user_decryption_key_len = user_decryption_key_bytes.len() as i32;
 
-    let mut cache_ptr: *mut c_void = std::ptr::null_mut();
-    let cache_ptr_ptr: *mut *mut c_void = &mut cache_ptr;
+    let mut cache_handle: i32 = 0;
 
     unwrap_ffi_error(h_aes_create_decryption_cache(
-        cache_ptr_ptr,
+        &mut cache_handle,
         user_decryption_key_ptr,
         user_decryption_key_len,
     ))?;
@@ -304,7 +302,7 @@ unsafe fn decrypt_header_using_cache(
         &mut additional_data_len,
         header.encrypted_header_bytes.as_ptr() as *const c_char,
         header.encrypted_header_bytes.len() as c_int,
-        cache_ptr_ptr,
+        cache_handle,
     ))?;
 
     let symmetric_key_ = <Aes256GcmCrypto as SymmetricCrypto>::Key::parse(
@@ -320,7 +318,7 @@ unsafe fn decrypt_header_using_cache(
     )
     .to_vec();
 
-    unwrap_ffi_error(h_aes_destroy_decryption_cache(cache_ptr_ptr))?;
+    unwrap_ffi_error(h_aes_destroy_decryption_cache(cache_handle))?;
 
     Ok(DecryptedHeader {
         symmetric_key: symmetric_key_,
@@ -338,6 +336,7 @@ fn test_ffi_hybrid_header() -> anyhow::Result<()> {
             uid: vec![1, 2, 3, 4, 5, 6, 7, 8, 9],
             additional_data: Some(vec![10, 11, 12, 13, 14]),
         };
+
         let encrypted_header = encrypt_header(&meta_data)?;
         let decrypted_header = decrypt_header(&encrypted_header)?;
 

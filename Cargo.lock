@@ -4,7 +4,7 @@ version = 3
 
 [[package]]
 name = "abe_gpsw"
-version = "0.6.0"
+version = "0.6.1"
 dependencies = [
  "cosmian_bls12_381",
  "cosmian_crypto_base",
@@ -14,6 +14,7 @@ dependencies = [
  "group",
  "hex",
  "js-sys",
+ "lazy_static",
  "rand",
  "rand_core 0.5.1",
  "rand_hc",
