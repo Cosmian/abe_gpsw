@@ -560,6 +560,28 @@ pub unsafe extern "C" fn h_aes_decrypt_header_using_cache(
 }
 
 #[no_mangle]
+/// # Safety
+pub unsafe extern "C" fn h_get_encrypted_header_size(
+    encrypted_ptr: *const c_char,
+    encrypted_len: c_int,
+) -> c_int {
+    ffi_not_null!(encrypted_ptr, "Encrypted bytes pointer should not be bull");
+    //
+    // Check `encrypted_bytes` input param and store it locally
+    if encrypted_len == 0 {
+        ffi_bail!("Encrypted value must be at least 4-bytes long");
+    }
+    let encrypted_header_bytes =
+        std::slice::from_raw_parts(encrypted_ptr as *const u8, encrypted_len as usize);
+
+    //
+    // Recover header from `encrypted_bytes`
+    let mut header_size_bytes = [0; 4];
+    header_size_bytes.copy_from_slice(&encrypted_header_bytes.to_vec()[0..4]);
+    i32::from_be_bytes(header_size_bytes)
+}
+
+#[no_mangle]
 /// Decrypt an encrypted header returning the symmetric key,
 /// the uid and additional data if available.
 ///

@@ -1,4 +1,4 @@
-name: Release
+name: Release ios
 
 on:
   push:
@@ -10,28 +10,29 @@ jobs:
     name: release ${{ matrix.target }} for feature ${{ matrix.feature }}
     env:
       PROJECT_NAME_UNDERSCORE: abe_gpsw
-    runs-on: ubuntu-latest
+    runs-on: macos-latest
     strategy:
       fail-fast: false
       matrix:
         include:
-          - target: x86_64-pc-windows-gnu
+          - target: aarch64-apple-darwin
             feature: ffi
-          - target: x86_64-unknown-linux-musl
+          - target: x86_64-apple-darwin
             feature: ffi
-          - target: x86_64-unknown-linux-gnu
+          - target: aarch64-apple-ios
             feature: ffi
-          - target: wasm32-unknown-unknown
-            feature: wasm_bindgen
-          - target: wasm32-wasi
-            feature: wasm_bindgen
+          # - target: armv7-apple-ios
+          #   feature: ffi
+          - target: x86_64-apple-ios
+            feature: ffi
+          # - target: i386-apple-ios
+          #   feature: ffi
     steps:
       - uses: actions/checkout@v1
       - uses: actions-rs/toolchain@v1
         with:
           toolchain: stable
           override: true
-      - run: sudo apt-get install gcc-mingw-w64
       - run: rustup target add ${{ matrix.target }}
       - name: Build release with feature ${{ matrix.feature }}
         uses: actions-rs/cargo@v1
