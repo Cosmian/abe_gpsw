@@ -73,7 +73,7 @@ unsafe fn encrypt_header(meta_data: &Metadata) -> anyhow::Result<EncryptedHeader
         encrypted_header_ptr,
         &mut encrypted_header_len,
         policy_ptr,
-        public_key_ptr as *const i8,
+        public_key_ptr as *const c_char,
         public_key_len,
         attributes_ptr,
         meta_data.uid.as_ptr() as *const c_char,
