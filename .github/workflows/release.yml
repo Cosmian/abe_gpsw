@@ -23,8 +23,6 @@ jobs:
             feature: ffi
           - target: wasm32-unknown-unknown
             feature: wasm_bindgen
-          - target: wasm32-wasi
-            feature: wasm_bindgen
     steps:
       - uses: actions/checkout@v1
       - uses: actions-rs/toolchain@v1
@@ -41,5 +39,5 @@ jobs:
       - name: Upload Artifact
         uses: actions/upload-artifact@v2
         with:
-          name: ${{ env.PROJECT_NAME_UNDERSCORE }}_${{ matrix.target }}_${{ matrix.feature }}
-          path: target/${{ matrix.target }}/release/*${{ env.PROJECT_NAME_UNDERSCORE }}*
+          name: ${{ env.PROJECT_NAME_UNDERSCORE }}_${{ github.ref_name }}_${{ matrix.target }}_${{ matrix.feature }}
+          path: target/${{ matrix.target }}/release/*${{ env.PROJECT_NAME_UNDERSCORE }}*[.wasm,.dll,.so]

@@ -15,18 +15,10 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - target: aarch64-apple-darwin
-            feature: ffi
-          - target: x86_64-apple-darwin
-            feature: ffi
           - target: aarch64-apple-ios
             feature: ffi
-          # - target: armv7-apple-ios
-          #   feature: ffi
           - target: x86_64-apple-ios
             feature: ffi
-          # - target: i386-apple-ios
-          #   feature: ffi
     steps:
       - uses: actions/checkout@v1
       - uses: actions-rs/toolchain@v1
@@ -42,5 +34,5 @@ jobs:
       - name: Upload Artifact
         uses: actions/upload-artifact@v2
         with:
-          name: ${{ env.PROJECT_NAME_UNDERSCORE }}_${{ matrix.target }}_${{ matrix.feature }}
-          path: target/${{ matrix.target }}/release/*${{ env.PROJECT_NAME_UNDERSCORE }}*
+          name: ${{ env.PROJECT_NAME_UNDERSCORE }}_${{ github.ref_name }_${{ matrix.target }}_${{ matrix.feature }}
+          path: target/${{ matrix.target }}/release/*${{ env.PROJECT_NAME_UNDERSCORE }}*.a
