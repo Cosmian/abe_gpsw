@@ -1,9 +1,11 @@
 name: Release Android
 
-on:
-  push:
-    tags:
-      - "*"
+on: [push, pull_request]
+
+# on:
+#   push:
+#     tags:
+#       - "*"
 
 jobs:
   release:
@@ -33,6 +35,7 @@ jobs:
         with:
           toolchain: stable
           override: true
+      - run: echo "RELEASE_VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_ENV
       - run: rustup target add ${{ matrix.target }}
       - run: sudo apt-get install clang libclang-dev
       - run: cargo install cargo-ndk
@@ -47,5 +50,5 @@ jobs:
       - name: Upload Artifact
         uses: actions/upload-artifact@v2
         with:
-          name: ${{ env.PROJECT_NAME_UNDERSCORE }}_${{ matrix.target }}_${{ matrix.feature }}
+          name: ${{ env.PROJECT_NAME_UNDERSCORE }}_${{ env.RELEASE_VERSION }}_${{ matrix.target }}_${{ matrix.feature }}
           path: target/${{ matrix.target }}/release/*${{ env.PROJECT_NAME_UNDERSCORE }}*
