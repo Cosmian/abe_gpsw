@@ -1,10 +1,11 @@
 #![allow(clippy::unused_unit)]
 // Wait for `wasm-bindgen` issue 2774: https://github.com/rustwasm/wasm-bindgen/issues/2774
 
+use std::convert::From;
+
 use cosmian_crypto_base::symmetric_crypto::{
     aes_256_gcm_pure::Aes256GcmCrypto, Key, SymmetricCrypto,
 };
-use std::convert::From;
 use wasm_bindgen::prelude::*;
 use wasm_bindgen_test::*;
 

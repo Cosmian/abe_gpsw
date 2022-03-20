@@ -8,6 +8,12 @@ use std::{
     },
 };
 
+use cosmian_crypto_base::{
+    hybrid_crypto::Metadata,
+    symmetric_crypto::{aes_256_gcm_pure::Aes256GcmCrypto, Key, SymmetricCrypto},
+};
+use lazy_static::lazy_static;
+
 use crate::{
     core::{
         bilinear_map::bls12_381::Bls12_381,
@@ -26,12 +32,6 @@ use crate::{
         },
     },
 };
-use cosmian_crypto_base::symmetric_crypto::Key;
-use cosmian_crypto_base::{
-    hybrid_crypto::Metadata,
-    symmetric_crypto::{aes_256_gcm_pure::Aes256GcmCrypto, SymmetricCrypto},
-};
-use lazy_static::lazy_static;
 
 type PublicKey = <Gpsw<Bls12_381> as AbeScheme>::MasterPublicKey;
 type UserDecryptionKey = <Gpsw<Bls12_381> as AbeScheme>::UserDecryptionKey;
@@ -585,7 +585,8 @@ pub unsafe extern "C" fn h_get_encrypted_header_size(
 /// Decrypt an encrypted header returning the symmetric key,
 /// the uid and additional data if available.
 ///
-/// Slower tha using a cache but avoids handling the cache creation and destruction.
+/// Slower tha using a cache but avoids handling the cache creation and
+/// destruction.
 ///
 /// No additional data will be returned if the `additional_data_ptr` is NULL.
 ///
@@ -692,7 +693,8 @@ pub unsafe extern "C" fn h_aes_decrypt_header(
     0
 }
 
-// maximum clear text size that can be safely encrypted with AES GCM (using a a single random nonce)
+// maximum clear text size that can be safely encrypted with AES GCM (using a a
+// single random nonce)
 pub const MAX_CLEAR_TEXT_SIZE: usize = 1_usize << 30;
 
 #[no_mangle]

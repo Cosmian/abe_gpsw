@@ -1,3 +1,9 @@
+use cosmian_crypto_base::{
+    hybrid_crypto::Metadata,
+    symmetric_crypto::{aes_256_gcm_pure::Aes256GcmCrypto, Key, SymmetricCrypto},
+};
+use serde_json::Value;
+
 use crate::{
     core::{
         bilinear_map::bls12_381::Bls12_381,
@@ -9,16 +15,12 @@ use crate::{
         symmetric_encryption_overhead,
     },
 };
-use cosmian_crypto_base::{
-    hybrid_crypto::Metadata,
-    symmetric_crypto::{aes_256_gcm_pure::Aes256GcmCrypto, Key, SymmetricCrypto},
-};
-use serde_json::Value;
 
 type PublicKey = <Gpsw<Bls12_381> as AbeScheme>::MasterPublicKey;
 type UserDecryptionKey = <Gpsw<Bls12_381> as AbeScheme>::UserDecryptionKey;
 
-// maximum clear text size that can be safely encrypted with AES GCM (using a single random nonce)
+// maximum clear text size that can be safely encrypted with AES GCM (using a
+// single random nonce)
 pub const MAX_CLEAR_TEXT_SIZE: usize = 1_usize << 30;
 
 #[test]

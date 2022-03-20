@@ -61,8 +61,9 @@ impl<S: AbeScheme> Engine<S> {
     /// Allows a user to generate a new key for a more restrictive policy
     ///
     /// A more restrictive policy is a policy that must always satisfy
-    /// the original policy when satisfied. In other words, we can only modify a policy by changing
-    /// an `Or` node by either an `And` or replace it by one of its child.
+    /// the original policy when satisfied. In other words, we can only modify a
+    /// policy by changing an `Or` node by either an `And` or replace it by
+    /// one of its child.
     ///
     /// Remark: It is also possible to merge 2 keys by `Or` node, this latter
     /// functionality is not yet supported
