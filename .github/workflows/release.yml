@@ -36,8 +36,10 @@ jobs:
         with:
           command: build
           args: --release --verbose --features ${{ matrix.feature }} --target ${{ matrix.target }}
+      - run: cargo install cbindgen
+      - run: bash cbindgen.sh target/${{ matrix.target }}/release ${{ env.PROJECT_NAME_UNDERSCORE }}
       - name: Upload Artifact
         uses: actions/upload-artifact@v2
         with:
           name: ${{ env.PROJECT_NAME_UNDERSCORE }}_${{ github.ref_name }}_${{ matrix.target }}_${{ matrix.feature }}
-          path: target/${{ matrix.target }}/release/*${{ env.PROJECT_NAME_UNDERSCORE }}*[.wasm,.dll,.so]
+          path: target/${{ matrix.target }}/release/*${{ env.PROJECT_NAME_UNDERSCORE }}*[.wasm,.dll,.so,.h]
