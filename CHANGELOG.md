@@ -3,6 +3,19 @@
 All notable changes to this project will be documented in this file.
 
 ---
+## [0.6.2] - 2022-03-16
+### Added
+- Build for Android and iOS
+- [FFI] Add a ABE split header function
+- Use `cbindgen` to generate .h from Rust-FFI-functions
+### Changed
+### Fixed
+### Removed
+
+---
+
+
+---
 ## [0.6.1] - 2022-03-15
 ### Added
 ### Changed

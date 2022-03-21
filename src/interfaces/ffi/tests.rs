@@ -1,3 +1,10 @@
+use std::ffi::CStr;
+
+use cosmian_crypto_base::{
+    hybrid_crypto::Metadata,
+    symmetric_crypto::{aes_256_gcm_pure::Aes256GcmCrypto, Key, SymmetricCrypto},
+};
+
 use crate::{
     core::{
         bilinear_map::bls12_381::Bls12_381,
@@ -6,21 +13,16 @@ use crate::{
     },
     interfaces::{ffi::error::get_last_error, hybrid_crypto::EncryptedHeader},
 };
-use cosmian_crypto_base::symmetric_crypto::Key;
-use cosmian_crypto_base::{
-    hybrid_crypto::Metadata,
-    symmetric_crypto::{aes_256_gcm_pure::Aes256GcmCrypto, SymmetricCrypto},
-};
-use std::ffi::CStr;
 
 type PublicKey = <Gpsw<Bls12_381> as AbeScheme>::MasterPublicKey;
 
 type UserDecryptionKey = <Gpsw<Bls12_381> as AbeScheme>::UserDecryptionKey;
-use serde_json::Value;
 use std::{
     ffi::CString,
     os::raw::{c_char, c_int},
 };
+
+use serde_json::Value;
 
 use super::hybrid_gpsw_aes::{
     h_aes_create_decryption_cache, h_aes_create_encryption_cache, h_aes_decrypt_header,
@@ -73,7 +75,7 @@ unsafe fn encrypt_header(meta_data: &Metadata) -> anyhow::Result<EncryptedHeader
         encrypted_header_ptr,
         &mut encrypted_header_len,
         policy_ptr,
-        public_key_ptr as *const i8,
+        public_key_ptr as *const c_char,
         public_key_len,
         attributes_ptr,
         meta_data.uid.as_ptr() as *const c_char,

@@ -1,16 +1,15 @@
-use cosmian_crypto_base::hybrid_crypto::Block;
 use cosmian_crypto_base::{
-    hybrid_crypto::{Header, Metadata},
+    hybrid_crypto::{Block, Header, Metadata},
     symmetric_crypto::SymmetricCrypto,
 };
 
-use crate::core::gpsw::AbeScheme;
-use crate::interfaces::{
-    asymmetric_crypto::AbeCrypto,
-    policy::{Attribute, Policy},
+use crate::{
+    core::gpsw::AbeScheme,
+    interfaces::{
+        asymmetric_crypto::{AbeCrypto, EncryptionParameters},
+        policy::{Attribute, Policy},
+    },
 };
-
-use crate::interfaces::asymmetric_crypto::EncryptionParameters;
 
 /// An EncryptedHeader returned by the `encrypt_hybrid_header` function
 pub struct EncryptedHeader<S>
@@ -91,10 +90,12 @@ where
 
 /// Encrypt data symmetrically in a block.
 ///
-/// The `uid` should be different for every resource  and `block_number` different for every block.
-/// They are part of the AEAD of the symmetric scheme if any.
+/// The `uid` should be different for every resource  and `block_number`
+/// different for every block. They are part of the AEAD of the symmetric scheme
+/// if any.
 ///
-/// The `MAX_CLEAR_TEXT_SIZE` fixes the maximum clear text that can fit in a block. That value should be kept identical for all blocks of a resource.
+/// The `MAX_CLEAR_TEXT_SIZE` fixes the maximum clear text that can fit in a
+/// block. That value should be kept identical for all blocks of a resource.
 ///
 /// The nonce, if any, occupies the first bytes of the encrypted block.
 pub fn encrypt_hybrid_block<A, S, const MAX_CLEAR_TEXT_SIZE: usize>(

@@ -1,4 +1,4 @@
-name: Release
+name: Release Android
 
 on:
   push:
@@ -17,30 +17,38 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - target: x86_64-pc-windows-gnu
+          - target: aarch64-linux-android
             feature: ffi
-          - target: x86_64-unknown-linux-musl
+            target_short_name: arm64-v8a
+          - target: armv7-linux-androideabi
             feature: ffi
-          - target: x86_64-unknown-linux-gnu
+            target_short_name: armeabi-v7a
+          - target: x86_64-linux-android
             feature: ffi
+            target_short_name: x86_64
+          - target: i686-linux-android
+            feature: ffi
+            target_short_name: x86
     steps:
       - uses: actions/checkout@v1
       - uses: actions-rs/toolchain@v1
         with:
           toolchain: stable
           override: true
-      - run: sudo apt-get install gcc-mingw-w64
       - run: rustup target add ${{ matrix.target }}
+      - run: sudo apt-get install clang libclang-dev
+      - run: cargo install cargo-ndk
+      - uses: nttld/setup-ndk@v1
+        with:
+          ndk-version: r22b
       - name: Build release with feature ${{ matrix.feature }}
         uses: actions-rs/cargo@v1
         with:
-          command: build
-          args: --release --verbose --features ${{ matrix.feature }} --target ${{ matrix.target }}
-      - run: cargo install cbindgen
-      - run: bash cbindgen.sh target/${{ matrix.target }}/release ${{ env.PROJECT_NAME_UNDERSCORE }}
+          command: ndk
+          args: --target ${{ matrix.target_short_name }} -o ./jniLibs build --release --lib --verbose --features ${{ matrix.feature }}
       - name: Create zip
         run: |
-          zip ${{ env.ARCHIVE_NAME }} ${{ env.TARGET_PATTERN }}/*${{ env.PROJECT_NAME_UNDERSCORE }}*
+          zip ${{ env.ARCHIVE_NAME }} ${{ env.TARGET_PATTERN }}/*
       - name: Release
         uses: softprops/action-gh-release@v1
         with:

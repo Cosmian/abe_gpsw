@@ -4,6 +4,7 @@
 // for online help
 
 use std::env;
+
 #[cfg(feature = "ffi")]
 use {
     abe_gpsw::interfaces::ffi::{
@@ -16,7 +17,7 @@ use {
     },
     std::{
         ffi::{CStr, CString},
-        os::raw::{c_char, c_int},
+        os::raw::c_int,
     },
 };
 #[cfg(feature = "interfaces")]
@@ -236,11 +237,11 @@ pub unsafe fn bench_ffi_header_encryption() -> anyhow::Result<()> {
     };
 
     let mut symmetric_key = vec![0u8; 32];
-    let symmetric_key_ptr = symmetric_key.as_mut_ptr() as *mut c_char;
+    let symmetric_key_ptr = symmetric_key.as_mut_ptr().cast::<i8>();
     let mut symmetric_key_len = symmetric_key.len() as c_int;
 
     let mut header_bytes_key = vec![0u8; 4096];
-    let header_bytes_ptr = header_bytes_key.as_mut_ptr() as *mut c_char;
+    let header_bytes_ptr = header_bytes_key.as_mut_ptr().cast::<i8>();
     let mut header_bytes_len = header_bytes_key.len() as c_int;
 
     let policy_cs = CString::new(serde_json::to_string(&policy)?.as_str())?;
@@ -262,12 +263,17 @@ pub unsafe fn bench_ffi_header_encryption() -> anyhow::Result<()> {
             header_bytes_ptr,
             &mut header_bytes_len,
             policy_ptr,
-            public_key_ptr as *const i8,
+            public_key_ptr.cast::<i8>(),
             public_key_len,
             attributes_ptr,
-            meta_data.uid.as_ptr() as *const c_char,
+            meta_data.uid.as_ptr().cast::<i8>(),
             meta_data.uid.len() as i32,
-            meta_data.additional_data.as_ref().unwrap().as_ptr() as *const c_char,
+            meta_data
+                .additional_data
+                .as_ref()
+                .unwrap()
+                .as_ptr()
+                .cast::<i8>(),
             meta_data.additional_data.as_ref().unwrap().len() as i32,
         ))?;
     }
@@ -312,7 +318,7 @@ pub unsafe fn bench_ffi_header_encryption_using_cache() -> anyhow::Result<()> {
     let policy_ptr = policy_cs.as_ptr();
 
     let public_key_bytes = public_key.as_bytes()?;
-    let public_key_ptr = public_key_bytes.as_ptr() as *const c_char;
+    let public_key_ptr = public_key_bytes.as_ptr().cast::<i8>();
     let public_key_len = public_key_bytes.len() as i32;
 
     let mut cache_handle: i32 = 0;
@@ -324,11 +330,11 @@ pub unsafe fn bench_ffi_header_encryption_using_cache() -> anyhow::Result<()> {
     ))?;
 
     let mut symmetric_key = vec![0u8; 32];
-    let symmetric_key_ptr = symmetric_key.as_mut_ptr() as *mut c_char;
+    let symmetric_key_ptr = symmetric_key.as_mut_ptr().cast::<i8>();
     let mut symmetric_key_len = symmetric_key.len() as c_int;
 
     let mut header_bytes_key = vec![0u8; 4096];
-    let header_bytes_ptr = header_bytes_key.as_mut_ptr() as *mut c_char;
+    let header_bytes_ptr = header_bytes_key.as_mut_ptr().cast::<i8>();
     let mut header_bytes_len = header_bytes_key.len() as c_int;
 
     let attributes_json = CString::new(serde_json::to_string(&policy_attributes)?.as_str())?;
@@ -344,9 +350,14 @@ pub unsafe fn bench_ffi_header_encryption_using_cache() -> anyhow::Result<()> {
             &mut header_bytes_len,
             cache_handle,
             attributes_ptr,
-            meta_data.uid.as_ptr() as *const c_char,
+            meta_data.uid.as_ptr().cast::<i8>(),
             meta_data.uid.len() as i32,
-            meta_data.additional_data.as_ref().unwrap().as_ptr() as *const c_char,
+            meta_data
+                .additional_data
+                .as_ref()
+                .unwrap()
+                .as_ptr()
+                .cast::<i8>(),
             meta_data.additional_data.as_ref().unwrap().len() as i32,
         ))?;
     }
@@ -400,19 +411,19 @@ pub unsafe fn bench_ffi_header_decryption() -> anyhow::Result<()> {
     let user_decryption_key = UserDecryptionKey::from_bytes(&hex::decode(hex_key)?)?;
 
     let mut symmetric_key = vec![0u8; 32];
-    let symmetric_key_ptr = symmetric_key.as_mut_ptr() as *mut c_char;
+    let symmetric_key_ptr = symmetric_key.as_mut_ptr().cast::<i8>();
     let mut symmetric_key_len = symmetric_key.len() as c_int;
 
     let mut uid = vec![0u8; 4096];
-    let uid_ptr = uid.as_mut_ptr() as *mut c_char;
+    let uid_ptr = uid.as_mut_ptr().cast::<i8>();
     let mut uid_len = uid.len() as c_int;
 
     let mut additional_data = vec![0u8; 4096];
-    let additional_data_ptr = additional_data.as_mut_ptr() as *mut c_char;
+    let additional_data_ptr = additional_data.as_mut_ptr().cast::<i8>();
     let mut additional_data_len = additional_data.len() as c_int;
 
     let user_decryption_key_bytes = user_decryption_key.as_bytes()?;
-    let user_decryption_key_ptr = user_decryption_key_bytes.as_ptr() as *const c_char;
+    let user_decryption_key_ptr = user_decryption_key_bytes.as_ptr().cast::<i8>();
     let user_decryption_key_len = user_decryption_key_bytes.len() as i32;
 
     let loops = 5000;
@@ -425,7 +436,10 @@ pub unsafe fn bench_ffi_header_decryption() -> anyhow::Result<()> {
             &mut uid_len,
             additional_data_ptr,
             &mut additional_data_len,
-            encrypted_header.encrypted_header_bytes.as_ptr() as *const c_char,
+            encrypted_header
+                .encrypted_header_bytes
+                .as_ptr()
+                .cast::<i8>(),
             encrypted_header.encrypted_header_bytes.len() as c_int,
             user_decryption_key_ptr,
             user_decryption_key_len,
@@ -452,19 +466,19 @@ pub unsafe fn bench_ffi_header_decryption_using_cache() -> anyhow::Result<()> {
     let user_decryption_key = UserDecryptionKey::from_bytes(&hex::decode(hex_key)?)?;
 
     let mut symmetric_key = vec![0u8; 32];
-    let symmetric_key_ptr = symmetric_key.as_mut_ptr() as *mut c_char;
+    let symmetric_key_ptr = symmetric_key.as_mut_ptr().cast::<i8>();
     let mut symmetric_key_len = symmetric_key.len() as c_int;
 
     let mut uid = vec![0u8; 4096];
-    let uid_ptr = uid.as_mut_ptr() as *mut c_char;
+    let uid_ptr = uid.as_mut_ptr().cast::<i8>();
     let mut uid_len = uid.len() as c_int;
 
     let mut additional_data = vec![0u8; 4096];
-    let additional_data_ptr = additional_data.as_mut_ptr() as *mut c_char;
+    let additional_data_ptr = additional_data.as_mut_ptr().cast::<i8>();
     let mut additional_data_len = additional_data.len() as c_int;
 
     let user_decryption_key_bytes = user_decryption_key.as_bytes()?;
-    let user_decryption_key_ptr = user_decryption_key_bytes.as_ptr() as *const c_char;
+    let user_decryption_key_ptr = user_decryption_key_bytes.as_ptr().cast::<i8>();
     let user_decryption_key_len = user_decryption_key_bytes.len() as i32;
 
     let mut cache_handle: i32 = 0;
@@ -485,7 +499,10 @@ pub unsafe fn bench_ffi_header_decryption_using_cache() -> anyhow::Result<()> {
             &mut uid_len,
             additional_data_ptr,
             &mut additional_data_len,
-            encrypted_header.encrypted_header_bytes.as_ptr() as *const c_char,
+            encrypted_header
+                .encrypted_header_bytes
+                .as_ptr()
+                .cast::<i8>(),
             encrypted_header.encrypted_header_bytes.len() as c_int,
             cache_handle,
         ))?;
@@ -502,7 +519,7 @@ pub unsafe fn bench_ffi_header_decryption_using_cache() -> anyhow::Result<()> {
 unsafe fn unwrap_ffi_error(val: i32) -> anyhow::Result<()> {
     if val != 0 {
         let mut message_bytes_key = vec![0u8; 4096];
-        let message_bytes_ptr = message_bytes_key.as_mut_ptr() as *mut c_char;
+        let message_bytes_ptr = message_bytes_key.as_mut_ptr().cast::<i8>();
         let mut message_bytes_len = message_bytes_key.len() as c_int;
         get_last_error(message_bytes_ptr, &mut message_bytes_len);
         let cstr = CStr::from_ptr(message_bytes_ptr);
