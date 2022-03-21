@@ -10,6 +10,8 @@ jobs:
     name: release ${{ matrix.target }} for feature ${{ matrix.feature }}
     env:
       PROJECT_NAME_UNDERSCORE: abe_gpsw
+      ARCHIVE_NAME: ${{ matrix.target }}_${{ matrix.feature }}
+      TARGET_PATTERN: target/${{ matrix.target }}/release
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -44,8 +46,10 @@ jobs:
         with:
           command: ndk
           args: --target ${{ matrix.target_short_name }} -o ./jniLibs build --release --lib --verbose --features ${{ matrix.feature }}
-      - name: Upload Artifact
-        uses: actions/upload-artifact@v2
+      - name: Create zip
+        run: |
+          zip ${{ env.ARCHIVE_NAME }} ${{ env.TARGET_PATTERN }}/*
+      - name: Release
+        uses: softprops/action-gh-release@v1
         with:
-          name: ${{ env.PROJECT_NAME_UNDERSCORE }}_${{ github.ref_name }}_${{ matrix.target }}_${{ matrix.feature }}
-          path: target/${{ matrix.target }}/release/*${{ env.PROJECT_NAME_UNDERSCORE }}*[.so,.a]
+          files: ${{ env.ARCHIVE_NAME }}.zip

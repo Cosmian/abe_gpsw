@@ -10,6 +10,8 @@ jobs:
     name: release ${{ matrix.target }} for feature ${{ matrix.feature }}
     env:
       PROJECT_NAME_UNDERSCORE: abe_gpsw
+      ARCHIVE_NAME: ${{ matrix.target }}_${{ matrix.feature }}
+      TARGET_PATTERN: target/${{ matrix.target }}/release
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -26,8 +28,10 @@ jobs:
       - run: cargo install wasm-pack
       - run: rustup target add ${{ matrix.target }}
       - run: wasm-pack build --release --all-features
-      - name: Upload Artifact
-        uses: actions/upload-artifact@v2
+      - name: Create zip
+        run: |
+          zip ${{ env.ARCHIVE_NAME }} pkg/*
+      - name: Release
+        uses: softprops/action-gh-release@v1
         with:
-          name: ${{ env.PROJECT_NAME_UNDERSCORE }}_${{ github.ref_name }}_${{ matrix.target }}_${{ matrix.feature }}
-          path: pkg
+          files: ${{ env.ARCHIVE_NAME }}.zip
