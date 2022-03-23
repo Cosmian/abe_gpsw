@@ -194,10 +194,94 @@ impl AccessPolicy {
         Ok(access_policy)
     }
 
+    /// This function is finding the right closing parenthesis in the boolean
+    /// expression given as a string
+    fn find_next_parenthesis(boolean_expression: &str) -> Result<usize, FormatErr> {
+        let mut count = 0;
+        let mut right_closing_parenthesis = 0;
+        // Skip first parenthesis
+        for (index, c) in boolean_expression.chars().enumerate() {
+            match c {
+                '(' => count += 1,
+                ')' => count -= 1,
+                _ => {}
+            };
+            if count < 0 {
+                right_closing_parenthesis = index;
+                break;
+            }
+        }
+        if right_closing_parenthesis == 0 {
+            return Err(FormatErr::InvalidBooleanExpression(format!(
+                "Missing closing parenthesis in boolean expression {boolean_expression}"
+            )));
+        }
+        Ok(right_closing_parenthesis)
+    }
+
+    /* This function takes a boolean expression and splits it into 3 parts:
+    - left part
+    - operator
+    - right part
+
+    Example: Department::HR & Level::level_2 will be decomposed in:
+    - Department::HR
+    - &
+    - Level::level_2
+    */
+    fn decompose_expression(
+        boolean_expression: &str,
+        split_position: usize,
+    ) -> Result<(String, Option<char>, Option<String>), FormatErr> {
+        if split_position > boolean_expression.len() {
+            return Err(FormatErr::InvalidBooleanExpression(format!(
+                "Cannot split boolean expression {boolean_expression} at position \
+                 {split_position} since {split_position} is greater than the size of \
+                 {boolean_expression}"
+            )));
+        }
+
+        let left_part = &boolean_expression[..split_position];
+        if split_position == boolean_expression.len() {
+            return Ok((left_part.to_string(), None, None));
+        } else if split_position == boolean_expression.len() + 1 {
+            return Err(FormatErr::InvalidBooleanExpression(
+                "Invalid boolean expression. Boolean expression should be 'A & B' or 'A | B'"
+                    .to_string(),
+            ));
+        }
+
+        let next_char = boolean_expression
+            .chars()
+            .nth(split_position)
+            .unwrap_or_default();
+        let mut split_position = split_position;
+        if next_char == ')' {
+            split_position += 1;
+        }
+        if split_position == boolean_expression.len() {
+            return Ok((left_part.to_string(), None, None));
+        }
+        let operator = boolean_expression
+            .chars()
+            .nth(split_position)
+            .unwrap_or_default();
+        // Skip 2 next characters (parenthesis + next char)
+        let right_part = &boolean_expression[split_position + 1..];
+        Ok((
+            left_part.to_string(),
+            Some(operator),
+            Some(right_part.to_string()),
+        ))
+    }
+
     /// Convert a boolean expression into `AccessPolicy`.
     /// Example:
-    ///     input boolean expression: (Department::HR | Department::R&D) & Level::level_2
-    ///     output: corresponding access policy: And(Attr(Level::level2), Or(Attr(Department::HR), Attr(Department::R&D)))
+    ///     input boolean expression: (Department::HR | Department::R&D) &
+    /// Level::level_2
+    ///     output: corresponding access policy:
+    /// And(Attr(Level::level2), Or(Attr(Department::HR),
+    /// Attr(Department::R&D)))
     ///
     /// # Arguments
     ///
@@ -209,23 +293,109 @@ impl AccessPolicy {
     ///
     /// # Examples
     ///
-    /// ```
-    /// let boolean_expression = "(Department::HR | Department::R&D) & Level::level_2";
+    /// ```rust
+    /// let boolean_expression = "(Department::HR | Department::RnD) & Level::level_2";
     /// let access_policy = abe_gpsw::core::policy::AccessPolicy::from_boolean_expression(boolean_expression);
     /// ```
     /// # Errors
     ///
-    /// HMAC creation can fail
+    /// Missing parenthesis or bad operators
     pub fn from_boolean_expression(boolean_expression: &str) -> Result<Self, FormatErr> {
-        let result = AccessPolicy::All;
+        let boolean_expression_example = "(Department::HR | Department::R&D) & Level::level_2";
+
         // Remove all spaces
         let boolean_expression = str::replace(boolean_expression, " ", "");
 
+        if !boolean_expression.contains("::") {
+            return Err(FormatErr::InvalidBooleanExpression(format!(
+                "'{boolean_expression}' does not contain any attribute separator '::'. Example: \
+                 {boolean_expression_example}"
+            )));
+        }
+
         // if first char is parenthesis
+        let first_char = boolean_expression.chars().next().unwrap_or_default();
+        if first_char == '(' {
+            // Skip first parenthesis
+            let boolean_expression = &boolean_expression[1..];
+            // Check if formula contains a closing parenthesis
+            let c = boolean_expression.matches(')').count();
+            if c == 0 {
+                return Err(FormatErr::InvalidBooleanExpression(format!(
+                    "closing parenthesis missing in {boolean_expression}"
+                )));
+            }
+            // Search right closing parenthesis, avoiding false positive
+            let matching_closing_parenthesis =
+                AccessPolicy::find_next_parenthesis(boolean_expression)?;
+            let (left_part, operator, right_part) =
+                Self::decompose_expression(boolean_expression, matching_closing_parenthesis)?;
+            if operator.is_none() {
+                return AccessPolicy::from_boolean_expression(left_part.as_str());
+            }
 
-        // else
+            let operator = operator.unwrap_or_default();
+            let right_part = right_part.unwrap_or_default();
+            let ap1 = Box::new(AccessPolicy::from_boolean_expression(left_part.as_str())?);
+            let ap2 = Box::new(AccessPolicy::from_boolean_expression(right_part.as_str())?);
+            let ap = match operator {
+                '&' => Ok(AccessPolicy::And(ap1, ap2)),
+                '|' => Ok(AccessPolicy::Or(ap1, ap2)),
+                _ => Err(FormatErr::UnsupportedOperator(operator.to_string())),
+            }?;
+            Ok(ap)
+        } else {
+            let or_position = boolean_expression.find('|');
+            let and_position = boolean_expression.find('&');
 
-        Ok(result)
+            // Get position of next operator
+            let position = if or_position.is_none() && and_position.is_none() {
+                0
+            } else if or_position.is_none() {
+                and_position.unwrap_or_default()
+            } else if and_position.is_none() {
+                or_position.unwrap_or_default()
+            } else {
+                std::cmp::min(
+                    or_position.unwrap_or_default(),
+                    and_position.unwrap_or_default(),
+                )
+            };
+
+            if position == 0 {
+                let attribute_vec = boolean_expression.split("::").collect::<Vec<_>>();
+
+                if attribute_vec.len() != 2
+                    || attribute_vec[0].is_empty()
+                    || attribute_vec[1].is_empty()
+                {
+                    return Err(FormatErr::InvalidBooleanExpression(format!(
+                        "'{boolean_expression}' does not respect the format <axis::name>. \
+                         Example: {boolean_expression_example}"
+                    )));
+                }
+                return Ok(ap(attribute_vec[0], attribute_vec[1]));
+            }
+
+            // Remove operator from input string
+            let (left_part, operator, right_part) =
+                Self::decompose_expression(&boolean_expression, position)?;
+            if operator.is_none() {
+                return AccessPolicy::from_boolean_expression(left_part.as_str());
+            }
+            let operator = operator.unwrap_or_default();
+            let right_part = right_part.unwrap_or_default();
+
+            let ap1 = Box::new(AccessPolicy::from_boolean_expression(left_part.as_str())?);
+            let ap2 = Box::new(AccessPolicy::from_boolean_expression(right_part.as_str())?);
+            let ap = match operator {
+                '&' => Ok(AccessPolicy::And(ap1, ap2)),
+                '|' => Ok(AccessPolicy::Or(ap1, ap2)),
+                _ => Err(FormatErr::UnsupportedOperator(operator.to_string())),
+            }?;
+
+            Ok(ap)
+        }
     }
 
     pub fn attributes(&self) -> Vec<Attribute> {
@@ -407,7 +577,8 @@ impl Policy {
         Ok(self)
     }
 
-    /// Rotate an attribute, changing its underlying value with that of an unused slot
+    /// Rotate an attribute, changing its underlying value with that of an
+    /// unused slot
     pub fn rotate(&mut self, attr: &Attribute) -> Result<(), FormatErr> {
         if self.last_attribute + 1 > self.max_attribute {
             return Err(FormatErr::CapacityOverflow);
