@@ -219,16 +219,15 @@ impl AccessPolicy {
         Ok(right_closing_parenthesis)
     }
 
-    /* This function takes a boolean expression and splits it into 3 parts:
-    - left part
-    - operator
-    - right part
-
-    Example: Department::HR & Level::level_2 will be decomposed in:
-    - Department::HR
-    - &
-    - Level::level_2
-    */
+    /// This function takes a boolean expression and splits it into 3 parts:
+    /// - left part
+    /// - operator
+    /// - right part
+    ///
+    /// Example: "Department::HR & Level::level_2" will be decomposed in:
+    /// - Department::HR
+    /// - &
+    /// - Level::level_2
     fn decompose_expression(
         boolean_expression: &str,
         split_position: usize,
