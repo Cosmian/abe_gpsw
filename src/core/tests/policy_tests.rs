@@ -71,3 +71,32 @@ fn policy_group_from_java() {
         .unwrap();
     assert_eq!(vec![10, 6], dpt_hr.clone().into_vec());
 }
+
+#[test]
+fn parse_boolean_expression() {
+    let access_policy = AccessPolicy::from_boolean_expression(
+        "(Department::HR | Department::RnD) & Level::level_2",
+    )
+    .unwrap();
+    let expected_ap = (ap("Department", "HR") | ap("Department", "RnD")) & ap("Level", "level_2");
+    assert_eq!(expected_ap, access_policy);
+
+    let access_policy =
+        AccessPolicy::from_boolean_expression("Level::level_2&(Department::HR | Department::RnD) ")
+            .unwrap();
+    assert_eq!(expected_ap, access_policy);
+
+    let access_policy =
+        AccessPolicy::from_boolean_expression("(((Department::HR))) & Level::level_2").unwrap();
+    let expected_ap = (ap("Department", "HR")) & ap("Level", "level_2");
+    assert_eq!(expected_ap, access_policy);
+
+    let access_policy = AccessPolicy::from_boolean_expression("(((Department::HR)))").unwrap();
+    let expected_ap = ap("Department", "HR");
+    assert_eq!(expected_ap, access_policy);
+
+    assert!(AccessPolicy::from_boolean_expression("Department:HR").is_err());
+    assert!(AccessPolicy::from_boolean_expression("Department::HR&").is_err());
+    assert!(AccessPolicy::from_boolean_expression("Department::HR|::").is_err());
+    assert!(AccessPolicy::from_boolean_expression("::").is_err());
+}

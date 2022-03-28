@@ -3,6 +3,15 @@
 All notable changes to this project will be documented in this file.
 
 ---
+## [0.6.3] - 2022-03-16
+### Added
+- Access policy parser for boolean expression: Example: parse a string access policy under this format "(Department::HR | Department::R&D) & Level::level_2" and returns the corresponding `AccessPolicy`
+### Changed
+### Fixed
+### Removed
+---
+
+---
 ## [0.6.2] - 2022-03-16
 ### Added
 - Build for Android and iOS
