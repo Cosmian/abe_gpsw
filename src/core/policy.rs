@@ -619,7 +619,7 @@ impl Policy {
             AccessPolicy::All => {
                 return Err(FormatErr::InvalidFormula(
                     "`All` is not authorized inside a formula".to_string(),
-                ))
+                ));
             }
         })
     }

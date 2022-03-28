@@ -25,4 +25,5 @@
         "wasi",
         "webassembly"
     ],
+    "python.formatting.provider": "autopep8",
 }

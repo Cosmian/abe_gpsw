@@ -1,7 +1,7 @@
 pub(crate) mod scheme;
-pub use scheme::Gpsw;
-
 use std::convert::{TryFrom, TryInto};
+
+pub use scheme::Gpsw;
 
 use crate::{core::msp::MonotoneSpanProgram, error::FormatErr};
 

@@ -1,0 +1,42 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "*"
+
+jobs:
+  release:
+    name: release ${{ matrix.target }} for feature ${{ matrix.feature }}
+    env:
+      PROJECT_NAME_UNDERSCORE: abe_gpsw
+      ARCHIVE_NAME: ${{ matrix.target }}_${{ matrix.feature }}
+      TARGET_PATTERN: target/${{ matrix.target }}/release
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: wasm32-wasi
+            feature: wasi_impl
+    steps:
+      - uses: actions/checkout@v1
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          override: true
+      - run: rustup target add ${{ matrix.target }}
+      - run: cargo install cargo-witgen --version 0.4.0
+      - run: cargo install --git https://github.com/bytecodealliance/wit-bindgen wit-bindgen-cli --rev '2c4ec937cab8c23131d644d2fcaf4705a08f9b01'
+      - name: Build release with feature ${{ matrix.feature }}
+        uses: actions-rs/cargo@v1
+        with:
+          command: build
+          args: --release --verbose --features ${{ matrix.feature }} --target ${{ matrix.target }}
+      - name: Create zip
+        run: |
+          zip ${{ env.ARCHIVE_NAME }} ${{ env.TARGET_PATTERN }}/${{ env.PROJECT_NAME_UNDERSCORE }}.wasm python/wasi/*.py
+      - name: Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: ${{ env.ARCHIVE_NAME }}.zip

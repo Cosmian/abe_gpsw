@@ -3,3 +3,7 @@ target
 *nix
 flamegraph*.svg
 perf.data*
+__pycache__
+jniLibs
+*.wasm
+.ipynb_checkpoints

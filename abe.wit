@@ -1,0 +1,46 @@
+// This is a generated file by witgen (https://github.com/bnjjj/witgen), please do not edit yourself, you can generate a new one thanks to cargo witgen generate command
+
+///  This struct only provides a visual way to display attributes arguments
+record Attribute {
+    axis_name: string,
+	attribute: string
+}
+
+///  Regroup private, public and delegation keys in same struct
+record MasterKey {
+    private_key: list <u8>,
+	public_key: list <u8>,
+	delegation_key: list <u8>,
+	policy_serialized: list <u8>
+}
+
+///  Generate a user decryption key for the given master key and access policy
+generate_user_decryption_key: function(master_private_key: list <u8>, access_policy: option <string>, policy: list <u8>) -> expected <string, string>
+
+///  Encrypt an AES-symmetric key and encrypt with AESGCM-256
+encrypt: function(plaintext: string, master_public_key: list <u8>, attributes: list <Attribute>, policy: list <u8>) -> expected <list <u8>, string>
+
+///  Generate a delegate user decryption key for the access policy
+delegate_user_decryption_key: function(delegation_key: list <u8>, user_decryption_key: string, policy: list <u8>, access_policy: option <string>) -> expected <string, string>
+
+///  Generate ABE master key
+generate_master_key: function(nb_revocation: u64, policy: Policy) -> expected <MasterKey, string>
+
+///  Decrypt ABE-ciphertext (decrypt ABE header + decrypt AES)
+decrypt: function(user_decryption_key: string, encrypted_data: list <u8>) -> expected <string, string>
+
+record PolicyAxis {
+    name: string,
+	attributes: list <string>,
+	hierarchical: bool
+}
+
+///  Rotating ABE attributes
+rotate_attributes: function(policy: list <u8>, attributes: list <Attribute>) -> expected <list <u8>, string>
+
+///  This struct only provides a visual way to display policy arguments
+record Policy {
+    primary_axis: PolicyAxis,
+	secondary_axis: PolicyAxis
+}
+
