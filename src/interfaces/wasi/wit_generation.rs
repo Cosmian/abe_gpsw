@@ -15,7 +15,7 @@ use crate::{
         Engine,
     },
     interfaces::hybrid_crypto::{
-        decrypt_hybrid_block, decrypt_hybrid_header, encrypt_hybrid_block,
+        decrypt_hybrid_block, decrypt_hybrid_header, encrypt_hybrid_block, encrypt_hybrid_header,
     },
 };
 
@@ -23,6 +23,10 @@ type PublicKey = <Gpsw<Bls12_381> as AbeScheme>::MasterPublicKey;
 type PrivateKey = <Gpsw<Bls12_381> as AbeScheme>::MasterPrivateKey;
 type UserDecryptionKey = <Gpsw<Bls12_381> as AbeScheme>::UserDecryptionKey;
 type DelegationKey = <Gpsw<Bls12_381> as AbeScheme>::MasterPublicDelegationKey;
+
+// maximum clear text size that can be safely encrypted with AES GCM (using a
+// single random nonce)
+pub const MAX_CLEAR_TEXT_SIZE: usize = 1_usize << 30;
 
 #[witgen]
 pub struct PolicyAxis {
@@ -54,7 +58,7 @@ pub struct Attribute {
     pub attribute: String,
 }
 impl Attribute {
-    fn abe_attributes(attributes: Vec<Attribute>) -> Vec<crate::core::policy::Attribute> {
+    fn abe_attributes(attributes: &[Attribute]) -> Vec<crate::core::policy::Attribute> {
         attributes
             .iter()
             .map(|a| attr(&a.axis_name, &a.attribute))
@@ -64,7 +68,7 @@ impl Attribute {
 
 fn policy_to_abe_policy(
     nb_revocation: usize,
-    policy: Policy,
+    policy: &Policy,
 ) -> Result<crate::core::policy::Policy, String> {
     let x = policy
         .primary_axis
@@ -98,7 +102,7 @@ fn policy_to_abe_policy(
 #[witgen]
 /// Generate ABE master key
 pub fn generate_master_key(nb_revocation: usize, policy: Policy) -> Result<MasterKey, String> {
-    let abe_policy = policy_to_abe_policy(nb_revocation, policy)?;
+    let abe_policy = policy_to_abe_policy(nb_revocation, &policy)?;
 
     let engine = Engine::<Gpsw<Bls12_381>>::new();
     let mk = engine
@@ -126,28 +130,18 @@ pub fn generate_user_decryption_key(
     policy: Vec<u8>,
 ) -> Result<String, String> {
     let policy = &serde_json::from_slice(&policy).map_err(|e| e.to_string())?;
-    let access_policy = match access_policy {
-        Some(access_policy) => {
-            AccessPolicy::from_boolean_expression(&access_policy).map_err(|e| e.to_string())?
-        }
-        None => crate::core::policy::AccessPolicy::All,
-    };
+    let access_policy = access_policy
+        .map_or(Ok(AccessPolicy::All), |a| {
+            AccessPolicy::from_boolean_expression(&a).map_err(|e| e.to_string())
+        })
+        .map_err(|e| e)?;
     let engine = Engine::<Gpsw<Bls12_381>>::new();
     let msk = PrivateKey::from_bytes(&master_private_key).map_err(|e| e.to_string())?;
     Ok(engine
         .generate_user_key(policy, &msk, &access_policy)
-        // crate::interfaces::hybrid_crypto::generate_user_decryption_key(
-        //     &master_private_key,
-        //     &access_policy,
-        //     &policy,
-        // )
         .map_err(|e| e.to_string())?
         .to_string())
 }
-
-// maximum clear text size that can be safely encrypted with AES GCM (using a
-// single random nonce)
-pub const MAX_CLEAR_TEXT_SIZE: usize = 1_usize << 30;
 
 #[witgen]
 /// Encrypt an AES-symmetric key and encrypt with AESGCM-256
@@ -159,18 +153,19 @@ pub fn encrypt(
 ) -> Result<Vec<u8>, String> {
     let policy = serde_json::from_slice(&policy).map_err(|e| e.to_string())?;
     // Obviously, this is NOT recommended to use an empty unique identifier
-    // let uid = [0_u8; 32];
     let metadata = Metadata {
         uid: vec![0_u8; 32],
         additional_data: None,
     };
-    let abe_attributes = Attribute::abe_attributes(attributes);
+    let abe_attributes = Attribute::abe_attributes(&attributes);
     let public_key = PublicKey::from_bytes(&master_public_key).map_err(|e| e.to_string())?;
 
-    let encrypted_header = crate::interfaces::hybrid_crypto::encrypt_hybrid_header::<
-        Gpsw<Bls12_381>,
-        Aes256GcmCrypto,
-    >(&policy, &public_key, &abe_attributes, metadata.clone())
+    let encrypted_header = encrypt_hybrid_header::<Gpsw<Bls12_381>, Aes256GcmCrypto>(
+        &policy,
+        &public_key,
+        &abe_attributes,
+        metadata.clone(),
+    )
     .map_err(|e| e.to_string())?;
 
     let encrypted_block =
@@ -207,8 +202,6 @@ pub fn decrypt(user_decryption_key: String, encrypted_data: Vec<u8>) -> Result<S
     // Split header from encrypted data
     let header = &encrypted_data[4..(4 + header_size)];
     let encrypted_block = &encrypted_data[(4 + header_size)..];
-    // let header = &encrypted_data[0..472];
-    // let encrypted_block = &encrypted_data[472..];
 
     let header_ = decrypt_hybrid_header::<Gpsw<Bls12_381>, Aes256GcmCrypto>(&user_key, header)
         .map_err(|e| e.to_string())?;
@@ -237,7 +230,7 @@ pub fn delegate_user_decryption_key(
         Some(access_policy) => {
             AccessPolicy::from_boolean_expression(&access_policy).map_err(|e| e.to_string())?
         }
-        None => crate::core::policy::AccessPolicy::All,
+        None => AccessPolicy::All,
     };
 
     let delegation_key = DelegationKey::from_bytes(&delegation_key).map_err(|e| e.to_string())?;
@@ -257,13 +250,14 @@ pub fn delegate_user_decryption_key(
 #[witgen]
 /// Rotating ABE attributes
 pub fn rotate_attributes(policy: Vec<u8>, attributes: Vec<Attribute>) -> Result<Vec<u8>, String> {
-    let policy: &mut crate::core::policy::Policy =
-        &mut serde_json::from_slice(&policy).map_err(|e| e.to_string())?;
+    let mut policy: crate::core::policy::Policy =
+        serde_json::from_slice(&policy).map_err(|e| e.to_string())?;
 
     for input_attribute in attributes {
         let attribute = attr(&input_attribute.axis_name, &input_attribute.attribute);
         policy.rotate(&attribute).map_err(|e| e.to_string())?;
     }
-    let new_policy = serde_json::to_vec(policy).map_err(|e| e.to_string())?;
+    let new_policy = serde_json::to_vec(&policy).map_err(|e| e.to_string())?;
+
     Ok(new_policy)
 }

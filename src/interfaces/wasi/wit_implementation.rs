@@ -1,9 +1,9 @@
-wit_bindgen_rust::export!("abe.wit");
-struct Abe;
-
 use abe::*;
 
 use super::wit_generation;
+
+wit_bindgen_rust::export!("abe.wit");
+struct Abe;
 
 impl abe::Abe for Abe {
     fn generate_master_key(nb_revocation: u64, policy: Policy) -> Result<MasterKey, String> {

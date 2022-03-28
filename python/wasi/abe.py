@@ -12,7 +12,8 @@ store.set_wasi(wasi_config)
 linker = Linker(store.engine)
 linker.define_wasi()
 
-my_module = Module.from_file(store.engine, "target/wasm32-wasi/release/abe_gpsw.wasm")
+my_module = Module.from_file(
+    store.engine, "target/wasm32-wasi/release/abe_gpsw.wasm")
 abe = Abe(store, linker, my_module)
 
 
@@ -30,7 +31,9 @@ def unwrap(wrapped_result):
 
 
 entities_axis = PolicyAxis(
-    name="Departments", attributes=["R&D", "HR", "MKG", "FIN"], hierarchical=False
+    name="Departments",
+    attributes=["RnD", "HR", "MKG", "FIN"],
+    hierarchical=False
 )
 security_axis = PolicyAxis(
     name="Security_Level",
@@ -81,7 +84,8 @@ ciphertext = unwrap(
 )
 print(ciphertext)
 
-cleartext = unwrap(abe.decrypt(store, another_user_decryption_key_mkg, ciphertext))
+cleartext = unwrap(abe.decrypt(
+    store, another_user_decryption_key_mkg, ciphertext))
 print(cleartext)
 
 assert plaintext == cleartext
