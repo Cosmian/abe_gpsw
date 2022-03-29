@@ -2,7 +2,7 @@ use abe::*;
 
 use super::wit_generation;
 
-wit_bindgen_rust::export!("abe.wit");
+cosmian_wit_bindgen_rust::export!("abe.wit");
 struct Abe;
 
 impl abe::Abe for Abe {
