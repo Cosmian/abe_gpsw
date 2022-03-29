@@ -50,7 +50,7 @@ pub enum FormatErr {
         "Unable to decrypt the header size. User decryption key has not the right policy to \
          decrypt this input."
     )]
-    InsuffisentAccessPolicy,
+    InsufficientAccessPolicy,
     #[error("{0}")]
     Deserialization(String),
     #[error("{0}")]

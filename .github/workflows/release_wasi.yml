@@ -35,7 +35,7 @@ jobs:
           args: --release --verbose --features ${{ matrix.feature }} --target ${{ matrix.target }}
       - name: Create zip
         run: |
-          zip ${{ env.ARCHIVE_NAME }} ${{ env.TARGET_PATTERN }}/${{ env.PROJECT_NAME_UNDERSCORE }}.wasm python/wasi/*.py
+          zip ${{ env.ARCHIVE_NAME }} ${{ env.TARGET_PATTERN }}/${{ env.PROJECT_NAME_UNDERSCORE }}.wasm python/wasi/*
       - name: Release
         uses: softprops/action-gh-release@v1
         with:

@@ -1,7 +1,7 @@
 use crate::core::{
     bilinear_map::bls12_381::Bls12_381,
     gpsw::{AbeScheme, AsBytes, Gpsw},
-    policy::{ap, attr, AccessPolicy, Policy},
+    policy::{attr, AccessPolicy, Policy},
     Engine,
 };
 
@@ -55,13 +55,7 @@ pub fn complex_access_policy_test() {
     let (master_private_key, public_key, _delegation_key) =
         engine.generate_master_key(&policy).unwrap();
 
-    let bnppf_all_access_policy = ap("Entity", "BNPPF")
-        & (ap("Country", "France")
-            | ap("Country", "Germany")
-            | ap("Country", "Italy")
-            | ap("Country", "Hungary")
-            | ap("Country", "Spain")
-            | ap("Country", "Belgium"));
+    let bnppf_all_access_policy = AccessPolicy::from_boolean_expression("Entity::BNPPF & (Country::France | Country::Germany | Country::Italy | Country::Hungary | Country::Spain | Country::Belgium)").unwrap();
 
     println!(
         "{}",

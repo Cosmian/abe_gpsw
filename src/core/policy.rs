@@ -276,11 +276,11 @@ impl AccessPolicy {
 
     /// Convert a boolean expression into `AccessPolicy`.
     /// Example:
-    ///     input boolean expression: (Department::HR | Department::R&D) &
+    ///     input boolean expression: (Department::HR | Department::RnD) &
     /// Level::level_2
     ///     output: corresponding access policy:
     /// And(Attr(Level::level2), Or(Attr(Department::HR),
-    /// Attr(Department::R&D)))
+    /// Attr(Department::RnD)))
     ///
     /// # Arguments
     ///
@@ -300,7 +300,7 @@ impl AccessPolicy {
     ///
     /// Missing parenthesis or bad operators
     pub fn from_boolean_expression(boolean_expression: &str) -> Result<Self, FormatErr> {
-        let boolean_expression_example = "(Department::HR | Department::R&D) & Level::level_2";
+        let boolean_expression_example = "(Department::HR | Department::RnD) & Level::level_2";
 
         // Remove all spaces
         let boolean_expression = str::replace(boolean_expression, " ", "");

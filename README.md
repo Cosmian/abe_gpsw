@@ -1,6 +1,6 @@
 # abe_gpsw &emsp; [![Build Status]][actions] [![Latest Version]][crates.io]
 
-This crate provides a Key-Policy Attribute-Based Encryption implementation based on [Attribute-Based Encryption for Fine-Grained Access Control of Encrypted Data](https://eprint.iacr.org/2006/309.pdf) written by Vipul Goyal, Omkant Pandey, Amit Sahai, Brent Waters. 
+This crate provides a Key-Policy Attribute-Based Encryption implementation based on [Attribute-Based Encryption for Fine-Grained Access Control of Encrypted Data](https://eprint.iacr.org/2006/309.pdf) written by Vipul Goyal, Omkant Pandey, Amit Sahai, Brent Waters.
 
 The implementation uses the [BLS12-381](https://crates.io/crates/cosmian_bls12_381) elliptic curve for pairing.
 
@@ -25,9 +25,9 @@ The implementation uses the [BLS12-381](https://crates.io/crates/cosmian_bls12_3
 
 # Quick start
 
-See the [demo code](./src/core/demo.rs) which contains a complete usage of the API with detailed comments. 
+See the [demo code](./src/core/demo.rs) which contains a complete usage of the API with detailed comments.
 
-Run it as a test using 
+Run it as a test using
 
 ```bash
 cargo test core::demo::abe -- --nocapture`
@@ -36,11 +36,11 @@ cargo test core::demo::abe -- --nocapture`
 # Building and testing
 
 The crate is separated in 2 main modules:
-    
+
  - `core`: contains the cryptographic code for GPSW. The main entry point is the [engine](./src/core/engine.rs) which use is demonstrated in the [demo code](./src/core/demo.rs).
  - `interfaces`: contains interfaces useful for Cosmian matching those in [crypto_base](https://github.com/Cosmian/crypto_base) as well as a Foreign Function Interface (FFI) useful to integrate with other languages. In particular, the code in this module demonstrates the use of hybrid cryptography involving ABE and AES and exposes it as a FFI.
 
- To build the core only, run 
+ To build the core only, run
 
  ```bash
  cargo build --release
@@ -61,7 +61,7 @@ The latter will build a shared library and one can verify that the FFI symbols a
 objdump -T  target/release/libabe_gpsw.so
 ```
 
-The code contains numerous tests that you can run using 
+The code contains numerous tests that you can run using
 
  ```bash
  cargo test --release --all-features
@@ -116,7 +116,7 @@ For instance, the policy
     },
     "Department": {
         "hierarchical": false,
-        "attributes": ["HR","FIN","MKG","R&D"]
+        "attributes": ["HR","FIN","MKG","RnD"]
     }
 ]
 ```
@@ -130,11 +130,11 @@ Contrarily to the `Department` axis, the `Security Level` axis is hierarchical: 
 All unique attribute names (7 in the example above) are derived by concatenating the axis names and the possible values for that axis, and are assigned a unique attribute value:
 
 | Attribute name         | Value |
-| ---------------------- | ----- |
+|------------------------|-------|
 | Department::HR         | 1     |
 | Department::FIN        | 2     |
 | Department::MKG        | 3     |
-| Department::R&D        | 4     |
+| Department::RnD        | 4     |
 | Security Level::low    | 5     |
 | Security Level::medium | 6     |
 | Security Level::high   | 7     |
@@ -142,7 +142,7 @@ All unique attribute names (7 in the example above) are derived by concatenating
 From the master secret key, a derived decryption key for a user of the marketing department (`MKG`) with a `medium` security level will hold an access policy expressed as the boolean expression:
 
 ```
-'Department::MKG' & ( 'Security Level::medium' | 'Security Level::low' )
+"Department::MKG & ( Security Level::medium | Security Level::low )"
 ```
 
 Finally, since attribute names are mapped to attribute values, the policy above is translated in GPSW as

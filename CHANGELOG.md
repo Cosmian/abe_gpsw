@@ -3,9 +3,19 @@
 All notable changes to this project will be documented in this file.
 
 ---
+## [0.6.4] - 2022-03-29
+### Added
+### Changed
+- Replace access policy of the user decryption key with boolean expression (given as string). Replace spaces with underscores.
+### Fixed
+- Typo in Jupyter notebook
+### Removed
+---
+
+---
 ## [0.6.3] - 2022-03-16
 ### Added
-- Access policy parser for boolean expression: Example: parse a string access policy under this format "(Department::HR | Department::R&D) & Level::level_2" and returns the corresponding `AccessPolicy`
+- Access policy parser for boolean expression: Example: parse a string access policy under this format "(Department::HR | Department::RnD) & Level::level_2" and returns the corresponding `AccessPolicy`
 - Add ABE GPSW for python use through wasm32-wasi target
 ### Changed
 ### Fixed
