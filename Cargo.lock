@@ -6,6 +6,7 @@ version = 3
 name = "abe_gpsw"
 version = "0.6.3"
 dependencies = [
+ "cosmian-wit-bindgen-rust",
  "cosmian_bls12_381",
  "cosmian_crypto_base",
  "eyre",
@@ -25,7 +26,6 @@ dependencies = [
  "thiserror",
  "wasm-bindgen",
  "wasm-bindgen-test",
- "wit-bindgen-rust",
  "witgen",
 ]
 
@@ -292,6 +292,71 @@ checksum = "a06aeb73f470f66dcdbf7223caeebb85984942f22f1adb2a088cf9668146bbbc"
 dependencies = [
  "cfg-if",
  "wasm-bindgen",
+]
+
+[[package]]
+name = "cosmian-wit-bindgen-gen-core"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ca5a09d947ca3212d6ae585b8c088cd081dc99a66e9d5b8eeb1a769b91010dc2"
+dependencies = [
+ "anyhow",
+ "cosmian-wit-parser",
+]
+
+[[package]]
+name = "cosmian-wit-bindgen-gen-rust"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "77ca14f3a3fc81b2d65f31727106afd19091f8261cc61fabab1d88133e257d02"
+dependencies = [
+ "cosmian-wit-bindgen-gen-core",
+ "heck",
+]
+
+[[package]]
+name = "cosmian-wit-bindgen-gen-rust-wasm"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4e45b8ae2c8353b90a62f1d767ae215bd2c77a27916fff5c968a5989687c842c"
+dependencies = [
+ "cosmian-wit-bindgen-gen-core",
+ "cosmian-wit-bindgen-gen-rust",
+ "heck",
+]
+
+[[package]]
+name = "cosmian-wit-bindgen-rust"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "bd08d6f4931fc057dde5d134ae5462c23eff5b62b12a5d9e4e799f334a12d1b7"
+dependencies = [
+ "async-trait",
+ "bitflags",
+ "cosmian-wit-bindgen-rust-impl",
+]
+
+[[package]]
+name = "cosmian-wit-bindgen-rust-impl"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5dad5a4f0be8f65668b32bac1d466454787aa536b11a336537c5fa12afe813a9"
+dependencies = [
+ "cosmian-wit-bindgen-gen-core",
+ "cosmian-wit-bindgen-gen-rust-wasm",
+ "proc-macro2",
+ "syn",
+]
+
+[[package]]
+name = "cosmian-wit-parser"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6f88d53aa99ba7d3b871aedc12404aa1b2e2a2974391d3df5852adf31d011f43"
+dependencies = [
+ "anyhow",
+ "id-arena",
+ "pulldown-cmark",
 ]
 
 [[package]]
@@ -1316,65 +1381,6 @@ name = "winapi-x86_64-pc-windows-gnu"
 version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "712e227841d057c1ee1cd2fb22fa7e5a5461ae8e48fa2ca79ec42cfc1931183f"
-
-[[package]]
-name = "wit-bindgen-gen-core"
-version = "0.1.0"
-source = "git+https://github.com/bytecodealliance/wit-bindgen?rev=2c4ec9#2c4ec937cab8c23131d644d2fcaf4705a08f9b01"
-dependencies = [
- "anyhow",
- "wit-parser",
-]
-
-[[package]]
-name = "wit-bindgen-gen-rust"
-version = "0.1.0"
-source = "git+https://github.com/bytecodealliance/wit-bindgen?rev=2c4ec9#2c4ec937cab8c23131d644d2fcaf4705a08f9b01"
-dependencies = [
- "heck",
- "wit-bindgen-gen-core",
-]
-
-[[package]]
-name = "wit-bindgen-gen-rust-wasm"
-version = "0.1.0"
-source = "git+https://github.com/bytecodealliance/wit-bindgen?rev=2c4ec9#2c4ec937cab8c23131d644d2fcaf4705a08f9b01"
-dependencies = [
- "heck",
- "wit-bindgen-gen-core",
- "wit-bindgen-gen-rust",
-]
-
-[[package]]
-name = "wit-bindgen-rust"
-version = "0.1.0"
-source = "git+https://github.com/bytecodealliance/wit-bindgen?rev=2c4ec9#2c4ec937cab8c23131d644d2fcaf4705a08f9b01"
-dependencies = [
- "async-trait",
- "bitflags",
- "wit-bindgen-rust-impl",
-]
-
-[[package]]
-name = "wit-bindgen-rust-impl"
-version = "0.1.0"
-source = "git+https://github.com/bytecodealliance/wit-bindgen?rev=2c4ec9#2c4ec937cab8c23131d644d2fcaf4705a08f9b01"
-dependencies = [
- "proc-macro2",
- "syn",
- "wit-bindgen-gen-core",
- "wit-bindgen-gen-rust-wasm",
-]
-
-[[package]]
-name = "wit-parser"
-version = "0.1.0"
-source = "git+https://github.com/bytecodealliance/wit-bindgen?rev=2c4ec9#2c4ec937cab8c23131d644d2fcaf4705a08f9b01"
-dependencies = [
- "anyhow",
- "id-arena",
- "pulldown-cmark",
-]
 
 [[package]]
 name = "witgen"
