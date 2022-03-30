@@ -55,7 +55,7 @@ pub fn complex_access_policy_test() {
     let (master_private_key, public_key, _delegation_key) =
         engine.generate_master_key(&policy).unwrap();
 
-    let bnppf_all_access_policy = AccessPolicy::from_boolean_expression("Entity::BNPPF & (Country::France | Country::Germany | Country::Italy | Country::Hungary | Country::Spain | Country::Belgium)").unwrap();
+    let bnppf_all_access_policy = AccessPolicy::from_boolean_expression("Entity::BNPPF && (Country::France || Country::Germany || Country::Italy || Country::Hungary || Country::Spain || Country::Belgium)").unwrap();
 
     println!(
         "{}",

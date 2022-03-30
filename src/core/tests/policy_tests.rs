@@ -75,19 +75,20 @@ fn policy_group_from_java() {
 #[test]
 fn parse_boolean_expression() {
     let access_policy = AccessPolicy::from_boolean_expression(
-        "(Department::HR | Department::RnD) & Level::level_2",
+        "(Department::HR || Department::RnD) && Level::level_2",
     )
     .unwrap();
     let expected_ap = (ap("Department", "HR") | ap("Department", "RnD")) & ap("Level", "level_2");
     assert_eq!(expected_ap, access_policy);
 
-    let access_policy =
-        AccessPolicy::from_boolean_expression("Level::level_2&(Department::HR | Department::RnD) ")
-            .unwrap();
+    let access_policy = AccessPolicy::from_boolean_expression(
+        "Level::level_2&&(Department::HR || Department::RnD) ",
+    )
+    .unwrap();
     assert_eq!(expected_ap, access_policy);
 
     let access_policy =
-        AccessPolicy::from_boolean_expression("(((Department::HR))) & Level::level_2").unwrap();
+        AccessPolicy::from_boolean_expression("(((Department::HR))) && Level::level_2").unwrap();
     let expected_ap = (ap("Department", "HR")) & ap("Level", "level_2");
     assert_eq!(expected_ap, access_policy);
 
@@ -96,7 +97,28 @@ fn parse_boolean_expression() {
     assert_eq!(expected_ap, access_policy);
 
     assert!(AccessPolicy::from_boolean_expression("Department:HR").is_err());
-    assert!(AccessPolicy::from_boolean_expression("Department::HR&").is_err());
-    assert!(AccessPolicy::from_boolean_expression("Department::HR|::").is_err());
+    assert!(AccessPolicy::from_boolean_expression("Department::HR&&").is_err());
+    assert!(AccessPolicy::from_boolean_expression("Department::HR||::").is_err());
     assert!(AccessPolicy::from_boolean_expression("::").is_err());
+}
+
+#[test]
+fn parse_boolean_expression_additional_tests() {
+    let expected_ap = (ap("X", "A") | ap("X", "B")) & ap("Y", "111");
+
+    let access_policy = AccessPolicy::from_boolean_expression("(X::A || X::B) && Y::111").unwrap();
+    assert_eq!(expected_ap, access_policy);
+
+    let access_policy =
+        AccessPolicy::from_boolean_expression("  (  X  ::  A  ||   X  ::  B  )  && Y  ::  111  ")
+            .unwrap();
+    assert_eq!(expected_ap, access_policy);
+
+    let access_policy = AccessPolicy::from_boolean_expression(
+        "( with spaces::a lot of spaces & || really a lot::really ? ) &&   why not :: here too",
+    )
+    .unwrap();
+    let expected_ap = (ap("with spaces", "a lot of spaces &") | ap("really a lot", "really ?"))
+        & ap("why not", "here too");
+    assert_eq!(expected_ap, access_policy);
 }

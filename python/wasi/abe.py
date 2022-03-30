@@ -52,7 +52,7 @@ super_delegate = unwrap(
         store, master_key.private_key, None, master_key.policy_serialized
     )
 )
-access_policy_mkg = "Departments::MKG & Security_Level::level_1"
+access_policy_mkg = "Departments::MKG && Security_Level::level_1"
 user_decryption_key_mkg = abe.delegate_user_decryption_key(
     store,
     master_key.delegation_key,

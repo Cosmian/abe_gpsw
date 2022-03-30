@@ -219,19 +219,56 @@ impl AccessPolicy {
         Ok(right_closing_parenthesis)
     }
 
+    /// Sanitize spaces in boolean expression
+    /// We remove useless spaces:
+    ///     before and after operator. Example: `A && B` --> `A&&B`
+    ///     before and after parenthesis. Example: `(A && B)` --> `(A&&B)`
+    /// But keep these spaces: `(A::b c || d e::F)` --> `(A::b c||d e::F)`
+    pub fn sanitize_spaces(boolean_expression: &str) -> String {
+        let trim_closure = |expr: &str, separator: &str| -> String {
+            let expression = expr
+                .split(separator)
+                .collect::<Vec<_>>()
+                .into_iter()
+                .map(|s| s.trim())
+                .collect::<Vec<_>>();
+            let mut expression_chars = Vec::<char>::new();
+            for (i, s) in expression.iter().enumerate() {
+                if i == 0 && s.is_empty() {
+                    expression_chars.append(&mut separator.chars().collect::<Vec<_>>());
+                } else {
+                    expression_chars.append(&mut s.chars().collect::<Vec<_>>());
+                    if i != expression.len() - 1 {
+                        expression_chars.append(&mut separator.chars().collect::<Vec<_>>());
+                    }
+                }
+            }
+            expression_chars.iter().collect::<String>()
+        };
+
+        // Remove successively spaces around `special` substrings
+        let mut output = boolean_expression.to_string();
+        for sep in ["(", ")", "||", "&&", "::"] {
+            output = trim_closure(output.as_str(), sep);
+        }
+
+        output
+    }
+
     /// This function takes a boolean expression and splits it into 3 parts:
     /// - left part
     /// - operator
     /// - right part
     ///
-    /// Example: "Department::HR & Level::level_2" will be decomposed in:
+    /// Example: "Department::HR && Level::level_2" will be decomposed in:
     /// - Department::HR
-    /// - &
+    /// - &&
     /// - Level::level_2
     fn decompose_expression(
         boolean_expression: &str,
         split_position: usize,
-    ) -> Result<(String, Option<char>, Option<String>), FormatErr> {
+    ) -> Result<(String, Option<String>, Option<String>), FormatErr> {
+        let operator_str_size = 2;
         if split_position > boolean_expression.len() {
             return Err(FormatErr::InvalidBooleanExpression(format!(
                 "Cannot split boolean expression {boolean_expression} at position \
@@ -240,16 +277,13 @@ impl AccessPolicy {
             )));
         }
 
+        // Put aside `Department::HR` from `Department::HR && Level::level_2`
         let left_part = &boolean_expression[..split_position];
         if split_position == boolean_expression.len() {
             return Ok((left_part.to_string(), None, None));
-        } else if split_position == boolean_expression.len() + 1 {
-            return Err(FormatErr::InvalidBooleanExpression(
-                "Invalid boolean expression. Boolean expression should be 'A & B' or 'A | B'"
-                    .to_string(),
-            ));
         }
 
+        // Put aside `&&` from `Department::HR && Level::level_2`
         let next_char = boolean_expression
             .chars()
             .nth(split_position)
@@ -261,22 +295,21 @@ impl AccessPolicy {
         if split_position == boolean_expression.len() {
             return Ok((left_part.to_string(), None, None));
         }
-        let operator = boolean_expression
-            .chars()
-            .nth(split_position)
-            .unwrap_or_default();
+        let operator = &boolean_expression[split_position..split_position + operator_str_size];
+
+        // Put aside `Level::level_2` from `Department::HR && Level::level_2`
         // Skip 2 next characters (parenthesis + next char)
-        let right_part = &boolean_expression[split_position + 1..];
+        let right_part = &boolean_expression[split_position + operator_str_size..];
         Ok((
             left_part.to_string(),
-            Some(operator),
+            Some(operator.to_string()),
             Some(right_part.to_string()),
         ))
     }
 
     /// Convert a boolean expression into `AccessPolicy`.
     /// Example:
-    ///     input boolean expression: (Department::HR | Department::RnD) &
+    ///     input boolean expression: (Department::HR || Department::RnD) &&
     /// Level::level_2
     ///     output: corresponding access policy:
     /// And(Attr(Level::level2), Or(Attr(Department::HR),
@@ -284,7 +317,7 @@ impl AccessPolicy {
     ///
     /// # Arguments
     ///
-    /// * `boolean_expression`: expression with operators & and |
+    /// * `boolean_expression`: expression with operators && and ||
     ///
     /// # Returns
     ///
@@ -293,17 +326,18 @@ impl AccessPolicy {
     /// # Examples
     ///
     /// ```rust
-    /// let boolean_expression = "(Department::HR | Department::RnD) & Level::level_2";
+    /// let boolean_expression = "(Department::HR || Department::RnD) && Level::level_2";
     /// let access_policy = abe_gpsw::core::policy::AccessPolicy::from_boolean_expression(boolean_expression);
     /// ```
     /// # Errors
     ///
     /// Missing parenthesis or bad operators
     pub fn from_boolean_expression(boolean_expression: &str) -> Result<Self, FormatErr> {
-        let boolean_expression_example = "(Department::HR | Department::RnD) & Level::level_2";
+        let boolean_expression_example = "(Department::HR || Department::RnD) && Level::level_2";
 
         // Remove all spaces
-        let boolean_expression = str::replace(boolean_expression, " ", "");
+        // let boolean_expression = str::replace(boolean_expression, " ", "");
+        let boolean_expression = AccessPolicy::sanitize_spaces(boolean_expression);
 
         if !boolean_expression.contains("::") {
             return Err(FormatErr::InvalidBooleanExpression(format!(
@@ -337,15 +371,15 @@ impl AccessPolicy {
             let right_part = right_part.unwrap_or_default();
             let ap1 = Box::new(AccessPolicy::from_boolean_expression(left_part.as_str())?);
             let ap2 = Box::new(AccessPolicy::from_boolean_expression(right_part.as_str())?);
-            let ap = match operator {
-                '&' => Ok(AccessPolicy::And(ap1, ap2)),
-                '|' => Ok(AccessPolicy::Or(ap1, ap2)),
+            let ap = match operator.as_str() {
+                "&&" => Ok(AccessPolicy::And(ap1, ap2)),
+                "||" => Ok(AccessPolicy::Or(ap1, ap2)),
                 _ => Err(FormatErr::UnsupportedOperator(operator.to_string())),
             }?;
             Ok(ap)
         } else {
-            let or_position = boolean_expression.find('|');
-            let and_position = boolean_expression.find('&');
+            let or_position = boolean_expression.find("||");
+            let and_position = boolean_expression.find("&&");
 
             // Get position of next operator
             let position = if or_position.is_none() && and_position.is_none() {
@@ -387,9 +421,9 @@ impl AccessPolicy {
 
             let ap1 = Box::new(AccessPolicy::from_boolean_expression(left_part.as_str())?);
             let ap2 = Box::new(AccessPolicy::from_boolean_expression(right_part.as_str())?);
-            let ap = match operator {
-                '&' => Ok(AccessPolicy::And(ap1, ap2)),
-                '|' => Ok(AccessPolicy::Or(ap1, ap2)),
+            let ap = match operator.as_str() {
+                "&&" => Ok(AccessPolicy::And(ap1, ap2)),
+                "||" => Ok(AccessPolicy::Or(ap1, ap2)),
                 _ => Err(FormatErr::UnsupportedOperator(operator.to_string())),
             }?;
 

@@ -287,14 +287,14 @@ mod tests {
                 "Security Level",
                 &[
                     "Protected",
-                    "Low_Secret",
+                    "Low Secret",
                     "Medium Secret",
                     "High Secret",
                     "Top Secret",
                 ],
                 true,
             )?
-            .add_axis("Department", &["RnD", "HR", "MKG", "FIN"], false)?;
+            .add_axis("Department", &["R&D", "HR", "MKG", "FIN"], false)?;
         let abe = AbeCrypto::<Gpsw<Bls12_381>>::new();
         let master_keys = abe.generate_master_keys(&policy)?;
 
@@ -308,7 +308,7 @@ mod tests {
 
         let attributes: Vec<Attribute> = vec![
             attr("Department", "FIN"),
-            attr("Security Level", "Low_Secret"),
+            attr("Security Level", "Low Secret"),
         ];
         let (sym_key, enc_sym_key) = abe.generate_symmetric_key::<Aes256GcmCrypto>(
             &master_keys.public_key,
@@ -332,14 +332,14 @@ mod tests {
                 "Security Level",
                 &[
                     "Protected",
-                    "Low_Secret",
+                    "Low Secret",
                     "Medium Secret",
                     "High Secret",
                     "Top Secret",
                 ],
                 true,
             )?
-            .add_axis("Department", &["RnD", "HR", "MKG", "FIN"], false)?;
+            .add_axis("Department", &["R&D", "HR", "MKG", "FIN"], false)?;
         let abe = AbeCrypto::<Gpsw<Bls12_381>>::new();
         let master_keys = abe.generate_master_keys(&policy)?;
 
@@ -354,7 +354,7 @@ mod tests {
         let message = abe.generate_random_bytes(42);
         let attributes: Vec<Attribute> = vec![
             attr("Department", "FIN"),
-            attr("Security Level", "Low_Secret"),
+            attr("Security Level", "Low Secret"),
         ];
         let encrypted = abe.encrypt(
             &master_keys.public_key,

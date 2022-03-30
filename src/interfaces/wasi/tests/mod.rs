@@ -19,7 +19,7 @@ fn single_test() {
         primary_axis: super::wit_generation::PolicyAxis {
             name: "Departments".to_string(),
             attributes: vec![
-                "RnD".to_string(),
+                "R&D".to_string(),
                 "HR".to_string(),
                 "MKG".to_string(),
                 "FIN".to_string(),
@@ -27,13 +27,13 @@ fn single_test() {
             hierarchical: false,
         },
         secondary_axis: PolicyAxis {
-            name: "Security_Level".to_string(),
+            name: "Security Level".to_string(),
             attributes: vec![
-                "level_1".to_string(),
-                "level_2".to_string(),
-                "level_3".to_string(),
-                "level_4".to_string(),
-                "level_5".to_string(),
+                "level 1".to_string(),
+                "level 2".to_string(),
+                "level 3".to_string(),
+                "level 4".to_string(),
+                "level 5".to_string(),
             ],
             hierarchical: true,
         },
@@ -47,7 +47,7 @@ fn single_test() {
 
     let level_4_mkg_fin_delegate = generate_user_decryption_key(
         mk.private_key,
-        Some("Departments::MKG & Security_Level::level_4".to_string()),
+        Some("Departments::MKG && Security Level::level 4".to_string()),
         mk.policy_serialized.clone(),
     )
     .unwrap();
@@ -56,7 +56,7 @@ fn single_test() {
         mk.delegation_key.clone(),
         level_4_mkg_fin_delegate,
         mk.policy_serialized.clone(),
-        Some("Departments::MKG & Security_Level::level_3".to_string()),
+        Some("Departments::MKG && Security Level::level 3".to_string()),
     );
 
     let updated_policy = rotate_attributes(
@@ -77,8 +77,8 @@ fn single_test() {
                 attribute: "MKG".to_string(),
             },
             Attribute {
-                axis_name: "Security_Level".to_string(),
-                attribute: "level_3".to_string(),
+                axis_name: "Security Level".to_string(),
+                attribute: "level 3".to_string(),
             },
         ],
         updated_policy,
