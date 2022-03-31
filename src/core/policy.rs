@@ -219,12 +219,13 @@ impl AccessPolicy {
         Ok(right_closing_parenthesis)
     }
 
-    /// Sanitize spaces in boolean expression
-    /// We remove useless spaces:
-    ///     before and after operator. Example: `A && B` --> `A&&B`
-    ///     before and after parenthesis. Example: `(A && B)` --> `(A&&B)`
-    /// But keep these spaces: `(A::b c || d e::F)` --> `(A::b c||d e::F)`
-    pub fn sanitize_spaces(boolean_expression: &str) -> String {
+    /// Sanitize spaces in boolean expression around parenthesis and operators
+    /// but keep spaces inside axis & attribute names We remove useless
+    /// spaces:
+    /// * before and after operator. Example: `A && B` --> `A&&B`
+    /// * before and after parenthesis. Example: `(A && B)` --> `(A&&B)`
+    /// * But keep these spaces: `(A::b c || d e::F)` --> `(A::b c||d e::F)`
+    fn sanitize_spaces(boolean_expression: &str) -> String {
         let trim_closure = |expr: &str, separator: &str| -> String {
             let expression = expr
                 .split(separator)
@@ -335,8 +336,7 @@ impl AccessPolicy {
     pub fn from_boolean_expression(boolean_expression: &str) -> Result<Self, FormatErr> {
         let boolean_expression_example = "(Department::HR || Department::RnD) && Level::level_2";
 
-        // Remove all spaces
-        // let boolean_expression = str::replace(boolean_expression, " ", "");
+        // Remove spaces around parenthesis and operators
         let boolean_expression = AccessPolicy::sanitize_spaces(boolean_expression);
 
         if !boolean_expression.contains("::") {
@@ -429,6 +429,47 @@ impl AccessPolicy {
 
             Ok(ap)
         }
+    }
+
+    /// Verify if an access policy is compliant with the ABE policy.
+    /// Function will verify if axis and attributes given in the boolean
+    /// expression are declared in the ABE policy
+    ///
+    /// # Arguments
+    ///
+    /// * `boolean_expression`: access policy expressed with operators && and ||
+    /// * `policy`: the ABE policy
+    ///
+    /// # Returns
+    ///
+    /// Nothing if access policy is valid. A `MissingAxis` or `MissingAttribute`
+    /// error otherwise
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// let access_policy = "(Department::HR || Department::R&D) && Level::level 2";
+    /// let policy = abe_gpsw::core::policy::Policy::new(100)
+    ///    .add_axis(
+    ///        "Level",
+    ///      &["level 1", "level 2", "level 3", "level 4", "level 5"],
+    ///       true,
+    ///   ).unwrap()
+    ///    .add_axis("Department", &["R&D", "HR", "MKG", "fin"], false).unwrap();
+    /// abe_gpsw::core::policy::AccessPolicy::verify_access_policy(access_policy, &policy).unwrap();
+    /// ```
+    /// # Errors
+    ///
+    /// Missing parenthesis or bad operators
+    pub fn verify_access_policy(
+        boolean_expression: &str,
+        policy: &Policy,
+    ) -> Result<(), FormatErr> {
+        // Remove spaces around parenthesis and operators
+        let access_policy = AccessPolicy::from_boolean_expression(boolean_expression)?;
+
+        policy.to_msp(&access_policy)?;
+        Ok(())
     }
 
     pub fn attributes(&self) -> Vec<Attribute> {

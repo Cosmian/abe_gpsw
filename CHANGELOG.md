@@ -5,6 +5,7 @@ All notable changes to this project will be documented in this file.
 ---
 ## [0.6.4] - 2022-03-31
 ### Added
+- Add function to verify if access policy is compliant with a given ABE policy
 ### Changed
 - Replace access policy of the user decryption key with boolean expression (given as string). Replace spaces with underscores.
 - Consolidate access policy parser: operators are `&&` or `||` and handle spaces in boolean expressions.

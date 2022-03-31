@@ -116,7 +116,7 @@ For instance, the policy
     },
     "Department": {
         "hierarchical": false,
-        "attributes": ["HR","FIN","MKG","RnD"]
+        "attributes": ["HR","FIN","MKG","R&D"]
     }
 ]
 ```
@@ -134,7 +134,7 @@ All unique attribute names (7 in the example above) are derived by concatenating
 | Department::HR         | 1     |
 | Department::FIN        | 2     |
 | Department::MKG        | 3     |
-| Department::RnD        | 4     |
+| Department::R&D        | 4     |
 | Security Level::low    | 5     |
 | Security Level::medium | 6     |
 | Security Level::high   | 7     |
@@ -142,7 +142,7 @@ All unique attribute names (7 in the example above) are derived by concatenating
 From the master secret key, a derived decryption key for a user of the marketing department (`MKG`) with a `medium` security level will hold an access policy expressed as the boolean expression:
 
 ```
-"Department::MKG & ( Security Level::medium | Security Level::low )"
+"Department::MKG && ( Security Level::medium || Security Level::low )"
 ```
 
 Finally, since attribute names are mapped to attribute values, the policy above is translated in GPSW as
