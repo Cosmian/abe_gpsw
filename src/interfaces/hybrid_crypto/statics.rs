@@ -111,7 +111,7 @@ where
     let mut block = Block::<S, MAX_CLEAR_TEXT_SIZE>::new();
     if clear_text.len() > MAX_CLEAR_TEXT_SIZE {
         anyhow::bail!(
-            "Tha data to encrypt is too large: {} bytes, max size: {} ",
+            "The data to encrypt is too large: {} bytes, max size: {} ",
             clear_text.len(),
             MAX_CLEAR_TEXT_SIZE
         );

@@ -36,6 +36,8 @@ jobs:
         include:
           - target: x86_64-unknown-linux-gnu
             feature: ffi
+          - target: x86_64-apple-darwin
+            feature: ffi
           - target: wasm32-unknown-unknown
             feature: wasm_bindgen
 

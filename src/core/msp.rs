@@ -1,7 +1,7 @@
 #![allow(dead_code)]
 use std::{
     collections::HashMap,
-    convert::TryFrom,
+    convert::{TryFrom, TryInto},
     fmt::Display,
     ops::{BitAnd, BitOr},
 };
@@ -47,11 +47,9 @@ impl<I: AsBytes> AsBytes for MonotoneSpanProgram<I> {
                 "minimum len of 8 bytes is required for MSP".to_string(),
             ));
         }
-        let mut nb_row = [0_u8; 4];
-        nb_row.copy_from_slice(&bytes[0..4]);
+        let nb_row: [u8; 4] = bytes[0..4].try_into()?;
         let nb_row = u32::from_be_bytes(nb_row) as usize;
-        let mut nb_col = [0_u8; 4];
-        nb_col.copy_from_slice(&bytes[4..8]);
+        let nb_col: [u8; 4] = bytes[4..8].try_into()?;
         let nb_col = u32::from_be_bytes(nb_col) as usize;
 
         if bytes.len() < 8 + 4 * nb_row {
@@ -62,8 +60,7 @@ impl<I: AsBytes> AsBytes for MonotoneSpanProgram<I> {
         let mut row_to_attr = Vec::with_capacity(nb_row);
         let mut attr_to_row = HashMap::with_capacity(nb_row);
         for i in 0..nb_row {
-            let mut u = [0_u8; 4];
-            u.copy_from_slice(&bytes[8 + i * 4..12 + i * 4]);
+            let u: [u8; 4] = bytes[8 + i * 4..12 + i * 4].try_into()?;
             let u = u32::from_be_bytes(u);
             row_to_attr.push(u);
             if attr_to_row.insert(u, i).is_some() {
