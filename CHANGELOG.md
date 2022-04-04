@@ -6,10 +6,10 @@ All notable changes to this project will be documented in this file.
 ## [0.6.4] - 2022-03-31
 ### Added
 - Add function to verify if access policy is compliant with a given ABE policy
-- Improve performance of ABE in wasi-webassembly using cache for public key deserialization
+- Improve performance of ABE encryption/decryption in wasi-webassembly using a cache for public key deserialization
 ### Changed
-- Replace access policy of the user decryption key with boolean expression (given as string). Replace spaces with underscores.
-- Consolidate access policy parser: operators are `&&` or `||` and handle spaces in boolean expressions.
+- Replace in code access policy (of the user decryption key) with boolean expression (given as string)
+- Consolidate access policy parser: operators are `&&` or `||` and handle spaces in boolean expressions
 ### Fixed
 - Typo in Jupyter notebook
 ### Removed
