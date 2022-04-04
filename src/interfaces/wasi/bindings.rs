@@ -50,6 +50,34 @@ mod abe {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
       f.debug_struct("Policy").field("primary_axis", &self.primary_axis).field("secondary_axis", &self.secondary_axis).finish()}
   }
+  #[export_name = "decrypt_hybrid_header"]
+  unsafe extern "C" fn __wit_bindgen_decrypt_hybrid_header(arg0: i32, arg1: i32, arg2: i32, ) -> i32{
+    let len0 = arg2 as usize;
+    let result1 = <super::Abe as Abe>::decrypt_hybrid_header(arg0, Vec::from_raw_parts(arg1 as *mut _, len0, len0));
+    let (result4_0,result4_1,result4_2,) = match result1{
+      Ok(e) => { {
+        let vec2 = (e.into_bytes()).into_boxed_slice();
+        let ptr2 = vec2.as_ptr() as i32;
+        let len2 = vec2.len() as i32;
+        core::mem::forget(vec2);
+        
+        (0i32, ptr2, len2)
+      }}
+      Err(e) => { {
+        let vec3 = (e.into_bytes()).into_boxed_slice();
+        let ptr3 = vec3.as_ptr() as i32;
+        let len3 = vec3.len() as i32;
+        core::mem::forget(vec3);
+        
+        (1i32, ptr3, len3)
+      }}
+    };
+    let ptr5 = RET_AREA.as_mut_ptr() as i32;
+    *((ptr5 + 16) as *mut i32) = result4_2;
+    *((ptr5 + 8) as *mut i32) = result4_1;
+    *((ptr5 + 0) as *mut i32) = result4_0;
+    ptr5
+  }
   #[export_name = "destroy_encryption_cache"]
   unsafe extern "C" fn __wit_bindgen_destroy_encryption_cache(arg0: i32, ) -> i32{
     let result0 = <super::Abe as Abe>::destroy_encryption_cache(arg0);
@@ -134,6 +162,27 @@ mod abe {
     *((ptr7 + 8) as *mut i32) = result6_1;
     *((ptr7 + 0) as *mut i32) = result6_0;
     ptr7
+  }
+  #[export_name = "create_decryption_cache"]
+  unsafe extern "C" fn __wit_bindgen_create_decryption_cache(arg0: i32, arg1: i32, ) -> i32{
+    let len0 = arg1 as usize;
+    let result1 = <super::Abe as Abe>::create_decryption_cache(Vec::from_raw_parts(arg0 as *mut _, len0, len0));
+    let (result3_0,result3_1,result3_2,) = match result1{
+      Ok(e) => { (0i32, wit_bindgen_rust::rt::as_i32(e), 0i32)}
+      Err(e) => { {
+        let vec2 = (e.into_bytes()).into_boxed_slice();
+        let ptr2 = vec2.as_ptr() as i32;
+        let len2 = vec2.len() as i32;
+        core::mem::forget(vec2);
+        
+        (1i32, ptr2, len2)
+      }}
+    };
+    let ptr4 = RET_AREA.as_mut_ptr() as i32;
+    *((ptr4 + 16) as *mut i32) = result3_2;
+    *((ptr4 + 8) as *mut i32) = result3_1;
+    *((ptr4 + 0) as *mut i32) = result3_0;
+    ptr4
   }
   #[export_name = "delegate_user_decryption_key"]
   unsafe extern "C" fn __wit_bindgen_delegate_user_decryption_key(arg0: i32, arg1: i32, arg2: i32, arg3: i32, arg4: i32, arg5: i32, arg6: i32, arg7: i32, arg8: i32, ) -> i32{
@@ -451,27 +500,6 @@ mod abe {
     *((ptr7 + 0) as *mut i32) = result6_0;
     ptr7
   }
-  #[export_name = "create_decryption_cache"]
-  unsafe extern "C" fn __wit_bindgen_create_decryption_cache(arg0: i32, arg1: i32, ) -> i32{
-    let len0 = arg1 as usize;
-    let result1 = <super::Abe as Abe>::create_decryption_cache(Vec::from_raw_parts(arg0 as *mut _, len0, len0));
-    let (result3_0,result3_1,result3_2,) = match result1{
-      Ok(e) => { (0i32, wit_bindgen_rust::rt::as_i32(e), 0i32)}
-      Err(e) => { {
-        let vec2 = (e.into_bytes()).into_boxed_slice();
-        let ptr2 = vec2.as_ptr() as i32;
-        let len2 = vec2.len() as i32;
-        core::mem::forget(vec2);
-        
-        (1i32, ptr2, len2)
-      }}
-    };
-    let ptr4 = RET_AREA.as_mut_ptr() as i32;
-    *((ptr4 + 16) as *mut i32) = result3_2;
-    *((ptr4 + 8) as *mut i32) = result3_1;
-    *((ptr4 + 0) as *mut i32) = result3_0;
-    ptr4
-  }
   #[export_name = "create_encryption_cache"]
   unsafe extern "C" fn __wit_bindgen_create_encryption_cache(arg0: i32, arg1: i32, arg2: i32, arg3: i32, ) -> i32{
     let len0 = arg1 as usize;
@@ -548,40 +576,16 @@ mod abe {
     *((ptr10 + 0) as *mut i32) = result9_0;
     ptr10
   }
-  #[export_name = "decrypt_hybrid_header"]
-  unsafe extern "C" fn __wit_bindgen_decrypt_hybrid_header(arg0: i32, arg1: i32, arg2: i32, ) -> i32{
-    let len0 = arg2 as usize;
-    let result1 = <super::Abe as Abe>::decrypt_hybrid_header(arg0, Vec::from_raw_parts(arg1 as *mut _, len0, len0));
-    let (result4_0,result4_1,result4_2,) = match result1{
-      Ok(e) => { {
-        let vec2 = (e.into_bytes()).into_boxed_slice();
-        let ptr2 = vec2.as_ptr() as i32;
-        let len2 = vec2.len() as i32;
-        core::mem::forget(vec2);
-        
-        (0i32, ptr2, len2)
-      }}
-      Err(e) => { {
-        let vec3 = (e.into_bytes()).into_boxed_slice();
-        let ptr3 = vec3.as_ptr() as i32;
-        let len3 = vec3.len() as i32;
-        core::mem::forget(vec3);
-        
-        (1i32, ptr3, len3)
-      }}
-    };
-    let ptr5 = RET_AREA.as_mut_ptr() as i32;
-    *((ptr5 + 16) as *mut i32) = result4_2;
-    *((ptr5 + 8) as *mut i32) = result4_1;
-    *((ptr5 + 0) as *mut i32) = result4_0;
-    ptr5
-  }
   pub trait Abe {
     /// This is a generated file by witgen (https://github.com/bnjjj/witgen), please do not edit yourself, you can generate a new one thanks to cargo witgen generate command
+    /// Decrypt ABE header
+    fn decrypt_hybrid_header(cache_handle: i32,encrypted_data: Vec<u8>,) -> Result<String,String>;
     fn destroy_encryption_cache(cache_handle: i32,) -> Result<(),String>;
     fn destroy_decryption_cache(cache_handle: i32,) -> Result<(),String>;
     /// Generate a user decryption key for the given master key and access policy
     fn generate_user_decryption_key(master_private_key: Vec<u8>,access_policy: Option<String>,policy: Vec<u8>,) -> Result<String,String>;
+    /// Prepare encryption cache (avoiding user decryption key deserialization)
+    fn create_decryption_cache(user_decryption_key: Vec<u8>,) -> Result<i32,String>;
     /// Generate a delegate user decryption key for the access policy
     fn delegate_user_decryption_key(delegation_key: Vec<u8>,user_decryption_key: String,policy: Vec<u8>,access_policy: Option<String>,) -> Result<String,String>;
     /// Generate ABE master key
@@ -597,13 +601,9 @@ mod abe {
     /// Decrypt symmetric block cipher
     fn decrypt_hybrid_block(ciphertext: Vec<u8>,symmetric_key: Vec<u8>,uid: Vec<u8>,block_number: u64,) -> Result<Vec<u8>,String>;
     /// Prepare encryption cache (avoiding public key deserialization)
-    fn create_decryption_cache(user_decryption_key: Vec<u8>,) -> Result<i32,String>;
-    /// Prepare encryption cache (avoiding public key deserialization)
     fn create_encryption_cache(master_public_key: Vec<u8>,policy: Vec<u8>,) -> Result<i32,String>;
     /// Encrypt an AES-symmetric key and encrypt with AESGCM-256
     fn encrypt_hybrid_header(attributes: Vec<Attribute>,cache_handle: i32,uid: Vec<u8>,) -> Result<EncryptedHeader,String>;
-    /// Decrypt ABE-ciphertext (decrypt ABE header)
-    fn decrypt_hybrid_header(cache_handle: i32,encrypted_data: Vec<u8>,) -> Result<String,String>;
   }
   static mut RET_AREA: [i64; 9] = [0; 9];
 }

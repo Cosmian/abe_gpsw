@@ -220,6 +220,32 @@ class Abe:
         rotate_attributes = exports['rotate_attributes']
         assert(isinstance(rotate_attributes, wasmtime.Func))
         self._rotate_attributes = rotate_attributes
+    def decrypt_hybrid_header(self, caller: wasmtime.Store, cache_handle: int, encrypted_data: bytes) -> Expected[str, str]:
+        memory = self._memory;
+        realloc = self._canonical_abi_realloc
+        free = self._canonical_abi_free
+        ptr, len0 = _list_canon_lower(encrypted_data, ctypes.c_uint8, 1, 1, realloc, memory, caller)
+        ret = self._decrypt_hybrid_header(caller, _clamp(cache_handle, -2147483648, 2147483647), ptr, len0)
+        assert(isinstance(ret, int))
+        load = _load(ctypes.c_int32, memory, caller, ret, 0)
+        load1 = _load(ctypes.c_int32, memory, caller, ret, 8)
+        load2 = _load(ctypes.c_int32, memory, caller, ret, 16)
+        variant: Expected[str, str]
+        if load == 0:
+            ptr3 = load1
+            len4 = load2
+            list = _decode_utf8(memory, caller, ptr3, len4)
+            free(caller, ptr3, len4, 1)
+            variant = Ok(list)
+        elif load == 1:
+            ptr5 = load1
+            len6 = load2
+            list7 = _decode_utf8(memory, caller, ptr5, len6)
+            free(caller, ptr5, len6, 1)
+            variant = Err(list7)
+        else:
+            raise TypeError("invalid variant discriminant for expected")
+        return variant
     def destroy_encryption_cache(self, caller: wasmtime.Store, cache_handle: int) -> Expected[None, str]:
         memory = self._memory;
         free = self._canonical_abi_free
@@ -297,6 +323,28 @@ class Abe:
         else:
             raise TypeError("invalid variant discriminant for expected")
         return variant15
+    def create_decryption_cache(self, caller: wasmtime.Store, user_decryption_key: bytes) -> Expected[int, str]:
+        memory = self._memory;
+        realloc = self._canonical_abi_realloc
+        free = self._canonical_abi_free
+        ptr, len0 = _list_canon_lower(user_decryption_key, ctypes.c_uint8, 1, 1, realloc, memory, caller)
+        ret = self._create_decryption_cache(caller, ptr, len0)
+        assert(isinstance(ret, int))
+        load = _load(ctypes.c_int32, memory, caller, ret, 0)
+        load1 = _load(ctypes.c_int32, memory, caller, ret, 8)
+        load2 = _load(ctypes.c_int32, memory, caller, ret, 16)
+        variant: Expected[int, str]
+        if load == 0:
+            variant = Ok(load1)
+        elif load == 1:
+            ptr3 = load1
+            len4 = load2
+            list = _decode_utf8(memory, caller, ptr3, len4)
+            free(caller, ptr3, len4, 1)
+            variant = Err(list)
+        else:
+            raise TypeError("invalid variant discriminant for expected")
+        return variant
     def delegate_user_decryption_key(self, caller: wasmtime.Store, delegation_key: bytes, user_decryption_key: str, policy: bytes, access_policy: Optional[str]) -> Expected[str, str]:
         memory = self._memory;
         realloc = self._canonical_abi_realloc
@@ -581,28 +629,6 @@ class Abe:
         else:
             raise TypeError("invalid variant discriminant for expected")
         return variant
-    def create_decryption_cache(self, caller: wasmtime.Store, user_decryption_key: bytes) -> Expected[int, str]:
-        memory = self._memory;
-        realloc = self._canonical_abi_realloc
-        free = self._canonical_abi_free
-        ptr, len0 = _list_canon_lower(user_decryption_key, ctypes.c_uint8, 1, 1, realloc, memory, caller)
-        ret = self._create_decryption_cache(caller, ptr, len0)
-        assert(isinstance(ret, int))
-        load = _load(ctypes.c_int32, memory, caller, ret, 0)
-        load1 = _load(ctypes.c_int32, memory, caller, ret, 8)
-        load2 = _load(ctypes.c_int32, memory, caller, ret, 16)
-        variant: Expected[int, str]
-        if load == 0:
-            variant = Ok(load1)
-        elif load == 1:
-            ptr3 = load1
-            len4 = load2
-            list = _decode_utf8(memory, caller, ptr3, len4)
-            free(caller, ptr3, len4, 1)
-            variant = Err(list)
-        else:
-            raise TypeError("invalid variant discriminant for expected")
-        return variant
     def create_encryption_cache(self, caller: wasmtime.Store, master_public_key: bytes, policy: bytes) -> Expected[int, str]:
         memory = self._memory;
         realloc = self._canonical_abi_realloc
@@ -671,32 +697,6 @@ class Abe:
             list20 = _decode_utf8(memory, caller, ptr18, len19)
             free(caller, ptr18, len19, 1)
             variant = Err(list20)
-        else:
-            raise TypeError("invalid variant discriminant for expected")
-        return variant
-    def decrypt_hybrid_header(self, caller: wasmtime.Store, cache_handle: int, encrypted_data: bytes) -> Expected[str, str]:
-        memory = self._memory;
-        realloc = self._canonical_abi_realloc
-        free = self._canonical_abi_free
-        ptr, len0 = _list_canon_lower(encrypted_data, ctypes.c_uint8, 1, 1, realloc, memory, caller)
-        ret = self._decrypt_hybrid_header(caller, _clamp(cache_handle, -2147483648, 2147483647), ptr, len0)
-        assert(isinstance(ret, int))
-        load = _load(ctypes.c_int32, memory, caller, ret, 0)
-        load1 = _load(ctypes.c_int32, memory, caller, ret, 8)
-        load2 = _load(ctypes.c_int32, memory, caller, ret, 16)
-        variant: Expected[str, str]
-        if load == 0:
-            ptr3 = load1
-            len4 = load2
-            list = _decode_utf8(memory, caller, ptr3, len4)
-            free(caller, ptr3, len4, 1)
-            variant = Ok(list)
-        elif load == 1:
-            ptr5 = load1
-            len6 = load2
-            list7 = _decode_utf8(memory, caller, ptr5, len6)
-            free(caller, ptr5, len6, 1)
-            variant = Err(list7)
         else:
             raise TypeError("invalid variant discriminant for expected")
         return variant

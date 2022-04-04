@@ -2,11 +2,6 @@
 // rustc cannot see that code is actually not a dead code
 #![allow(dead_code)]
 
-use cosmian_crypto_base::{
-    hybrid_crypto::Metadata,
-    symmetric_crypto::{aes_256_gcm_pure::Aes256GcmCrypto, Key, SymmetricCrypto},
-};
-use lazy_static::lazy_static;
 use std::{
     collections::HashMap,
     convert::TryInto,
@@ -15,6 +10,12 @@ use std::{
         RwLock,
     },
 };
+
+use cosmian_crypto_base::{
+    hybrid_crypto::Metadata,
+    symmetric_crypto::{aes_256_gcm_pure::Aes256GcmCrypto, Key, SymmetricCrypto},
+};
+use lazy_static::lazy_static;
 use witgen::witgen;
 
 use crate::{
@@ -262,12 +263,10 @@ pub fn encrypt_hybrid_header(
         .expect("a read mutex on the encryption cache failed");
     let cache = map.get(&cache_handle).expect("invalid cache handle");
 
-    let abe_attributes = Attribute::abe_attributes(&attributes);
-
     let encrypted_header = internal_encrypt_hybrid_header::<Gpsw<Bls12_381>, Aes256GcmCrypto>(
         &cache.policy,
         &cache.public_key,
-        &abe_attributes,
+        &Attribute::abe_attributes(&attributes),
         Metadata {
             uid,
             additional_data: None,
