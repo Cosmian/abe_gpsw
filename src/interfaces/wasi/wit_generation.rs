@@ -358,10 +358,10 @@ pub fn decrypt_hybrid_header(cache_handle: i32, encrypted_data: Vec<u8>) -> Resu
 
     //
     // Recover header from `encrypted_bytes`
-    let header_size_bytes: [u8; 4] = encrypted_data[0..4]
+    let header_size_bytes: &[u8; 4] = &encrypted_data[0..4]
         .try_into()
         .map_err(|_| "byte arrays conversion failed")?;
-    let header_size: usize = u32::from_be_bytes(header_size_bytes) as usize;
+    let header_size: usize = u32::from_be_bytes(*header_size_bytes) as usize;
 
     // Split header from encrypted data
     let header = &encrypted_data[4..(4 + header_size)];
@@ -398,8 +398,6 @@ pub fn decrypt_hybrid_block(
 #[witgen]
 /// Decrypt ABE-ciphertext (decrypt ABE header + decrypt AES)
 pub fn decrypt(user_decryption_key: String, encrypted_data: Vec<u8>) -> Result<String, String> {
-    // let header = decrypt_hybrid_header(user_decryption_key, encrypted_data)?;
-
     let user_key = UserDecryptionKey::from_bytes(
         &hex::decode(user_decryption_key).map_err(|e| e.to_string())?,
     )

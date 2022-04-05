@@ -5,13 +5,19 @@ use super::wit_generation;
 cosmian_wit_bindgen_rust::export!("abe.wit");
 struct Abe;
 
+impl From<Attribute> for wit_generation::Attribute {
+    fn from(attr: Attribute) -> Self {
+        wit_generation::Attribute {
+            axis_name: attr.axis_name,
+            attribute: attr.attribute,
+        }
+    }
+}
+
 fn attributes_to_wit_attributes(attributes: Vec<Attribute>) -> Vec<wit_generation::Attribute> {
     attributes
-        .iter()
-        .map(|e| wit_generation::Attribute {
-            axis_name: e.axis_name.clone(),
-            attribute: e.attribute.clone(),
-        })
+        .into_iter()
+        .map(wit_generation::Attribute::from)
         .collect::<Vec<_>>()
 }
 

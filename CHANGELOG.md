@@ -7,6 +7,7 @@ All notable changes to this project will be documented in this file.
 ### Added
 - Add function to verify if access policy is compliant with a given ABE policy
 - Improve performance of ABE encryption/decryption in wasi-webassembly using a cache for public key deserialization
+- Attribute parser for example this string "Security Level::level 1"
 ### Changed
 - Replace in code access policy (of the user decryption key) with boolean expression (given as string)
 - Consolidate access policy parser: operators are `&&` or `||` and handle spaces in boolean expressions

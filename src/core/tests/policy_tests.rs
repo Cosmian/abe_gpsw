@@ -1,5 +1,7 @@
+use std::convert::TryFrom;
+
 use crate::{
-    core::policy::{ap, attr, AccessPolicy, Policy},
+    core::policy::{ap, attr, AccessPolicy, Attribute, Policy},
     error::FormatErr,
 };
 
@@ -20,6 +22,23 @@ fn policy_group() -> Result<(), FormatErr> {
     let _policy_group_: Policy = serde_json::from_str(&json).unwrap();
     // assert_eq!(policy_group, policy_group_);
     Ok(())
+}
+
+#[test]
+fn attribute_parser() {
+    let attribute = Attribute::from(("Security Level", "level 1"));
+    Attribute::try_from(attribute.to_string().as_str()).unwrap();
+
+    assert!(Attribute::try_from("").is_err());
+    assert!(Attribute::try_from("A:B").is_err());
+    assert!(Attribute::try_from("::").is_err());
+    assert!(Attribute::try_from("::::").is_err());
+
+    let attribute2 = attr("Security Level", "level 1");
+    assert_eq!(
+        Attribute::try_from(" Security Level::level 1  ").unwrap(),
+        attribute2
+    );
 }
 
 #[test]

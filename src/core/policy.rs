@@ -14,6 +14,8 @@ use crate::{
     error::FormatErr,
 };
 
+const OPERATOR_SIZE: usize = 2;
+
 // An attribute in a policy group is characterized by the policy name (axis)
 // and its own particular name
 #[derive(Hash, PartialEq, Eq, Clone, PartialOrd, Ord)]
@@ -65,6 +67,42 @@ impl From<(String, String)> for Attribute {
             axis: input.0,
             name: input.1,
         }
+    }
+}
+
+impl TryFrom<&str> for Attribute {
+    type Error = FormatErr;
+
+    fn try_from(s: &str) -> Result<Self, Self::Error> {
+        if s.is_empty() {
+            return Err(FormatErr::InvalidAttribute(s.to_string()));
+        }
+        if s.matches("::").count() != 1 {
+            return Err(FormatErr::InvalidAttribute(format!(
+                "separator '::' expected once in {s}"
+            )));
+        }
+
+        let attribute_str = s.trim();
+        let split = attribute_str
+            .split("::")
+            .map(std::string::ToString::to_string)
+            .collect::<Vec<_>>();
+        if split[0].is_empty() || split[1].is_empty() {
+            return Err(FormatErr::InvalidAttribute(format!(
+                "empty axis or empty name in {s}"
+            )));
+        }
+        Ok(Self {
+            axis: split[0].to_owned(),
+            name: split[1].to_owned(),
+        })
+    }
+}
+
+impl std::fmt::Display for Attribute {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}::{}", self.axis, self.name)
     }
 }
 
@@ -269,7 +307,6 @@ impl AccessPolicy {
         boolean_expression: &str,
         split_position: usize,
     ) -> Result<(String, Option<String>, Option<String>), FormatErr> {
-        let operator_str_size = 2;
         if split_position > boolean_expression.len() {
             return Err(FormatErr::InvalidBooleanExpression(format!(
                 "Cannot split boolean expression {boolean_expression} at position \
@@ -296,11 +333,11 @@ impl AccessPolicy {
         if split_position == boolean_expression.len() {
             return Ok((left_part.to_string(), None, None));
         }
-        let operator = &boolean_expression[split_position..split_position + operator_str_size];
+        let operator = &boolean_expression[split_position..split_position + OPERATOR_SIZE];
 
         // Put aside `Level::level_2` from `Department::HR && Level::level_2`
         // Skip 2 next characters (parenthesis + next char)
-        let right_part = &boolean_expression[split_position + operator_str_size..];
+        let right_part = &boolean_expression[split_position + OPERATOR_SIZE..];
         Ok((
             left_part.to_string(),
             Some(operator.to_string()),
