@@ -3,6 +3,15 @@
 All notable changes to this project will be documented in this file.
 
 ---
+## [0.6.5] - 2022-04-06
+### Added
+### Changed
+- Improve wasm-bindgen ABE decryption using cache (gain of 30%)
+### Fixed
+### Removed
+---
+
+---
 ## [0.6.4] - 2022-03-31
 ### Added
 - Add function to verify if access policy is compliant with a given ABE policy
