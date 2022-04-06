@@ -50,7 +50,7 @@ pub enum FormatErr {
         "Unable to decrypt the header size. User decryption key has not the right policy to \
          decrypt this input."
     )]
-    InsuffisentAccessPolicy,
+    InsufficientAccessPolicy,
     #[error("{0}")]
     Deserialization(String),
     #[error("{0}")]
@@ -61,6 +61,8 @@ pub enum FormatErr {
     InvalidFormula(String),
     #[error("invalid boolean expression: {0}")]
     InvalidBooleanExpression(String),
+    #[error("invalid attribute: {0}")]
+    InvalidAttribute(String),
     #[error("encrypted data size cannot be less than {0} bytes")]
     InvalidEncryptedDataSize(String),
     #[error("invalid encrypted data")]

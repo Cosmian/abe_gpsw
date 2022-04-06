@@ -1,5 +1,7 @@
+use std::convert::TryFrom;
+
 use crate::{
-    core::policy::{ap, attr, AccessPolicy, Policy},
+    core::policy::{ap, attr, AccessPolicy, Attribute, Policy},
     error::FormatErr,
 };
 
@@ -20,6 +22,23 @@ fn policy_group() -> Result<(), FormatErr> {
     let _policy_group_: Policy = serde_json::from_str(&json).unwrap();
     // assert_eq!(policy_group, policy_group_);
     Ok(())
+}
+
+#[test]
+fn attribute_parser() {
+    let attribute = Attribute::from(("Security Level", "level 1"));
+    Attribute::try_from(attribute.to_string().as_str()).unwrap();
+
+    assert!(Attribute::try_from("").is_err());
+    assert!(Attribute::try_from("A:B").is_err());
+    assert!(Attribute::try_from("::").is_err());
+    assert!(Attribute::try_from("::::").is_err());
+
+    let attribute2 = attr("Security Level", "level 1");
+    assert_eq!(
+        Attribute::try_from(" Security Level::level 1  ").unwrap(),
+        attribute2
+    );
 }
 
 #[test]
@@ -75,19 +94,20 @@ fn policy_group_from_java() {
 #[test]
 fn parse_boolean_expression() {
     let access_policy = AccessPolicy::from_boolean_expression(
-        "(Department::HR | Department::RnD) & Level::level_2",
+        "(Department::HR || Department::R&D) && Level::level_2",
     )
     .unwrap();
-    let expected_ap = (ap("Department", "HR") | ap("Department", "RnD")) & ap("Level", "level_2");
+    let expected_ap = (ap("Department", "HR") | ap("Department", "R&D")) & ap("Level", "level_2");
+    assert_eq!(expected_ap, access_policy);
+
+    let access_policy = AccessPolicy::from_boolean_expression(
+        "Level::level_2&&(Department::HR || Department::R&D) ",
+    )
+    .unwrap();
     assert_eq!(expected_ap, access_policy);
 
     let access_policy =
-        AccessPolicy::from_boolean_expression("Level::level_2&(Department::HR | Department::RnD) ")
-            .unwrap();
-    assert_eq!(expected_ap, access_policy);
-
-    let access_policy =
-        AccessPolicy::from_boolean_expression("(((Department::HR))) & Level::level_2").unwrap();
+        AccessPolicy::from_boolean_expression("(((Department::HR))) && Level::level_2").unwrap();
     let expected_ap = (ap("Department", "HR")) & ap("Level", "level_2");
     assert_eq!(expected_ap, access_policy);
 
@@ -96,7 +116,54 @@ fn parse_boolean_expression() {
     assert_eq!(expected_ap, access_policy);
 
     assert!(AccessPolicy::from_boolean_expression("Department:HR").is_err());
-    assert!(AccessPolicy::from_boolean_expression("Department::HR&").is_err());
-    assert!(AccessPolicy::from_boolean_expression("Department::HR|::").is_err());
+    assert!(AccessPolicy::from_boolean_expression("Department::HR&&").is_err());
+    assert!(AccessPolicy::from_boolean_expression("Department::HR||::").is_err());
     assert!(AccessPolicy::from_boolean_expression("::").is_err());
+}
+
+#[test]
+fn parse_boolean_expression_additional_tests() {
+    let expected_ap = (ap("X", "A") | ap("X", "B")) & ap("Y", "111");
+
+    let access_policy = AccessPolicy::from_boolean_expression("(X::A || X::B) && Y::111").unwrap();
+    assert_eq!(expected_ap, access_policy);
+
+    let access_policy =
+        AccessPolicy::from_boolean_expression("  (  X  ::  A  ||   X  ::  B  )  && Y  ::  111  ")
+            .unwrap();
+    assert_eq!(expected_ap, access_policy);
+
+    let access_policy = AccessPolicy::from_boolean_expression(
+        "( with spaces::a lot of spaces & || really a lot::really ? ) &&   why not :: here too",
+    )
+    .unwrap();
+    let expected_ap = (ap("with spaces", "a lot of spaces &") | ap("really a lot", "really ?"))
+        & ap("why not", "here too");
+    assert_eq!(expected_ap, access_policy);
+}
+
+#[test]
+fn verify_access_policy() {
+    let access_policy = "(Department::HR || Department::R&D) && Level::level 2";
+    let policy = Policy::new(1000)
+        .add_axis(
+            "Level",
+            &["level 1", "level 2", "level 3", "level 4", "level 5"],
+            true,
+        )
+        .unwrap()
+        .add_axis("Department", &["R&D", "HR", "MKG", "fin"], false)
+        .unwrap();
+    AccessPolicy::verify_access_policy(access_policy, &policy).unwrap();
+
+    assert!(AccessPolicy::verify_access_policy(
+        "(Department1111::HR || Department::R&D) && Level::level 2",
+        &policy
+    )
+    .is_err());
+    assert!(AccessPolicy::verify_access_policy(
+        "(Department::HR111111 || Department::R&D) && Level::level 2",
+        &policy
+    )
+    .is_err());
 }

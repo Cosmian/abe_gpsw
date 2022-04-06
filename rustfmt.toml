@@ -24,7 +24,7 @@ group_imports = "StdExternalCrate"
 
 # Add trailing semicolon after break, continue and return
 # Default value: true
-trailing_semicolon = false
+trailing_semicolon = true
 
 # Enable unstable features on the unstable channel.
 # Default value: false

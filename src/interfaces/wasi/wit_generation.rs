@@ -2,20 +2,37 @@
 // rustc cannot see that code is actually not a dead code
 #![allow(dead_code)]
 
-use cosmian_crypto_base::{
-    hybrid_crypto::Metadata, symmetric_crypto::aes_256_gcm_pure::Aes256GcmCrypto,
+use std::{
+    collections::HashMap,
+    convert::TryInto,
+    sync::{
+        atomic::{AtomicI32, Ordering},
+        RwLock,
+    },
 };
+
+use cosmian_crypto_base::{
+    hybrid_crypto::Metadata,
+    symmetric_crypto::{aes_256_gcm_pure::Aes256GcmCrypto, Key, SymmetricCrypto},
+};
+use lazy_static::lazy_static;
 use witgen::witgen;
 
 use crate::{
     core::{
         bilinear_map::bls12_381::Bls12_381,
-        gpsw::{AbeScheme, AsBytes, Gpsw},
+        gpsw::{
+            scheme::{GpswDecryptionKey, GpswMasterPublicKey},
+            AbeScheme, AsBytes, Gpsw,
+        },
         policy::{attr, AccessPolicy},
         Engine,
     },
     interfaces::hybrid_crypto::{
-        decrypt_hybrid_block, decrypt_hybrid_header, encrypt_hybrid_block, encrypt_hybrid_header,
+        decrypt_hybrid_block as internal_decrypt_hybrid_block,
+        decrypt_hybrid_header as internal_decrypt_hybrid_header,
+        encrypt_hybrid_block as internal_encrypt_hybrid_block,
+        encrypt_hybrid_header as internal_encrypt_hybrid_header,
     },
 };
 
@@ -53,6 +70,7 @@ pub struct MasterKey {
 
 /// This struct only provides a visual way to display attributes arguments
 #[witgen]
+#[derive(Clone)]
 pub struct Attribute {
     pub axis_name: String,
     pub attribute: String,
@@ -143,6 +161,10 @@ pub fn generate_user_decryption_key(
         .to_string())
 }
 
+// -------------------------------
+//         Encryption
+// -------------------------------
+
 #[witgen]
 /// Encrypt an AES-symmetric key and encrypt with AESGCM-256
 pub fn encrypt(
@@ -150,28 +172,27 @@ pub fn encrypt(
     master_public_key: Vec<u8>,
     attributes: Vec<Attribute>,
     policy: Vec<u8>,
+    uid: Vec<u8>,
 ) -> Result<Vec<u8>, String> {
     let policy = serde_json::from_slice(&policy).map_err(|e| e.to_string())?;
-    // Obviously, this is NOT recommended to use an empty unique identifier
-    let metadata = Metadata {
-        uid: vec![0_u8; 32],
-        additional_data: None,
-    };
     let abe_attributes = Attribute::abe_attributes(&attributes);
     let public_key = PublicKey::from_bytes(&master_public_key).map_err(|e| e.to_string())?;
 
-    let encrypted_header = encrypt_hybrid_header::<Gpsw<Bls12_381>, Aes256GcmCrypto>(
+    let encrypted_header = internal_encrypt_hybrid_header::<Gpsw<Bls12_381>, Aes256GcmCrypto>(
         &policy,
         &public_key,
         &abe_attributes,
-        metadata.clone(),
+        Metadata {
+            uid: uid.clone(),
+            additional_data: None,
+        },
     )
     .map_err(|e| e.to_string())?;
 
     let encrypted_block =
-        encrypt_hybrid_block::<Gpsw<Bls12_381>, Aes256GcmCrypto, MAX_CLEAR_TEXT_SIZE>(
+        internal_encrypt_hybrid_block::<Gpsw<Bls12_381>, Aes256GcmCrypto, MAX_CLEAR_TEXT_SIZE>(
             &encrypted_header.symmetric_key,
-            &metadata.uid,
+            &uid,
             0,
             plaintext.as_bytes(),
         )
@@ -185,6 +206,195 @@ pub fn encrypt(
     Ok(result)
 }
 
+// A static cache of the Encryption Caches
+lazy_static! {
+    static ref ENCRYPTION_CACHE_MAP: RwLock<HashMap<i32, EncryptionCache>> =
+        RwLock::new(HashMap::new());
+    static ref NEXT_ENCRYPTION_CACHE_ID: std::sync::atomic::AtomicI32 = AtomicI32::new(0);
+}
+
+/// An Encryption Cache that will be used to cache Rust side
+/// the Public Key and the Policy when doing multiple serial encryptions
+pub struct EncryptionCache {
+    policy: crate::core::policy::Policy,
+    public_key: GpswMasterPublicKey<Bls12_381>,
+}
+
+#[witgen]
+/// Prepare encryption cache (avoiding public key deserialization)
+pub fn create_encryption_cache(master_public_key: Vec<u8>, policy: Vec<u8>) -> Result<i32, String> {
+    let policy: crate::core::policy::Policy =
+        serde_json::from_slice(&policy).map_err(|e| e.to_string())?;
+    let public_key = PublicKey::from_bytes(&master_public_key).map_err(|e| e.to_string())?;
+
+    let cache = EncryptionCache { policy, public_key };
+    let id = NEXT_ENCRYPTION_CACHE_ID.fetch_add(1, Ordering::Acquire);
+    let mut map = ENCRYPTION_CACHE_MAP
+        .write()
+        .expect("A write mutex on encryption cache failed");
+    map.insert(id, cache);
+    Ok(id)
+}
+
+#[witgen]
+pub fn destroy_encryption_cache(cache_handle: i32) -> Result<(), String> {
+    let mut map = ENCRYPTION_CACHE_MAP
+        .write()
+        .expect("A write mutex on encryption cache failed");
+    map.remove(&cache_handle);
+    Ok(())
+}
+
+#[witgen]
+pub struct EncryptedHeader {
+    pub symmetric_key: Vec<u8>,
+    pub encrypted_header_bytes: Vec<u8>,
+}
+
+#[witgen]
+/// Encrypt an AES-symmetric key and encrypt with AESGCM-256
+pub fn encrypt_hybrid_header(
+    attributes: Vec<Attribute>,
+    cache_handle: i32,
+    uid: Vec<u8>,
+) -> Result<EncryptedHeader, String> {
+    let map = ENCRYPTION_CACHE_MAP
+        .read()
+        .expect("a read mutex on the encryption cache failed");
+    let cache = map.get(&cache_handle).expect("invalid cache handle");
+
+    let encrypted_header = internal_encrypt_hybrid_header::<Gpsw<Bls12_381>, Aes256GcmCrypto>(
+        &cache.policy,
+        &cache.public_key,
+        &Attribute::abe_attributes(&attributes),
+        Metadata {
+            uid,
+            additional_data: None,
+        },
+    )
+    .map_err(|e| e.to_string())?;
+
+    Ok(EncryptedHeader {
+        symmetric_key: encrypted_header.symmetric_key.as_bytes(),
+        encrypted_header_bytes: encrypted_header.encrypted_header_bytes,
+    })
+}
+
+#[witgen]
+/// Encrypt an AES-symmetric key and encrypt with AESGCM-256
+pub fn encrypt_hybrid_block(
+    plaintext: String,
+    symmetric_key: Vec<u8>,
+    uid: Vec<u8>,
+    block_number: u64,
+) -> Result<Vec<u8>, String> {
+    let symmetric_key = <Aes256GcmCrypto as SymmetricCrypto>::Key::parse(symmetric_key)
+        .map_err(|e| e.to_string())?;
+
+    let encrypted_block =
+        internal_encrypt_hybrid_block::<Gpsw<Bls12_381>, Aes256GcmCrypto, MAX_CLEAR_TEXT_SIZE>(
+            &symmetric_key,
+            &uid,
+            block_number as usize,
+            plaintext.as_bytes(),
+        )
+        .map_err(|e| e.to_string())?;
+
+    Ok(encrypted_block)
+}
+
+// -------------------------------
+//         Decryption
+// -------------------------------
+
+// A cache of the encryption caches
+lazy_static! {
+    static ref DECRYPTION_CACHE_MAP: RwLock<HashMap<i32, DecryptionCache>> =
+        RwLock::new(HashMap::new());
+    static ref NEXT_DECRYPTION_CACHE_ID: std::sync::atomic::AtomicI32 = AtomicI32::new(0);
+}
+
+/// A Decryption Cache that will be used to cache Rust side
+/// the User Decryption Key when performing serial decryptions
+pub struct DecryptionCache {
+    user_decryption_key: GpswDecryptionKey<Bls12_381>,
+}
+
+#[witgen]
+/// Prepare encryption cache (avoiding user decryption key deserialization)
+pub fn create_decryption_cache(user_decryption_key: Vec<u8>) -> Result<i32, String> {
+    let user_decryption_key = UserDecryptionKey::from_bytes(&user_decryption_key)
+        .expect("Hybrid Cipher: invalid user decryption key");
+
+    let cache = DecryptionCache {
+        user_decryption_key,
+    };
+    let id = NEXT_DECRYPTION_CACHE_ID.fetch_add(1, Ordering::Acquire);
+    let mut map = DECRYPTION_CACHE_MAP
+        .write()
+        .expect("A write mutex on decryption cache failed");
+    map.insert(id, cache);
+    Ok(id)
+}
+
+#[witgen]
+pub fn destroy_decryption_cache(cache_handle: i32) -> Result<(), String> {
+    let mut map = DECRYPTION_CACHE_MAP
+        .write()
+        .expect("A write mutex on decryption cache failed");
+    map.remove(&cache_handle);
+    Ok(())
+}
+
+#[witgen]
+/// Decrypt ABE header
+pub fn decrypt_hybrid_header(cache_handle: i32, encrypted_data: Vec<u8>) -> Result<String, String> {
+    let map = DECRYPTION_CACHE_MAP
+        .read()
+        .expect("a read mutex on the decryption cache failed");
+    let cache = map
+        .get(&cache_handle)
+        .expect("Hybrid Cipher: no decryption cache with handle");
+
+    //
+    // Recover header from `encrypted_bytes`
+    let header_size_bytes: &[u8; 4] = &encrypted_data[0..4]
+        .try_into()
+        .map_err(|_| "byte arrays conversion failed")?;
+    let header_size: usize = u32::from_be_bytes(*header_size_bytes) as usize;
+
+    // Split header from encrypted data
+    let header = &encrypted_data[4..(4 + header_size)];
+
+    let header = internal_decrypt_hybrid_header::<Gpsw<Bls12_381>, Aes256GcmCrypto>(
+        &cache.user_decryption_key,
+        header,
+    )
+    .map_err(|e| e.to_string())?;
+
+    Ok(header.symmetric_key.to_string())
+}
+
+#[witgen]
+/// Decrypt symmetric block cipher
+pub fn decrypt_hybrid_block(
+    ciphertext: Vec<u8>,
+    symmetric_key: Vec<u8>,
+    uid: Vec<u8>,
+    block_number: u64,
+) -> Result<Vec<u8>, String> {
+    let symmetric_key = <Aes256GcmCrypto as SymmetricCrypto>::Key::parse(symmetric_key)
+        .map_err(|e| e.to_string())?;
+    let cleartext = internal_decrypt_hybrid_block::<
+        Gpsw<Bls12_381>,
+        Aes256GcmCrypto,
+        MAX_CLEAR_TEXT_SIZE,
+    >(&symmetric_key, &uid, block_number as usize, &ciphertext)
+    .map_err(|e| e.to_string())?;
+
+    Ok(cleartext)
+}
+
 #[witgen]
 /// Decrypt ABE-ciphertext (decrypt ABE header + decrypt AES)
 pub fn decrypt(user_decryption_key: String, encrypted_data: Vec<u8>) -> Result<String, String> {
@@ -195,24 +405,27 @@ pub fn decrypt(user_decryption_key: String, encrypted_data: Vec<u8>) -> Result<S
 
     //
     // Recover header from `encrypted_bytes`
-    let mut header_size_bytes = [0; 4];
-    header_size_bytes.copy_from_slice(&encrypted_data.to_vec()[0..4]);
+    let header_size_bytes: [u8; 4] = encrypted_data[0..4]
+        .try_into()
+        .map_err(|_| "byte arrays conversion failed")?;
     let header_size: usize = u32::from_be_bytes(header_size_bytes) as usize;
 
     // Split header from encrypted data
     let header = &encrypted_data[4..(4 + header_size)];
     let encrypted_block = &encrypted_data[(4 + header_size)..];
 
-    let header_ = decrypt_hybrid_header::<Gpsw<Bls12_381>, Aes256GcmCrypto>(&user_key, header)
-        .map_err(|e| e.to_string())?;
+    let header =
+        internal_decrypt_hybrid_header::<Gpsw<Bls12_381>, Aes256GcmCrypto>(&user_key, header)
+            .map_err(|e| e.to_string())?;
 
-    let cleartext = decrypt_hybrid_block::<Gpsw<Bls12_381>, Aes256GcmCrypto, MAX_CLEAR_TEXT_SIZE>(
-        &header_.symmetric_key,
-        &header_.meta_data.uid,
-        0,
-        encrypted_block,
-    )
-    .map_err(|e| e.to_string())?;
+    let cleartext =
+        internal_decrypt_hybrid_block::<Gpsw<Bls12_381>, Aes256GcmCrypto, MAX_CLEAR_TEXT_SIZE>(
+            &header.symmetric_key,
+            &header.meta_data.uid,
+            0,
+            encrypted_block,
+        )
+        .map_err(|e| e.to_string())?;
 
     String::from_utf8(cleartext).map_err(|e| e.to_string())
 }

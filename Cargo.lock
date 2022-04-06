@@ -4,7 +4,7 @@ version = 3
 
 [[package]]
 name = "abe_gpsw"
-version = "0.6.3"
+version = "0.6.4"
 dependencies = [
  "cosmian-wit-bindgen-rust",
  "cosmian_bls12_381",
@@ -316,9 +316,9 @@ dependencies = [
 
 [[package]]
 name = "cosmian-wit-bindgen-gen-rust-wasm"
-version = "0.1.0"
+version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4e45b8ae2c8353b90a62f1d767ae215bd2c77a27916fff5c968a5989687c842c"
+checksum = "2c8eb994e4aefed7881ec8b6e855a54c94d5cf7e4d4f57d8b7bddb7187505ad6"
 dependencies = [
  "cosmian-wit-bindgen-gen-core",
  "cosmian-wit-bindgen-gen-rust",
@@ -327,9 +327,9 @@ dependencies = [
 
 [[package]]
 name = "cosmian-wit-bindgen-rust"
-version = "0.1.0"
+version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bd08d6f4931fc057dde5d134ae5462c23eff5b62b12a5d9e4e799f334a12d1b7"
+checksum = "2f621c859c92d26d3079df5f86ce72385cd39ed1a8024f922af6af176c09aae6"
 dependencies = [
  "async-trait",
  "bitflags",
@@ -338,9 +338,9 @@ dependencies = [
 
 [[package]]
 name = "cosmian-wit-bindgen-rust-impl"
-version = "0.1.0"
+version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5dad5a4f0be8f65668b32bac1d466454787aa536b11a336537c5fa12afe813a9"
+checksum = "816c6968e553e2d1b78b3742f4e632aa30addf5243cd0a660cceace76ad32c35"
 dependencies = [
  "cosmian-wit-bindgen-gen-core",
  "cosmian-wit-bindgen-gen-rust-wasm",

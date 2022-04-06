@@ -11,7 +11,7 @@ edition = "2018"
 license = "MIT/Apache-2.0"
 name = "abe_gpsw"
 repository = "https://github.com/Cosmian/abe_gpsw"
-version = "0.6.3"
+version = "0.6.4"
 
 [lib]
 name = "abe_gpsw"
@@ -31,7 +31,7 @@ wit = ["witgen", "wasi"]
 anyhow = { package = "eyre", version = "0.6.0" }
 cosmian_bls12_381 = "0.4"
 cosmian_crypto_base = { version = "0.5.2", optional = true }
-cosmian-wit-bindgen-rust = {version = "0.1.0", optional = true }
+cosmian-wit-bindgen-rust = {version = "0.1", optional = true }
 ff = "0.9"
 js-sys = { version = "0.3", optional = true }
 getrandom = { version = "0.2", features = ["js"] }

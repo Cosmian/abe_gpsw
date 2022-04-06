@@ -2,6 +2,8 @@ from wasmtime import Linker, Module, Store, WasiConfig
 
 from bindings import Abe, Attribute, Ok, Policy, PolicyAxis
 
+import datetime
+
 store = Store()
 wasi_config = WasiConfig()
 wasi_config.inherit_stderr()
@@ -52,7 +54,7 @@ super_delegate = unwrap(
         store, master_key.private_key, None, master_key.policy_serialized
     )
 )
-access_policy_mkg = "Departments::MKG & Security_Level::level_1"
+access_policy_mkg = "Departments::MKG && Security_Level::level_1"
 user_decryption_key_mkg = abe.delegate_user_decryption_key(
     store,
     master_key.delegation_key,
@@ -69,19 +71,66 @@ another_user_decryption_key_mkg = unwrap(
 )
 print(another_user_decryption_key_mkg)
 
-plaintext = "my confidential data"
-ciphertext = unwrap(
-    abe.encrypt(
-        store,
-        plaintext,
-        master_key.public_key,
-        [
+uid = bytes([1, 2, 3, 4, 5, 6, 7, 8])
+loops = 10
+first_time = datetime.datetime.now()
+
+for i in range(0, loops):
+    plaintext = "my confidential data"
+    ciphertext = unwrap(
+        abe.encrypt(
+            store,
+            plaintext,
+            master_key.public_key,
+            [
+                Attribute("Departments", "MKG"),
+                Attribute("Security_Level", "level_1"),
+            ],
+            master_key.policy_serialized,
+            uid
+        )
+    )
+difference = (datetime.datetime.now() - first_time) / loops
+print(difference.total_seconds() * 1000)
+
+print(ciphertext)
+
+cleartext = unwrap(abe.decrypt(
+    store, another_user_decryption_key_mkg, ciphertext))
+print(cleartext)
+
+assert plaintext == cleartext
+
+
+loops = 10
+
+cache_handle = unwrap(abe.create_encryption_cache(
+    store, master_key.public_key, master_key.policy_serialized))
+
+first_time = datetime.datetime.now()
+for i in range(0, loops):
+    plaintext = "my confidential data"
+
+    header = unwrap(
+        abe.encrypt_hybrid_header(store, [
             Attribute("Departments", "MKG"),
             Attribute("Security_Level", "level_1"),
-        ],
-        master_key.policy_serialized,
+        ], cache_handle, uid)
     )
-)
+
+    sym_ciphertext = unwrap(abe.encrypt_hybrid_block(
+        store, plaintext, header.symmetric_key, uid, 0))
+
+    header_len = (len(header.encrypted_header_bytes)
+                  ).to_bytes(4, byteorder='big')
+    ciphertext = b"".join(
+        [header_len, header.encrypted_header_bytes, sym_ciphertext])
+
+difference = (datetime.datetime.now() - first_time) / loops
+print(difference.total_seconds() * 1000)
+unwrap(abe.destroy_encryption_cache(store, cache_handle))
+
+
 print(ciphertext)
 
 cleartext = unwrap(abe.decrypt(

@@ -410,7 +410,7 @@ pub unsafe extern "C" fn h_aes_create_decryption_cache(
         ffi_bail!("The user decryption key should not be empty");
     }
 
-    // Public Key
+    // User decryption key
     let user_decryption_key_bytes = std::slice::from_raw_parts(
         user_decryption_key_ptr as *const u8,
         user_decryption_key_len as usize,

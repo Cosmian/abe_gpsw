@@ -65,8 +65,7 @@ impl<T: AsBytes> AsBytes for Vec<T> {
             return Ok(Vec::new());
         }
         // retrieve len of vector
-        let mut len = [0_u8; 4];
-        len.copy_from_slice(&bytes[0..4]);
+        let len: [u8; 4] = bytes[0..4].try_into()?;
         let len = u32::from_be_bytes(len) as usize;
         if len >= u32::MAX as usize {
             return Err(FormatErr::Deserialization(
