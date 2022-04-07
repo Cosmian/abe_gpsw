@@ -485,27 +485,23 @@ impl AccessPolicy {
     /// # Examples
     ///
     /// ```rust
-    /// let access_policy = "(Department::HR || Department::R&D) && Level::level 2";
+    /// let access_policy_str = "(Department::HR || Department::R&D) && Level::level 2";
+    /// let access_policy = abe_gpsw::core::policy::AccessPolicy::from_boolean_expression(access_policy_str).unwrap();
+
     /// let policy = abe_gpsw::core::policy::Policy::new(100)
     ///    .add_axis(
     ///        "Level",
     ///      &["level 1", "level 2", "level 3", "level 4", "level 5"],
     ///       true,
     ///   ).unwrap()
-    ///    .add_axis("Department", &["R&D", "HR", "MKG", "fin"], false).unwrap();
-    /// abe_gpsw::core::policy::AccessPolicy::verify_access_policy(access_policy, &policy).unwrap();
+    ///    .add_axis("Department", &["R&D", "HR", "MKG", "fin"],
+    /// false).unwrap(); access_policy.verify_access_policy(&policy).unwrap();
     /// ```
     /// # Errors
     ///
     /// Missing parenthesis or bad operators
-    pub fn verify_access_policy(
-        boolean_expression: &str,
-        policy: &Policy,
-    ) -> Result<(), FormatErr> {
-        // Remove spaces around parenthesis and operators
-        let access_policy = AccessPolicy::from_boolean_expression(boolean_expression)?;
-
-        policy.to_msp(&access_policy)?;
+    pub fn verify_access_policy(&self, policy: &Policy) -> Result<(), FormatErr> {
+        policy.to_msp(self)?;
         Ok(())
     }
 

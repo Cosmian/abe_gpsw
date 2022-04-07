@@ -61,6 +61,11 @@ pub fn complex_access_policy_test() {
     )
     .unwrap();
 
+    // Verify access policy (optional check)
+    bnppf_all_access_policy
+        .verify_access_policy(&policy)
+        .unwrap();
+
     println!(
         "{}",
         serde_json::to_string(&bnppf_all_access_policy).unwrap()
@@ -71,6 +76,18 @@ pub fn complex_access_policy_test() {
         .unwrap();
 
     let bnppf_france_message = engine.random_message().unwrap();
+
+    // Check that wrong encryption-attributes give an error. This error is an
+    // `FormatErr:AttributeNotFound`
+    assert!(engine
+        .encrypt(
+            &policy,
+            &public_key,
+            &[("Bad_Entity", "BNPPF").into(), ("Country", "France").into()],
+            &bnppf_france_message,
+        )
+        .is_err());
+
     let bnppf_france_cipher_text = engine
         .encrypt(
             &policy,

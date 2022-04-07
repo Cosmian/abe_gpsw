@@ -7,6 +7,7 @@ All notable changes to this project will be documented in this file.
 ### Added
 ### Changed
 - Improve wasm-bindgen ABE decryption using cache (gain of 30%)
+- Make sure that wrong encryption-attributes give an explicit error (`AttributeNotFound` error)
 ### Fixed
 ### Removed
 ---

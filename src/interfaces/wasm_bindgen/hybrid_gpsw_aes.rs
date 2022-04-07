@@ -13,10 +13,9 @@ use std::{
 use cosmian_crypto_base::symmetric_crypto::{
     aes_256_gcm_pure::Aes256GcmCrypto, Key, SymmetricCrypto,
 };
+use lazy_static::lazy_static;
 use wasm_bindgen::prelude::*;
 use wasm_bindgen_test::*;
-
-use lazy_static::lazy_static;
 
 use crate::{
     core::{
@@ -103,7 +102,7 @@ pub fn webassembly_decrypt_hybrid_header(
     ))
 }
 
-// A cache of the encryption caches
+// A cache of the decryption caches
 lazy_static! {
     static ref DECRYPTION_CACHE_MAP: RwLock<HashMap<i32, DecryptionCache>> =
         RwLock::new(HashMap::new());
@@ -117,7 +116,7 @@ pub struct DecryptionCache {
 }
 
 #[wasm_bindgen]
-/// Prepare encryption cache (avoiding user decryption key deserialization)
+/// Prepare decryption cache (avoiding user decryption key deserialization)
 pub fn webassembly_create_decryption_cache(
     user_decryption_key: js_sys::Uint8Array,
 ) -> Result<i32, JsValue> {

@@ -373,7 +373,7 @@ pub unsafe extern "C" fn h_aes_encrypt_header(
 //         Decryption
 // -------------------------------
 
-// A cache of the encryption caches
+// A cache of the decryption caches
 lazy_static! {
     static ref DECRYPTION_CACHE_MAP: RwLock<HashMap<i32, DecryptionCache>> =
         RwLock::new(HashMap::new());
@@ -391,7 +391,7 @@ pub struct DecryptionCache {
 /// when decrypting multiple messages. This avoids having to re-instantiate
 /// the user key on the Rust side on every decryption which is costly.
 ///
-/// This method is to be used in conjonction with
+/// This method is to be used in conjunction with
 ///     h_aes_decrypt_header_using_cache()
 ///
 /// WARN: h_aes_destroy_decryption_cache() should be called

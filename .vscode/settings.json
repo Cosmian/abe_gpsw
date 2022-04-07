@@ -6,6 +6,7 @@
         "bindgen",
         "bitand",
         "bitor",
+        "BNPPF",
         "cdylib",
         "ciphertext",
         "cleartext",
