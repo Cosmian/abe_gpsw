@@ -144,7 +144,6 @@ fn parse_boolean_expression_additional_tests() {
 
 #[test]
 fn verify_access_policy() {
-    let access_policy = "(Department::HR || Department::R&D) && Level::level 2";
     let policy = Policy::new(1000)
         .add_axis(
             "Level",
@@ -154,16 +153,21 @@ fn verify_access_policy() {
         .unwrap()
         .add_axis("Department", &["R&D", "HR", "MKG", "fin"], false)
         .unwrap();
-    AccessPolicy::verify_access_policy(access_policy, &policy).unwrap();
+    let access_policy = AccessPolicy::from_boolean_expression(
+        "(Department::HR || Department::R&D) && Level::level 2",
+    )
+    .unwrap();
+    access_policy.verify_access_policy(&policy).unwrap();
 
-    assert!(AccessPolicy::verify_access_policy(
-        "(Department1111::HR || Department::R&D) && Level::level 2",
-        &policy
+    let access_policy = AccessPolicy::from_boolean_expression(
+        "(Axis_Name_Not_Existing_in_Policy::HR || Department::R&D) && Level::level 2",
     )
-    .is_err());
-    assert!(AccessPolicy::verify_access_policy(
-        "(Department::HR111111 || Department::R&D) && Level::level 2",
-        &policy
+    .unwrap();
+    assert!(access_policy.verify_access_policy(&policy).is_err());
+
+    let access_policy = AccessPolicy::from_boolean_expression(
+        "(Department::Attribute_Value_Not_Existing_in_Policy || Department::R&D) && Level::level 2",
     )
-    .is_err());
+    .unwrap();
+    assert!(access_policy.verify_access_policy(&policy).is_err());
 }

@@ -307,7 +307,7 @@ pub fn encrypt_hybrid_block(
 //         Decryption
 // -------------------------------
 
-// A cache of the encryption caches
+// A cache of the decryption caches
 lazy_static! {
     static ref DECRYPTION_CACHE_MAP: RwLock<HashMap<i32, DecryptionCache>> =
         RwLock::new(HashMap::new());
@@ -321,7 +321,7 @@ pub struct DecryptionCache {
 }
 
 #[witgen]
-/// Prepare encryption cache (avoiding user decryption key deserialization)
+/// Prepare decryption cache (avoiding user decryption key deserialization)
 pub fn create_decryption_cache(user_decryption_key: Vec<u8>) -> Result<i32, String> {
     let user_decryption_key = UserDecryptionKey::from_bytes(&user_decryption_key)
         .expect("Hybrid Cipher: invalid user decryption key");
