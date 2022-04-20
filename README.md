@@ -67,6 +67,58 @@ The code contains numerous tests that you can run using
  cargo test --release --all-features
  ```
 
+
+## Building the library for a different glibc
+
+1. Pull a distribution with the appropriate glibc (here targeting 2.17)
+
+    ```sh
+    sudo docker pull centos:centos7.4.1708
+    ```
+
+
+2. Execute the shell, mounting the current directory to `/root/abe_gpsw` inside the docker
+
+    ```sh
+    sudo docker run -it --rm -v $(pwd):/root/abe_gpsw centos:centos7.4.1708 /bin/bash
+    ```
+
+3. Inside the docker container, install rustup
+
+    ```sh
+    curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+    ```
+
+4. Set the rust environment variables
+
+    ```sh
+    source $HOME/.cargo/env
+    ```
+
+5. Install missing build tools
+
+    You may be missing linkers, etc... for centOs
+
+    ```sh
+    yum groupinstall "Development Tools"
+    ```
+
+    for Ubuntu
+
+    ```sh
+    sudo apt install build-essential
+    ```
+
+6. Build the library
+
+    ```sh
+    cd /root/abe_gpsw/
+    cargo build --release --all-features --target-dir target_2_17
+    ```
+
+The library binary is available as `target_2_17/release/libabe_gpsw.so`. 
+
+
 # Introduction to this repository cryptography
 
 In a standard public-key encryption scheme, each user has his own public key and secret key, so that if one wants to encrypt a message intended for several receivers (for example, according to their jobs in a company), it will be necessary to compute the ciphertext for each public key of each recipient, which implies a huge loss of time and space.
