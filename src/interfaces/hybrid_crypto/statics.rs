@@ -102,21 +102,21 @@ pub fn encrypt_hybrid_block<A, S, const MAX_CLEAR_TEXT_SIZE: usize>(
     symmetric_key: &S::Key,
     uid: &[u8],
     block_number: usize,
-    clear_text: &[u8],
+    plaintext: &[u8],
 ) -> anyhow::Result<Vec<u8>>
 where
     A: AbeScheme + std::marker::Sync + std::marker::Send,
     S: SymmetricCrypto,
 {
     let mut block = Block::<S, MAX_CLEAR_TEXT_SIZE>::new();
-    if clear_text.len() > MAX_CLEAR_TEXT_SIZE {
+    if plaintext.len() > MAX_CLEAR_TEXT_SIZE {
         anyhow::bail!(
             "The data to encrypt is too large: {} bytes, max size: {} ",
-            clear_text.len(),
+            plaintext.len(),
             MAX_CLEAR_TEXT_SIZE
         );
     }
-    block.write(0, clear_text)?;
+    block.write(0, plaintext)?;
 
     block.to_encrypted_bytes(symmetric_key, uid, block_number)
 }
@@ -129,21 +129,21 @@ pub fn decrypt_hybrid_block<A, S, const MAX_CLEAR_TEXT_SIZE: usize>(
     symmetric_key: &S::Key,
     uid: &[u8],
     block_number: usize,
-    encrypted_bytes: &[u8],
+    ciphertext: &[u8],
 ) -> anyhow::Result<Vec<u8>>
 where
     A: AbeScheme + std::marker::Sync + std::marker::Send,
     S: SymmetricCrypto,
 {
-    if encrypted_bytes.len() > Block::<S, MAX_CLEAR_TEXT_SIZE>::MAX_ENCRYPTED_LENGTH {
+    if ciphertext.len() > Block::<S, MAX_CLEAR_TEXT_SIZE>::MAX_ENCRYPTED_LENGTH {
         anyhow::bail!(
             "The encrypted data to decrypt is too large: {} bytes, max size: {} ",
-            encrypted_bytes.len(),
+            ciphertext.len(),
             Block::<S, MAX_CLEAR_TEXT_SIZE>::MAX_ENCRYPTED_LENGTH
         );
     }
     let block = Block::<S, MAX_CLEAR_TEXT_SIZE>::from_encrypted_bytes(
-        encrypted_bytes,
+        ciphertext,
         symmetric_key,
         uid,
         block_number,
