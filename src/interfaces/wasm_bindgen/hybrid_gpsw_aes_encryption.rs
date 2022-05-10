@@ -28,7 +28,7 @@ use crate::{
     interfaces::{
         hybrid_crypto::{
             decrypt_hybrid_block, decrypt_hybrid_header, encrypt_hybrid_block,
-            encrypt_hybrid_header,
+            encrypt_hybrid_header, EncryptedHeader,
         },
         policy::{Attributes, Policy},
     },
@@ -85,9 +85,12 @@ pub fn webassembly_encrypt_hybrid_header(
     )
     .map_err(|e| JsValue::from_str(&format!("Error encrypting header: {e:?}")))?;
 
-    Ok(js_sys::Uint8Array::from(
-        &encrypted_header.encrypted_header_bytes[..],
-    ))
+    //
+    // Flatten struct Encrypted Header
+    let encrypted_header_bytes = encrypted_header
+        .as_bytes()
+        .map_err(|e| JsValue::from_str(&format!("Error serializing encrypted header: {e:?}")))?;
+    Ok(js_sys::Uint8Array::from(&encrypted_header_bytes[..]))
 }
 
 // A cache of the decryption caches
@@ -179,9 +182,12 @@ pub fn webassembly_encrypt_hybrid_header_using_cache(
     )
     .map_err(|e| JsValue::from_str(&format!("Error encrypting header: {e:?}")))?;
 
-    Ok(js_sys::Uint8Array::from(
-        &encrypted_header.encrypted_header_bytes[..],
-    ))
+    //
+    // Flatten struct Encrypted Header
+    let encrypted_header_bytes = encrypted_header
+        .as_bytes()
+        .map_err(|e| JsValue::from_str(&format!("Error serializing encrypted header: {e:?}")))?;
+    Ok(js_sys::Uint8Array::from(&encrypted_header_bytes[..]))
 }
 
 /// Symmetrically Decrypt encrypted data in a block.
@@ -259,7 +265,7 @@ pub fn test_encrypt_hybrid_header() {
     let public_key_js = bytes_to_js_array(&public_key_bytes);
     let uid_js = js_sys::Uint8Array::new(&JsValue::from_str("12345678"));
 
-    let encrypted_header = webassembly_encrypt_hybrid_header(
+    let encrypted_header_js = webassembly_encrypt_hybrid_header(
         policy_js,
         public_key_js,
         "Department::FIN, Security Level::Confidential",
@@ -267,8 +273,8 @@ pub fn test_encrypt_hybrid_header() {
     )
     .unwrap();
 
-    let mut encrypted_header_bytes = vec![0_u8; encrypted_header.length() as usize];
-    encrypted_header.copy_to(&mut encrypted_header_bytes[..]);
+    let encrypted_header =
+        EncryptedHeader::<Aes256GcmCrypto>::from_bytes(&encrypted_header_js.to_vec()[..]).unwrap();
 
     // Decrypt
     let user_decryption_key_json: Value = serde_json::from_str(include_str!(
@@ -281,7 +287,7 @@ pub fn test_encrypt_hybrid_header() {
         UserDecryptionKey::from_bytes(&hex::decode(hex_key).unwrap()).unwrap();
     decrypt_hybrid_header::<Gpsw<Bls12_381>, Aes256GcmCrypto>(
         &user_decryption_key,
-        &encrypted_header_bytes,
+        &encrypted_header.encrypted_header_bytes,
     )
     .unwrap();
 }

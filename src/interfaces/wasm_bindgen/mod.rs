@@ -3,6 +3,7 @@ pub mod hybrid_gpsw_aes_encryption;
 
 use js_sys::Uint8Array;
 use wasm_bindgen::prelude::*;
+
 #[wasm_bindgen]
 extern "C" {
     #[wasm_bindgen(js_namespace = console)]

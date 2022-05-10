@@ -1,6 +1,8 @@
+use std::convert::TryInto;
+
 use cosmian_crypto_base::{
     hybrid_crypto::{Block, Header, Metadata},
-    symmetric_crypto::SymmetricCrypto,
+    symmetric_crypto::{Key, SymmetricCrypto},
 };
 
 use crate::{
@@ -18,6 +20,35 @@ where
 {
     pub symmetric_key: S::Key,
     pub encrypted_header_bytes: Vec<u8>,
+}
+
+impl<S: SymmetricCrypto> EncryptedHeader<S> {
+    pub(crate) fn as_bytes(&self) -> anyhow::Result<Vec<u8>> {
+        let mut bytes: Vec<u8> =
+            u32::to_be_bytes(<S as SymmetricCrypto>::Key::LENGTH as u32).try_into()?;
+        bytes.extend_from_slice(&self.symmetric_key.as_bytes());
+        bytes.extend_from_slice(&self.encrypted_header_bytes[..]);
+        Ok(bytes)
+    }
+
+    pub(crate) fn from_bytes(header: &[u8]) -> anyhow::Result<Self> {
+        if header.is_empty() {
+            anyhow::bail!("Cannot deserialize an empty symmetric key");
+        }
+        if header.len() < 4 {
+            anyhow::bail!("Invalid size: cannot deserialize symmetric key");
+        }
+        let symmetric_key_len: [u8; 4] = header[0..4].try_into()?;
+        let symmetric_key_len = u32::from_be_bytes(symmetric_key_len) as usize;
+        // Then split header between `symmetric_key` and `encrypted_symmetric_key`
+        let symmetric_key_bytes: Vec<u8> = header[4..(4 + symmetric_key_len)].try_into()?;
+        let encrypted_header_bytes: Vec<u8> = header[(4 + symmetric_key_len)..].try_into()?;
+
+        Ok(Self {
+            symmetric_key: S::Key::try_from(symmetric_key_bytes)?,
+            encrypted_header_bytes,
+        })
+    }
 }
 
 /// An ClearTextHeader returned by the `decrypt_hybrid_header` function
