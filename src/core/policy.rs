@@ -100,6 +100,47 @@ impl TryFrom<&str> for Attribute {
     }
 }
 
+/// Attributes struct is used to simplify the parsing of a list of Attribute
+#[derive(Debug, PartialEq)]
+pub(crate) struct Attributes {
+    attributes: Vec<Attribute>,
+}
+
+impl Attributes {
+    /// Get a reference to the attributes's attributes.
+    #[must_use]
+    pub(crate) fn attributes(&self) -> &[Attribute] {
+        self.attributes.as_ref()
+    }
+}
+
+impl From<Vec<Attribute>> for Attributes {
+    fn from(attributes: Vec<Attribute>) -> Self {
+        Self { attributes }
+    }
+}
+
+impl TryFrom<&str> for Attributes {
+    type Error = FormatErr;
+
+    fn try_from(attributes_str: &str) -> Result<Self, Self::Error> {
+        if attributes_str.is_empty() {
+            return Err(FormatErr::InvalidAttribute(attributes_str.to_string()));
+        }
+
+        // Convert a Vec<Result<Attribute,FormatErr>> into a Result<Vec<Attribute>>
+        let attributes: Result<Vec<_>, _> = attributes_str
+            .trim()
+            .split(',')
+            .map(Attribute::try_from)
+            .collect();
+
+        Ok(Self {
+            attributes: attributes?,
+        })
+    }
+}
+
 impl std::fmt::Display for Attribute {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}::{}", self.axis, self.name)

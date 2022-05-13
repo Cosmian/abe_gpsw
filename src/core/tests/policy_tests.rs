@@ -1,7 +1,7 @@
 use std::convert::TryFrom;
 
 use crate::{
-    core::policy::{ap, attr, AccessPolicy, Attribute, Policy},
+    core::policy::{ap, attr, AccessPolicy, Attribute, Attributes, Policy},
     error::FormatErr,
 };
 
@@ -38,6 +38,19 @@ fn attribute_parser() {
     assert_eq!(
         Attribute::try_from(" Security Level::level 1  ").unwrap(),
         attribute2
+    );
+}
+
+#[test]
+fn attributes_parser() {
+    let attributes = Attributes::try_from(" Security Level::level 1 ,    Department::HR ").unwrap();
+
+    assert_eq!(
+        attributes,
+        Attributes::from(vec![
+            Attribute::try_from("Security Level::level 1").unwrap(),
+            Attribute::try_from("Department::HR").unwrap()
+        ])
     );
 }
 

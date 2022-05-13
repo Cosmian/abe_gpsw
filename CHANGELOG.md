@@ -3,6 +3,18 @@
 All notable changes to this project will be documented in this file.
 
 ---
+## [0.6.6] - 2022-05-12
+### Added
+- Add ABE hybrid encryption for wasm-bindgen (JS)
+- Add `as_bytes` and `from_bytes` for `EncryptedHeader`
+- Add an ABE attributes parser for encryption: for example: "Security Level::level 1 , Department::HR" resulting in a list of 2 attributes
+### Changed
+- Refactor tests for ABE wasm-bindgen: verify encryption and decryption with native implementation
+### Fixed
+### Removed
+---
+
+---
 ## [0.6.5] - 2022-04-06
 ### Added
 ### Changed

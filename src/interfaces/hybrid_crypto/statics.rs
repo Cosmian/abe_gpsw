@@ -1,6 +1,8 @@
+use std::convert::TryInto;
+
 use cosmian_crypto_base::{
     hybrid_crypto::{Block, Header, Metadata},
-    symmetric_crypto::SymmetricCrypto,
+    symmetric_crypto::{Key, SymmetricCrypto},
 };
 
 use crate::{
@@ -18,6 +20,35 @@ where
 {
     pub symmetric_key: S::Key,
     pub encrypted_header_bytes: Vec<u8>,
+}
+
+impl<S: SymmetricCrypto> EncryptedHeader<S> {
+    pub(crate) fn as_bytes(&self) -> anyhow::Result<Vec<u8>> {
+        let mut bytes: Vec<u8> =
+            u32::to_be_bytes(<S as SymmetricCrypto>::Key::LENGTH as u32).try_into()?;
+        bytes.extend_from_slice(&self.symmetric_key.as_bytes());
+        bytes.extend_from_slice(&self.encrypted_header_bytes[..]);
+        Ok(bytes)
+    }
+
+    pub(crate) fn from_bytes(header: &[u8]) -> anyhow::Result<Self> {
+        if header.is_empty() {
+            anyhow::bail!("Cannot deserialize an empty symmetric key");
+        }
+        if header.len() < 4 {
+            anyhow::bail!("Invalid size: cannot deserialize symmetric key");
+        }
+        let symmetric_key_len: [u8; 4] = header[0..4].try_into()?;
+        let symmetric_key_len = u32::from_be_bytes(symmetric_key_len) as usize;
+        // Then split header between `symmetric_key` and `encrypted_symmetric_key`
+        let symmetric_key_bytes: Vec<u8> = header[4..(4 + symmetric_key_len)].try_into()?;
+        let encrypted_header_bytes: Vec<u8> = header[(4 + symmetric_key_len)..].try_into()?;
+
+        Ok(Self {
+            symmetric_key: S::Key::try_from(symmetric_key_bytes)?,
+            encrypted_header_bytes,
+        })
+    }
 }
 
 /// An ClearTextHeader returned by the `decrypt_hybrid_header` function
@@ -102,21 +133,21 @@ pub fn encrypt_hybrid_block<A, S, const MAX_CLEAR_TEXT_SIZE: usize>(
     symmetric_key: &S::Key,
     uid: &[u8],
     block_number: usize,
-    clear_text: &[u8],
+    plaintext: &[u8],
 ) -> anyhow::Result<Vec<u8>>
 where
     A: AbeScheme + std::marker::Sync + std::marker::Send,
     S: SymmetricCrypto,
 {
     let mut block = Block::<S, MAX_CLEAR_TEXT_SIZE>::new();
-    if clear_text.len() > MAX_CLEAR_TEXT_SIZE {
+    if plaintext.len() > MAX_CLEAR_TEXT_SIZE {
         anyhow::bail!(
             "The data to encrypt is too large: {} bytes, max size: {} ",
-            clear_text.len(),
+            plaintext.len(),
             MAX_CLEAR_TEXT_SIZE
         );
     }
-    block.write(0, clear_text)?;
+    block.write(0, plaintext)?;
 
     block.to_encrypted_bytes(symmetric_key, uid, block_number)
 }
@@ -129,21 +160,21 @@ pub fn decrypt_hybrid_block<A, S, const MAX_CLEAR_TEXT_SIZE: usize>(
     symmetric_key: &S::Key,
     uid: &[u8],
     block_number: usize,
-    encrypted_bytes: &[u8],
+    ciphertext: &[u8],
 ) -> anyhow::Result<Vec<u8>>
 where
     A: AbeScheme + std::marker::Sync + std::marker::Send,
     S: SymmetricCrypto,
 {
-    if encrypted_bytes.len() > Block::<S, MAX_CLEAR_TEXT_SIZE>::MAX_ENCRYPTED_LENGTH {
+    if ciphertext.len() > Block::<S, MAX_CLEAR_TEXT_SIZE>::MAX_ENCRYPTED_LENGTH {
         anyhow::bail!(
             "The encrypted data to decrypt is too large: {} bytes, max size: {} ",
-            encrypted_bytes.len(),
+            ciphertext.len(),
             Block::<S, MAX_CLEAR_TEXT_SIZE>::MAX_ENCRYPTED_LENGTH
         );
     }
     let block = Block::<S, MAX_CLEAR_TEXT_SIZE>::from_encrypted_bytes(
-        encrypted_bytes,
+        ciphertext,
         symmetric_key,
         uid,
         block_number,
