@@ -3,6 +3,15 @@
 All notable changes to this project will be documented in this file.
 
 ---
+## [0.6.7] - 2022-05-17
+### Added
+- In ABE-AES hybrid encryption, use encrypted `Metadata` to protect and recover UID value
+### Changed
+### Fixed
+### Removed
+---
+
+---
 ## [0.6.6] - 2022-05-12
 ### Added
 - Add ABE hybrid encryption for wasm-bindgen (JS)

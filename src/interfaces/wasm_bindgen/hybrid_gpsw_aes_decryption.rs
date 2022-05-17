@@ -99,9 +99,11 @@ pub fn webassembly_decrypt_hybrid_header(
         )
         .map_err(|e| return JsValue::from_str(&format!("Error decrypting hybrid header: {e}")))?;
 
-    Ok(js_sys::Uint8Array::from(
-        &cleartext_header.symmetric_key.as_bytes()[..],
-    ))
+    let cleartext_header_bytes = cleartext_header.as_bytes().map_err(|e| {
+        return JsValue::from_str(&format!("Error serializing cleartext header: {e}"));
+    })?;
+
+    Ok(js_sys::Uint8Array::from(&cleartext_header_bytes[..]))
 }
 
 // A cache of the decryption caches
@@ -176,9 +178,11 @@ pub fn webassembly_decrypt_hybrid_header_using_cache(
         )
         .map_err(|e| return JsValue::from_str(&format!("Error decrypting hybrid header: {e}")))?;
 
-    Ok(js_sys::Uint8Array::from(
-        &cleartext_header.symmetric_key.as_bytes()[..],
-    ))
+    let cleartext_header_bytes = cleartext_header.as_bytes().map_err(|e| {
+        return JsValue::from_str(&format!("Error serializing cleartext header: {e}"));
+    })?;
+
+    Ok(js_sys::Uint8Array::from(&cleartext_header_bytes[..]))
 }
 
 /// Symmetrically Decrypt encrypted data in a block.
@@ -279,7 +283,11 @@ pub fn test_decrypt_hybrid_header() {
     let user_decryption_key_js = bytes_to_js_array(&user_decryption_key_bytes);
     let encrypted_header_js = bytes_to_js_array(&encrypted_header.encrypted_header_bytes);
 
-    webassembly_decrypt_hybrid_header(user_decryption_key_js, encrypted_header_js).unwrap();
+    let cleartext_header_bytes =
+        webassembly_decrypt_hybrid_header(user_decryption_key_js, encrypted_header_js).unwrap();
+    let _cleartext_header =
+        ClearTextHeader::<Aes256GcmCrypto>::from_bytes(&cleartext_header_bytes.to_vec()[..])
+            .unwrap();
 }
 
 #[wasm_bindgen_test]
