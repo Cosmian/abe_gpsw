@@ -12,7 +12,7 @@ use std::{
 
 use cosmian_crypto_base::{
     hybrid_crypto::Metadata,
-    symmetric_crypto::{aes_256_gcm_pure::Aes256GcmCrypto, Key, SymmetricCrypto},
+    symmetric_crypto::{aes_256_gcm_pure::Aes256GcmCrypto, SymmetricCrypto},
 };
 use lazy_static::lazy_static;
 use serde_json::Value;
@@ -212,7 +212,7 @@ pub fn webassembly_encrypt_hybrid_block(
 
     //
     // Parse symmetric key
-    let symmetric_key = <Aes256GcmCrypto as SymmetricCrypto>::Key::parse(
+    let symmetric_key = <Aes256GcmCrypto as SymmetricCrypto>::Key::try_from(
         symmetric_key_bytes.to_vec(),
     )
     .map_err(|e| {
@@ -300,7 +300,7 @@ pub fn test_encrypt_hybrid_block() {
         hex::decode("cd8ca2eeb654b5f39f347f4e3f91b3a15c450c1e52c40716237b4c18510f65b4").unwrap();
 
     let symmetric_key =
-        <Aes256GcmCrypto as SymmetricCrypto>::Key::parse(symmetric_key_bytes.clone()).unwrap();
+        <Aes256GcmCrypto as SymmetricCrypto>::Key::try_from(symmetric_key_bytes.clone()).unwrap();
 
     let symmetric_key_js = bytes_to_js_array(&symmetric_key_bytes);
     let uid_js = bytes_to_js_array(&uid_bytes);

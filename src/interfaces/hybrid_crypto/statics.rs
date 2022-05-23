@@ -1,17 +1,19 @@
 use std::convert::TryInto;
 
 use cosmian_crypto_base::{
-    hybrid_crypto::{Block, Header, Metadata},
-    symmetric_crypto::{Key, SymmetricCrypto},
+    hybrid_crypto::{Block, Metadata, BytesScanner},
+    symmetric_crypto::{SymmetricCrypto, nonce::NonceTrait}, entropy::CsRng, Error,
 };
-
 use crate::{
-    core::gpsw::AbeScheme,
+    core::{gpsw::AbeScheme, Engine},
     interfaces::{
-        asymmetric_crypto::{AbeCrypto, EncryptionParameters},
+        // asymmetric_crypto::{AbeCrypto, EncryptionParameters},
         policy::{Attribute, Policy},
     },
 };
+use cosmian_crypto_base::KeyTrait;
+use std::convert::TryFrom;
+
 
 /// An EncryptedHeader returned by the `encrypt_hybrid_header` function
 pub struct EncryptedHeader<S>
@@ -26,7 +28,7 @@ impl<S: SymmetricCrypto> EncryptedHeader<S> {
     pub(crate) fn as_bytes(&self) -> anyhow::Result<Vec<u8>> {
         let mut bytes: Vec<u8> =
             u32::to_be_bytes(<S as SymmetricCrypto>::Key::LENGTH as u32).try_into()?;
-        bytes.extend_from_slice(&self.symmetric_key.as_bytes());
+        bytes.extend_from_slice(&self.symmetric_key.to_bytes());
         bytes.extend_from_slice(&self.encrypted_header_bytes[..]);
         Ok(bytes)
     }
@@ -45,7 +47,7 @@ impl<S: SymmetricCrypto> EncryptedHeader<S> {
         let encrypted_header_bytes: Vec<u8> = header[(4 + symmetric_key_len)..].try_into()?;
 
         Ok(Self {
-            symmetric_key: S::Key::try_from(symmetric_key_bytes)?,
+            symmetric_key: S::Key::try_from_bytes(symmetric_key_bytes)?,
             encrypted_header_bytes,
         })
     }
@@ -64,8 +66,8 @@ impl<S: SymmetricCrypto> ClearTextHeader<S> {
     pub(crate) fn as_bytes(&self) -> anyhow::Result<Vec<u8>> {
         let mut bytes: Vec<u8> =
             u32::to_be_bytes(<S as SymmetricCrypto>::Key::LENGTH as u32).try_into()?;
-        bytes.extend_from_slice(&self.symmetric_key.as_bytes());
-        bytes.extend_from_slice(&self.meta_data.as_bytes()?);
+        bytes.extend_from_slice(&self.symmetric_key.to_bytes());
+        bytes.extend_from_slice(&self.meta_data.to_bytes()?);
         Ok(bytes)
     }
 
@@ -83,7 +85,7 @@ impl<S: SymmetricCrypto> ClearTextHeader<S> {
         let meta_data_bytes: Vec<u8> = header[(4 + symmetric_key_len)..].try_into()?;
 
         Ok(Self {
-            symmetric_key: S::Key::try_from(symmetric_key_bytes)?,
+            symmetric_key: S::Key::try_from_bytes(symmetric_key_bytes)?,
             meta_data: Metadata::from_bytes(&meta_data_bytes)?,
         })
     }
@@ -105,17 +107,38 @@ where
     A: AbeScheme + std::marker::Sync + std::marker::Send,
     S: SymmetricCrypto,
 {
-    let attributes = attributes.to_vec();
-    let header = Header::<AbeCrypto<A>, S>::generate(
+    let engine = Engine::<A>::new();
+    let (sk_bytes, encrypted_sk) = engine.generate_symmetric_key(
+        policy,
         public_key,
-        Some(&EncryptionParameters {
-            policy: policy.clone(),
-            policy_attributes: attributes,
-        }),
-        meta_data,
+        attributes,
+        S::Key::LENGTH,
     )?;
-    let symmetric_key = header.symmetric_key().to_owned();
-    let header_bytes = header.as_bytes()?;
+    let symmetric_key = S::Key::try_from_bytes(sk_bytes)?;
+
+    // convert to bytes
+    // ..size
+    let mut header_bytes = u32_len(&encrypted_sk)?.to_vec();
+    // ...bytes
+    header_bytes.extend(&encrypted_sk);
+    if !&meta_data.is_empty() {
+        // Nonce
+        let nonce = S::Nonce::new(&mut CsRng::new());
+        header_bytes.extend(nonce.to_bytes());
+
+        // Encrypted metadata
+        let encrypted_metadata = S::encrypt(
+            &symmetric_key,
+            &meta_data.to_bytes()?,
+            &nonce,
+            None,
+        )?;
+        // ... size
+        header_bytes.extend(u32_len(&encrypted_metadata)?);
+        // ... bytes
+        header_bytes.extend(encrypted_metadata);
+    }
+
     Ok(EncryptedHeader {
         symmetric_key,
         encrypted_header_bytes: header_bytes,
@@ -132,10 +155,41 @@ where
     A: AbeScheme + std::marker::Sync + std::marker::Send,
     S: SymmetricCrypto,
 {
-    let header = Header::<AbeCrypto<A>, S>::from_bytes(encrypted_header, user_decryption_key)?;
+    // scan the input bytes
+    let mut scanner = BytesScanner::new(encrypted_header);
+
+    // encrypted symmetric key size
+    let encrypted_symmetric_key_size = scanner.read_u32()? as usize;
+    let encrypted_symmetric_key = scanner.next(encrypted_symmetric_key_size)?.to_vec();
+
+    // symmetric key
+    let engine = Engine::<A>::new();
+    // let asymmetric_scheme = A::default();
+    let symmetric_key =
+    S::Key::try_from_bytes(engine.decrypt_symmetric_key(user_decryption_key, &encrypted_symmetric_key, S::Key::LENGTH)?)?;
+
+    let meta_data = if scanner.has_more() {
+        // Nonce
+        let nonce = S::Nonce::try_from_bytes(scanner.next(S::Nonce::LENGTH)?.to_vec())?;
+
+        // encrypted metadata
+        let encrypted_metadata_size = scanner.read_u32()? as usize;
+
+        // UID
+        let encrypted_metadata = scanner.next(encrypted_metadata_size)?;
+        Metadata::from_bytes(&S::decrypt(
+            &symmetric_key,
+            encrypted_metadata,
+            &nonce,
+            None,
+        )?)?
+    } else {
+        Metadata::default()
+    };
+
     Ok(ClearTextHeader {
-        symmetric_key: header.symmetric_key().to_owned(),
-        meta_data: header.meta_data().to_owned(),
+        symmetric_key,
+        meta_data,
     })
 }
 
@@ -178,7 +232,8 @@ where
     }
     block.write(0, plaintext)?;
 
-    block.to_encrypted_bytes(symmetric_key, uid, block_number)
+    //TODO: try passing an already instatiated CsRng
+    block.to_encrypted_bytes(&mut CsRng::new(), symmetric_key, uid, block_number).map_err(|e| anyhow::anyhow!(e))
 }
 
 /// Symmetrically Decrypt encrypted data in a block.
@@ -209,4 +264,14 @@ where
         block_number,
     )?;
     Ok(block.clear_text_owned())
+}
+
+// Attempt getting the length of this slice as an u32 in 4 big endian bytes and
+// return an error if it overflows
+fn u32_len(slice: &[u8]) -> Result<[u8; 4], Error> {
+    u32::try_from(slice.len())
+        .map_err(|_| {
+            Error::InvalidSize("Slice of bytes is too big to fit in 2^32 bytes".to_string())
+        })
+        .map(u32::to_be_bytes)
 }

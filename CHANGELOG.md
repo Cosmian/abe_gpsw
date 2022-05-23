@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+
+---
+## [0.6.8] - 2022-05-23
+### Added
+### Changed
+- bumped crypto base version to 1.2.1
+### Fixed
+### Removed
+---
+
 ---
 ## [0.6.7] - 2022-05-17
 ### Added

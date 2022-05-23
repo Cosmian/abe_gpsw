@@ -10,10 +10,10 @@ use std::{
         RwLock,
     },
 };
-
+use std::convert::TryFrom;
 use cosmian_crypto_base::{
     hybrid_crypto::Metadata,
-    symmetric_crypto::{aes_256_gcm_pure::Aes256GcmCrypto, Key, SymmetricCrypto},
+    symmetric_crypto::{aes_256_gcm_pure::Aes256GcmCrypto,SymmetricCrypto},
 };
 use lazy_static::lazy_static;
 use witgen::witgen;
@@ -275,7 +275,7 @@ pub fn encrypt_hybrid_header(
     .map_err(|e| e.to_string())?;
 
     Ok(EncryptedHeader {
-        symmetric_key: encrypted_header.symmetric_key.as_bytes(),
+        symmetric_key: encrypted_header.symmetric_key.into(),
         encrypted_header_bytes: encrypted_header.encrypted_header_bytes,
     })
 }
@@ -288,7 +288,7 @@ pub fn encrypt_hybrid_block(
     uid: Vec<u8>,
     block_number: u64,
 ) -> Result<Vec<u8>, String> {
-    let symmetric_key = <Aes256GcmCrypto as SymmetricCrypto>::Key::parse(symmetric_key)
+    let symmetric_key = <Aes256GcmCrypto as SymmetricCrypto>::Key::try_from(symmetric_key)
         .map_err(|e| e.to_string())?;
 
     let encrypted_block =
@@ -383,7 +383,7 @@ pub fn decrypt_hybrid_block(
     uid: Vec<u8>,
     block_number: u64,
 ) -> Result<Vec<u8>, String> {
-    let symmetric_key = <Aes256GcmCrypto as SymmetricCrypto>::Key::parse(symmetric_key)
+    let symmetric_key = <Aes256GcmCrypto as SymmetricCrypto>::Key::try_from(symmetric_key)
         .map_err(|e| e.to_string())?;
     let cleartext = internal_decrypt_hybrid_block::<
         Gpsw<Bls12_381>,

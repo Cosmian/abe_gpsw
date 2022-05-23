@@ -7,10 +7,10 @@ use std::{
         RwLock,
     },
 };
-
+use std::convert::TryFrom;
 use cosmian_crypto_base::{
     hybrid_crypto::Metadata,
-    symmetric_crypto::{aes_256_gcm_pure::Aes256GcmCrypto, Key, SymmetricCrypto},
+    symmetric_crypto::{aes_256_gcm_pure::Aes256GcmCrypto, SymmetricCrypto},
 };
 use lazy_static::lazy_static;
 
@@ -213,7 +213,7 @@ pub unsafe extern "C" fn h_aes_encrypt_header_using_cache(
     ));
 
     let allocated = *symmetric_key_len;
-    let symmetric_key_bytes = encrypted_header.symmetric_key.as_bytes();
+    let symmetric_key_bytes: Vec<u8> = encrypted_header.symmetric_key.into();
     let len = symmetric_key_bytes.len();
     if (allocated as usize) < len {
         ffi_bail!(
@@ -342,7 +342,7 @@ pub unsafe extern "C" fn h_aes_encrypt_header(
     ));
 
     let allocated = *symmetric_key_len;
-    let symmetric_key_bytes = encrypted_header.symmetric_key.as_bytes();
+    let symmetric_key_bytes: Vec<u8> = encrypted_header.symmetric_key.into();
     let len = symmetric_key_bytes.len();
     if (allocated as usize) < len {
         ffi_bail!(
@@ -510,7 +510,7 @@ pub unsafe extern "C" fn h_aes_decrypt_header_using_cache(
 
     // Symmetric Key
     let allocated = *symmetric_key_len;
-    let symmetric_key_bytes = header.symmetric_key.as_bytes();
+    let symmetric_key_bytes: Vec<u8> = header.symmetric_key.into();
     let len = symmetric_key_bytes.len();
     if (allocated as usize) < len {
         ffi_bail!(
@@ -644,7 +644,7 @@ pub unsafe extern "C" fn h_aes_decrypt_header(
 
     // Symmetric Key
     let allocated = *symmetric_key_len;
-    let symmetric_key_bytes = header.symmetric_key.as_bytes();
+    let symmetric_key_bytes: Vec<u8> = header.symmetric_key.into();
     let len = symmetric_key_bytes.len();
     if (allocated as usize) < len {
         ffi_bail!(
@@ -752,7 +752,7 @@ pub unsafe extern "C" fn h_aes_encrypt_block(
     }
     let data = std::slice::from_raw_parts(data_ptr as *const u8, data_len as usize).to_vec();
 
-    let symmetric_key = ffi_unwrap!(<Aes256GcmCrypto as SymmetricCrypto>::Key::parse(
+    let symmetric_key = ffi_unwrap!(<Aes256GcmCrypto as SymmetricCrypto>::Key::try_from(
         symmetric_key
     ));
     let encrypted_block = ffi_unwrap!(encrypt_hybrid_block::<
@@ -827,7 +827,7 @@ pub unsafe extern "C" fn h_aes_decrypt_block(
     )
     .to_vec();
 
-    let symmetric_key = ffi_unwrap!(<Aes256GcmCrypto as SymmetricCrypto>::Key::parse(
+    let symmetric_key = ffi_unwrap!(<Aes256GcmCrypto as SymmetricCrypto>::Key::try_from(
         symmetric_key
     ));
     let encrypted_block = ffi_unwrap!(decrypt_hybrid_block::<

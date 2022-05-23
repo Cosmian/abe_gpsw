@@ -1,8 +1,8 @@
 use std::ffi::CStr;
-
+use std::convert::TryFrom;
 use cosmian_crypto_base::{
     hybrid_crypto::Metadata,
-    symmetric_crypto::{aes_256_gcm_pure::Aes256GcmCrypto, Key, SymmetricCrypto},
+    symmetric_crypto::{aes_256_gcm_pure::Aes256GcmCrypto, SymmetricCrypto},
 };
 
 use crate::{
@@ -84,7 +84,7 @@ unsafe fn encrypt_header(meta_data: &Metadata) -> anyhow::Result<EncryptedHeader
         meta_data.additional_data.as_ref().unwrap().len() as i32,
     ))?;
 
-    let symmetric_key_ = <Aes256GcmCrypto as SymmetricCrypto>::Key::parse(
+    let symmetric_key_ = <Aes256GcmCrypto as SymmetricCrypto>::Key::try_from(
         std::slice::from_raw_parts(symmetric_key_ptr as *const u8, symmetric_key_len as usize)
             .to_vec(),
     )?;
@@ -144,7 +144,7 @@ unsafe fn decrypt_header(
         user_decryption_key_len,
     ))?;
 
-    let symmetric_key_ = <Aes256GcmCrypto as SymmetricCrypto>::Key::parse(
+    let symmetric_key_ = <Aes256GcmCrypto as SymmetricCrypto>::Key::try_from(
         std::slice::from_raw_parts(symmetric_key_ptr as *const u8, symmetric_key_len as usize)
             .to_vec(),
     )?;
@@ -242,7 +242,7 @@ unsafe fn encrypt_header_using_cache(
         meta_data.additional_data.as_ref().unwrap().len() as i32,
     ))?;
 
-    let symmetric_key_ = <Aes256GcmCrypto as SymmetricCrypto>::Key::parse(
+    let symmetric_key_ = <Aes256GcmCrypto as SymmetricCrypto>::Key::try_from(
         std::slice::from_raw_parts(symmetric_key_ptr as *const u8, symmetric_key_len as usize)
             .to_vec(),
     )?;
@@ -307,7 +307,7 @@ unsafe fn decrypt_header_using_cache(
         cache_handle,
     ))?;
 
-    let symmetric_key_ = <Aes256GcmCrypto as SymmetricCrypto>::Key::parse(
+    let symmetric_key_ = <Aes256GcmCrypto as SymmetricCrypto>::Key::try_from(
         std::slice::from_raw_parts(symmetric_key_ptr as *const u8, symmetric_key_len as usize)
             .to_vec(),
     )?;

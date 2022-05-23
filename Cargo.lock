@@ -4,7 +4,7 @@ version = 3
 
 [[package]]
 name = "abe_gpsw"
-version = "0.6.7"
+version = "0.6.8"
 dependencies = [
  "cosmian-wit-bindgen-rust",
  "cosmian_bls12_381",
@@ -374,9 +374,9 @@ dependencies = [
 
 [[package]]
 name = "cosmian_crypto_base"
-version = "0.5.2"
+version = "1.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "53d32ae6a70e431bcccd92cfd60770d45a61cfda706f3ce12349c630a5c2498b"
+checksum = "f43a6fba84a3d5502e0b023a75d292e999a86aecb4bf87f2738537954dcf8397"
 dependencies = [
  "aes",
  "aes-gcm",
@@ -395,7 +395,9 @@ dependencies = [
  "rand_core 0.5.1",
  "rand_distr",
  "rand_hc",
+ "serde",
  "sha2 0.10.2",
+ "thiserror",
  "tracing",
 ]
 
