@@ -1,19 +1,17 @@
 use std::convert::TryInto;
 
-use cosmian_crypto_base::{
-    hybrid_crypto::{Block, Metadata, BytesScanner},
-    symmetric_crypto::{SymmetricCrypto, nonce::NonceTrait}, entropy::CsRng, Error,
-};
 use crate::{
     core::{gpsw::AbeScheme, Engine},
-    interfaces::{
-        // asymmetric_crypto::{AbeCrypto, EncryptionParameters},
-        policy::{Attribute, Policy},
-    },
+    interfaces::policy::{Attribute, Policy},
 };
 use cosmian_crypto_base::KeyTrait;
+use cosmian_crypto_base::{
+    entropy::CsRng,
+    hybrid_crypto::{Block, BytesScanner, Metadata},
+    symmetric_crypto::{nonce::NonceTrait, SymmetricCrypto},
+    Error,
+};
 use std::convert::TryFrom;
-
 
 /// An EncryptedHeader returned by the `encrypt_hybrid_header` function
 pub struct EncryptedHeader<S>
@@ -108,12 +106,8 @@ where
     S: SymmetricCrypto,
 {
     let engine = Engine::<A>::new();
-    let (sk_bytes, encrypted_sk) = engine.generate_symmetric_key(
-        policy,
-        public_key,
-        attributes,
-        S::Key::LENGTH,
-    )?;
+    let (sk_bytes, encrypted_sk) =
+        engine.generate_symmetric_key(policy, public_key, attributes, S::Key::LENGTH)?;
     let symmetric_key = S::Key::try_from_bytes(sk_bytes)?;
 
     // convert to bytes
@@ -127,12 +121,7 @@ where
         header_bytes.extend(nonce.to_bytes());
 
         // Encrypted metadata
-        let encrypted_metadata = S::encrypt(
-            &symmetric_key,
-            &meta_data.to_bytes()?,
-            &nonce,
-            None,
-        )?;
+        let encrypted_metadata = S::encrypt(&symmetric_key, &meta_data.to_bytes()?, &nonce, None)?;
         // ... size
         header_bytes.extend(u32_len(&encrypted_metadata)?);
         // ... bytes
@@ -165,8 +154,11 @@ where
     // symmetric key
     let engine = Engine::<A>::new();
     // let asymmetric_scheme = A::default();
-    let symmetric_key =
-    S::Key::try_from_bytes(engine.decrypt_symmetric_key(user_decryption_key, &encrypted_symmetric_key, S::Key::LENGTH)?)?;
+    let symmetric_key = S::Key::try_from_bytes(engine.decrypt_symmetric_key(
+        user_decryption_key,
+        &encrypted_symmetric_key,
+        S::Key::LENGTH,
+    )?)?;
 
     let meta_data = if scanner.has_more() {
         // Nonce
@@ -233,7 +225,9 @@ where
     block.write(0, plaintext)?;
 
     //TODO: try passing an already instatiated CsRng
-    block.to_encrypted_bytes(&mut CsRng::new(), symmetric_key, uid, block_number).map_err(|e| anyhow::anyhow!(e))
+    block
+        .to_encrypted_bytes(&mut CsRng::new(), symmetric_key, uid, block_number)
+        .map_err(|e| anyhow::anyhow!(e))
 }
 
 /// Symmetrically Decrypt encrypted data in a block.

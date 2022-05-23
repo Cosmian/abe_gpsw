@@ -103,7 +103,6 @@ impl From<serde_json::Error> for FormatErr {
     }
 }
 
-
 #[derive(Error, Debug, Clone, PartialEq)]
 pub enum ParsingError {
     #[error("{0}")]

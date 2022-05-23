@@ -1,3 +1,9 @@
+use cosmian_crypto_base::{
+    hybrid_crypto::Metadata,
+    symmetric_crypto::{aes_256_gcm_pure::Aes256GcmCrypto, SymmetricCrypto},
+};
+use lazy_static::lazy_static;
+use std::convert::TryFrom;
 use std::{
     collections::HashMap,
     ffi::CStr,
@@ -7,12 +13,6 @@ use std::{
         RwLock,
     },
 };
-use std::convert::TryFrom;
-use cosmian_crypto_base::{
-    hybrid_crypto::Metadata,
-    symmetric_crypto::{aes_256_gcm_pure::Aes256GcmCrypto, SymmetricCrypto},
-};
-use lazy_static::lazy_static;
 
 use crate::{
     core::{
