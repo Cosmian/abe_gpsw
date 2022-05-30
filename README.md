@@ -70,53 +70,7 @@ The code contains numerous tests that you can run using
 
 ## Building the library for a different glibc
 
-1. Pull a distribution with the appropriate glibc (here targeting 2.17)
-
-    ```sh
-    sudo docker pull centos:centos7.4.1708
-    ```
-
-
-2. Execute the shell, mounting the current directory to `/root/abe_gpsw` inside the docker
-
-    ```sh
-    sudo docker run -it --rm -v $(pwd):/root/abe_gpsw centos:centos7.4.1708 /bin/bash
-    ```
-
-3. Inside the docker container, install rustup
-
-    ```sh
-    curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
-    ```
-
-4. Set the rust environment variables
-
-    ```sh
-    source $HOME/.cargo/env
-    ```
-
-5. Install missing build tools
-
-    You may be missing linkers, etc... for centOs
-
-    ```sh
-    yum groupinstall "Development Tools"
-    ```
-
-    for Ubuntu
-
-    ```sh
-    sudo apt install build-essential
-    ```
-
-6. Build the library
-
-    ```sh
-    cd /root/abe_gpsw/
-    cargo build --release --all-features --target-dir target_2_17
-    ```
-
-The library binary is available as `target_2_17/release/libabe_gpsw.so`. 
+Go to the [build](build/glibc-2.17/) directory for an example on hw to build for GLIBC 2.17
 
 
 # Introduction to this repository cryptography
