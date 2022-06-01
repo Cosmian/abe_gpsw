@@ -4,6 +4,15 @@ All notable changes to this project will be documented in this file.
 
 
 ---
+## [0.6.10] - 2022-06-01
+### Added
+ - header size bench
+### Changed
+### Fixed
+### Removed
+---
+
+---
 ## [0.6.9] - 2022-05-23
 ### Added
 ### Changed
