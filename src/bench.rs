@@ -56,9 +56,12 @@ fn main() -> anyhow::Result<()> {
             selector
         );
     }
-    if selector == "header_encryption" {
+    if selector == "header_encryption_size" {
         #[cfg(feature = "interfaces")]
-        bench_header_encryption()?;
+        bench_header_encryption_size()?;
+    } else if selector == "header_encryption_speed" {
+        #[cfg(feature = "interfaces")]
+        bench_header_encryption_speed()?;
     } else if selector == "ffi_header_encryption" {
         #[cfg(feature = "ffi")]
         unsafe {
@@ -84,7 +87,9 @@ fn main() -> anyhow::Result<()> {
         }
     } else if selector == "all" {
         #[cfg(feature = "interfaces")]
-        bench_header_encryption()?;
+        bench_header_encryption_size()?;
+        #[cfg(feature = "interfaces")]
+        bench_header_encryption_speed()?;
         #[cfg(feature = "ffi")]
         unsafe {
             bench_ffi_header_encryption()?;
@@ -104,12 +109,13 @@ Usage: cargo run --release --features ffi --bin bench_abe_gpsw -- [OPTION]
 where [OPTION] is:
 
 all                        : (or none) run all benches
-header_encryption          : reference hybrid header encryption
-ffi_header_encryption      : hybrid header encryption via FFI
-ffi_header_enc_using_cache : hybrid header encryption via FFI using a cache
-header_decryption          : reference hybrid header decryption
-ffi_header_decryption      : hybrid header decryption via FFI
-ffi_header_dec_using_cache : hybrid header decryption via FFI using a cache
+header_encryption_size     : hybrid header encryption size
+header_encryption_speed    : reference hybrid header encryption speed
+ffi_header_encryption       : hybrid header encryption speed via FFI
+ffi_header_enc_using_cache  : hybrid header encryption speed via FFI using a cache
+header_decryption          : reference hybrid header decryption speed
+ffi_header_decryption       : hybrid header decryption speed via FFI
+ffi_header_dec_using_cache  : hybrid header decryption speed via FFI using a cache
 
 
 To generate a flame graph:
@@ -130,7 +136,63 @@ see above for the OPTION values
 }
 
 #[cfg(feature = "interfaces")]
-pub fn bench_header_encryption() -> anyhow::Result<()> {
+pub fn bench_header_encryption_size() -> anyhow::Result<()> {
+    print!("Running header encryption size...");
+
+    let public_key_json: Value = serde_json::from_str(include_str!(
+        "./interfaces/hybrid_crypto/tests/public_master_key.json"
+    ))?;
+    let key_value = &public_key_json["value"][0]["value"][1]["value"];
+
+    // Public Key bytes
+    let hex_key = key_value[0]["value"].as_str().unwrap();
+    let public_key = PublicKey::from_bytes(&hex::decode(hex_key)?)?;
+
+    // Policy
+    let policy_hex = key_value[1]["value"][4]["value"][0]["value"][2]["value"]
+        .as_str()
+        .unwrap();
+    let policy: Policy = serde_json::from_slice(&hex::decode(policy_hex)?)?;
+
+    let meta_data = Metadata {
+        uid: vec![],
+        additional_data: None,
+    };
+
+    let policy_attributes_1 = vec![
+        attr("Department", "FIN"),
+        attr("Security Level", "Confidential"),
+    ];
+    let encrypted_header_1 = encrypt_hybrid_header::<Gpsw<Bls12_381>, Aes256GcmCrypto>(
+        &policy,
+        &public_key,
+        &policy_attributes_1,
+        meta_data.clone(),
+    )?;
+    let policy_attributes_3 = vec![
+        attr("Department", "FIN"),
+        attr("Security Level", "Top Secret"),
+        attr("Security Level", "Confidential"),
+        attr("Security Level", "Protected"),
+    ];
+    let encrypted_header_3 = encrypt_hybrid_header::<Gpsw<Bls12_381>, Aes256GcmCrypto>(
+        &policy,
+        &public_key,
+        &policy_attributes_3,
+        meta_data,
+    )?;
+
+    println!(
+        "1 partition: {} bytes, 3 partitions: {} bytes",
+        encrypted_header_1.encrypted_header_bytes.len(),
+        encrypted_header_3.encrypted_header_bytes.len(),
+    );
+
+    Ok(())
+}
+
+#[cfg(feature = "interfaces")]
+pub fn bench_header_encryption_speed() -> anyhow::Result<()> {
     print!("Running 'direct' header encryption...");
     let public_key_json: Value = serde_json::from_str(include_str!(
         "./interfaces/hybrid_crypto/tests/public_master_key.json"
