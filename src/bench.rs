@@ -131,7 +131,7 @@ see above for the OPTION values
 
 #[cfg(feature = "interfaces")]
 pub fn bench_header_encryption() -> anyhow::Result<()> {
-    print!("Running 'direct' header encryption bench...");
+    print!("Running 'direct' header encryption...");
     let public_key_json: Value = serde_json::from_str(include_str!(
         "./interfaces/hybrid_crypto/tests/public_master_key.json"
     ))?;
@@ -210,7 +210,7 @@ fn generate_encrypted_header() -> anyhow::Result<EncryptedHeader<Aes256GcmCrypto
 /// # Safety
 #[cfg(feature = "ffi")]
 pub unsafe fn bench_ffi_header_encryption() -> anyhow::Result<()> {
-    print!("Running 'FFI' header encryption bench...");
+    print!("Running 'FFI' header encryption...");
     let public_key_json: Value = serde_json::from_str(include_str!(
         "./interfaces/hybrid_crypto/tests/public_master_key.json"
     ))?;
@@ -287,7 +287,7 @@ pub unsafe fn bench_ffi_header_encryption() -> anyhow::Result<()> {
 /// # Safety
 #[cfg(feature = "ffi")]
 pub unsafe fn bench_ffi_header_encryption_using_cache() -> anyhow::Result<()> {
-    print!("Running 'FFI' header encryption with cache bench...");
+    print!("Running 'FFI' header encryption using cache...");
     let public_key_json: Value = serde_json::from_str(include_str!(
         "./interfaces/hybrid_crypto/tests/public_master_key.json"
     ))?;
