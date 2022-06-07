@@ -1,9 +1,9 @@
+use std::{convert::TryFrom, ffi::CStr};
+
 use cosmian_crypto_base::{
     hybrid_crypto::Metadata,
     symmetric_crypto::{aes_256_gcm_pure::Aes256GcmCrypto, SymmetricCrypto},
 };
-use std::convert::TryFrom;
-use std::ffi::CStr;
 
 use crate::{
     core::{

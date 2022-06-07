@@ -1,17 +1,16 @@
-use std::convert::TryInto;
+use std::convert::{TryFrom, TryInto};
+
+use cosmian_crypto_base::{
+    entropy::CsRng,
+    hybrid_crypto::{Block, BytesScanner, Metadata},
+    symmetric_crypto::{nonce::NonceTrait, SymmetricCrypto},
+    Error, KeyTrait,
+};
 
 use crate::{
     core::{gpsw::AbeScheme, Engine},
     interfaces::policy::{Attribute, Policy},
 };
-use cosmian_crypto_base::KeyTrait;
-use cosmian_crypto_base::{
-    entropy::CsRng,
-    hybrid_crypto::{Block, BytesScanner, Metadata},
-    symmetric_crypto::{nonce::NonceTrait, SymmetricCrypto},
-    Error,
-};
-use std::convert::TryFrom;
 
 /// An EncryptedHeader returned by the `encrypt_hybrid_header` function
 pub struct EncryptedHeader<S>
@@ -23,7 +22,7 @@ where
 }
 
 impl<S: SymmetricCrypto> EncryptedHeader<S> {
-    pub(crate) fn as_bytes(&self) -> anyhow::Result<Vec<u8>> {
+    pub fn as_bytes(&self) -> anyhow::Result<Vec<u8>> {
         let mut bytes: Vec<u8> =
             u32::to_be_bytes(<S as SymmetricCrypto>::Key::LENGTH as u32).try_into()?;
         bytes.extend_from_slice(&self.symmetric_key.to_bytes());
@@ -31,7 +30,7 @@ impl<S: SymmetricCrypto> EncryptedHeader<S> {
         Ok(bytes)
     }
 
-    pub(crate) fn from_bytes(header: &[u8]) -> anyhow::Result<Self> {
+    pub fn from_bytes(header: &[u8]) -> anyhow::Result<Self> {
         if header.is_empty() {
             anyhow::bail!("Cannot deserialize an empty symmetric key");
         }
@@ -61,7 +60,7 @@ where
 }
 
 impl<S: SymmetricCrypto> ClearTextHeader<S> {
-    pub(crate) fn as_bytes(&self) -> anyhow::Result<Vec<u8>> {
+    pub fn as_bytes(&self) -> anyhow::Result<Vec<u8>> {
         let mut bytes: Vec<u8> =
             u32::to_be_bytes(<S as SymmetricCrypto>::Key::LENGTH as u32).try_into()?;
         bytes.extend_from_slice(&self.symmetric_key.to_bytes());
@@ -69,7 +68,7 @@ impl<S: SymmetricCrypto> ClearTextHeader<S> {
         Ok(bytes)
     }
 
-    pub(crate) fn from_bytes(header: &[u8]) -> anyhow::Result<Self> {
+    pub fn from_bytes(header: &[u8]) -> anyhow::Result<Self> {
         if header.is_empty() {
             anyhow::bail!("Cannot deserialize an empty symmetric key");
         }
