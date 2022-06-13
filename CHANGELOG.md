@@ -4,9 +4,18 @@ All notable changes to this project will be documented in this file.
 
 
 ---
+## [0.6.11] - 2022-06-07
+### Added
+- [JS/WASM + FFI] Add ABE keys generation JS bindings
+### Changed
+### Fixed
+### Removed
+---
+
+---
 ## [0.6.10] - 2022-06-01
 ### Added
- - header size bench
+- header size bench
 ### Changed
 ### Fixed
 ### Removed

@@ -15,28 +15,21 @@ use cosmian_crypto_base::{
     symmetric_crypto::{aes_256_gcm_pure::Aes256GcmCrypto, SymmetricCrypto},
 };
 use lazy_static::lazy_static;
-use serde_json::Value;
 use wasm_bindgen::prelude::*;
-use wasm_bindgen_test::*;
 
-use super::bytes_to_js_array;
 use crate::{
     core::{
         bilinear_map::bls12_381::Bls12_381,
         gpsw::{AbeScheme, AsBytes, Gpsw},
     },
     interfaces::{
-        hybrid_crypto::{
-            decrypt_hybrid_block, decrypt_hybrid_header, encrypt_hybrid_block,
-            encrypt_hybrid_header, EncryptedHeader,
-        },
+        hybrid_crypto::{encrypt_hybrid_block, encrypt_hybrid_header},
         policy::{Attributes, Policy},
     },
 };
 
 pub const MAX_CLEAR_TEXT_SIZE: usize = 1_usize << 30;
 
-type UserDecryptionKey = <Gpsw<Bls12_381> as AbeScheme>::UserDecryptionKey;
 type PublicKey = <Gpsw<Bls12_381> as AbeScheme>::MasterPublicKey;
 
 // -------------------------------
@@ -240,84 +233,4 @@ pub fn webassembly_encrypt_hybrid_block(
     })?;
 
     Ok(js_sys::Uint8Array::from(&ciphertext[..]))
-}
-
-#[wasm_bindgen_test]
-pub fn test_encrypt_hybrid_header() {
-    let public_key_json: Value = serde_json::from_str(include_str!(
-        "../hybrid_crypto/tests/public_master_key.json"
-    ))
-    .unwrap();
-    let key_value = &public_key_json["value"][0]["value"][1]["value"];
-
-    // Public Key bytes
-    let hex_key = &key_value[0]["value"].as_str().unwrap();
-    let public_key_bytes = hex::decode(hex_key).unwrap();
-
-    // Policy
-    let policy_hex = &key_value[1]["value"][4]["value"][0]["value"][2]["value"]
-        .as_str()
-        .unwrap();
-    let policy_bytes = hex::decode(policy_hex).unwrap();
-
-    // Prepare JS inputs
-    let policy_js = bytes_to_js_array(&policy_bytes);
-    let public_key_js = bytes_to_js_array(&public_key_bytes);
-    let uid_js = js_sys::Uint8Array::new(&JsValue::from_str("12345678"));
-
-    let encrypted_header_js = webassembly_encrypt_hybrid_header(
-        policy_js,
-        public_key_js,
-        "Department::FIN, Security Level::Confidential",
-        uid_js,
-    )
-    .unwrap();
-
-    let encrypted_header =
-        EncryptedHeader::<Aes256GcmCrypto>::from_bytes(&encrypted_header_js.to_vec()[..]).unwrap();
-
-    // Decrypt
-    let user_decryption_key_json: Value = serde_json::from_str(include_str!(
-        "../hybrid_crypto/tests/fin_confidential_user_key.json"
-    ))
-    .unwrap();
-    let key_value = &user_decryption_key_json["value"][0]["value"][1]["value"];
-    let hex_key = &key_value[0]["value"].as_str().unwrap();
-    let user_decryption_key =
-        UserDecryptionKey::from_bytes(&hex::decode(hex_key).unwrap()).unwrap();
-    decrypt_hybrid_header::<Gpsw<Bls12_381>, Aes256GcmCrypto>(
-        &user_decryption_key,
-        &encrypted_header.encrypted_header_bytes,
-    )
-    .unwrap();
-}
-
-#[wasm_bindgen_test]
-pub fn test_encrypt_hybrid_block() {
-    let symmetric_key_bytes =
-        hex::decode("802de96f19589fbc0eb2f26705dc1ed261e9c80f2fec301ca7d0ecea3176405b").unwrap();
-    let uid_bytes =
-        hex::decode("cd8ca2eeb654b5f39f347f4e3f91b3a15c450c1e52c40716237b4c18510f65b4").unwrap();
-
-    let symmetric_key =
-        <Aes256GcmCrypto as SymmetricCrypto>::Key::try_from(symmetric_key_bytes.clone()).unwrap();
-
-    let symmetric_key_js = bytes_to_js_array(&symmetric_key_bytes);
-    let uid_js = bytes_to_js_array(&uid_bytes);
-    let data_js = bytes_to_js_array(&[1, 2, 3, 4, 5, 6, 7, 8]);
-
-    let ciphertext =
-        webassembly_encrypt_hybrid_block(symmetric_key_js, Some(uid_js), Some(0), data_js).unwrap();
-
-    let mut ciphertext_bytes = vec![0_u8; ciphertext.length() as usize];
-    ciphertext.copy_to(&mut ciphertext_bytes[..]);
-
-    let _clear_text =
-        decrypt_hybrid_block::<Gpsw<Bls12_381>, Aes256GcmCrypto, MAX_CLEAR_TEXT_SIZE>(
-            &symmetric_key,
-            &uid_bytes,
-            0,
-            &ciphertext_bytes,
-        )
-        .unwrap();
 }
