@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file.
 
+---
+## [0.6.12] - 2022-06-16
+### Added
+- [pyo3] Add Rust bindings for Python thanks to pyo3
+### Changed
+### Fixed
+### Removed
+---
 
 ---
 ## [0.6.11] - 2022-06-07
