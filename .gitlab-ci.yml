@@ -100,6 +100,8 @@ build_python_whl:
 build_windows:
   <<: *base_compile
   stage: build
+  before_script:
+    - rustup target add x86_64-pc-windows-gnu
   script:
     - cargo build --verbose --release --features ffi --target x86_64-pc-windows-gnu
     - cbindgen . -c cbindgen.toml | grep -v \#include | uniq >target/${CI_PROJECT_NAME}.h
@@ -126,6 +128,8 @@ build_osx:
 build_android:
   <<: *base_compile
   stage: build
+  before_script:
+    - rustup target add i686-linux-android x86_64-linux-android armv7-linux-androideabi aarch64-linux-android
   script:
     - cargo ndk -t x86 -t x86_64 -t armeabi-v7a -t arm64-v8a -o jniLibs build --release --features ffi --lib
   artifacts:
