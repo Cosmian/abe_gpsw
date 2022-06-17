@@ -12,16 +12,29 @@ use thiserror::Error;
 
 #[derive(Error, Debug, Clone, PartialEq)]
 pub enum FormatErr {
+    //
+    // External errors conversion
     #[error("{0}")]
     CryptoError(String),
-    #[error("{0}")]
-    FromHexError(FromHexError),
-    #[error("{0}")]
+    #[error(transparent)]
     Infallible(Infallible),
-    #[error("{0}")]
-    Utf8Error(Utf8Error),
-    #[error("{0}")]
+    #[error(transparent)]
     NulError(NulError),
+    #[error(transparent)]
+    RegexError(#[from] regex::Error),
+    #[error(transparent)]
+    ParseIntError(#[from] ParseIntError),
+    #[error(transparent)]
+    TryFromSliceError(#[from] TryFromIntError),
+    #[error(transparent)]
+    FromHexError(#[from] FromHexError),
+    #[error(transparent)]
+    Utf8Error(#[from] Utf8Error),
+    #[error(transparent)]
+    ParsingError(#[from] ParsingError),
+
+    //
+    // Internal errors
     #[error("attribute not found: {0}")]
     AttributeNotFound(String),
     #[error("{} is missing{}",
@@ -83,8 +96,6 @@ pub enum FormatErr {
     InvalidEncryptedData,
     #[error("conversion failed")]
     ConversionFailed,
-    #[error("error parsing formula")]
-    ParsingError(ParsingError),
     #[error("Empty private key")]
     EmptyPrivateKey,
     #[error("Empty ciphertext")]
@@ -95,27 +106,9 @@ pub enum FormatErr {
     InvalidHeaderSize(usize),
 }
 
-impl From<TryFromIntError> for FormatErr {
-    fn from(_e: TryFromIntError) -> Self {
-        FormatErr::ConversionFailed
-    }
-}
-
 impl From<TryFromSliceError> for FormatErr {
     fn from(_e: TryFromSliceError) -> Self {
         FormatErr::ConversionFailed
-    }
-}
-
-impl From<ParseIntError> for FormatErr {
-    fn from(_e: ParseIntError) -> Self {
-        FormatErr::ConversionFailed
-    }
-}
-
-impl From<regex::Error> for FormatErr {
-    fn from(e: regex::Error) -> Self {
-        ParsingError::RegexError(e).into()
     }
 }
 
@@ -137,21 +130,9 @@ impl From<cosmian_crypto_base::Error> for FormatErr {
     }
 }
 
-impl From<FromHexError> for FormatErr {
-    fn from(e: FromHexError) -> Self {
-        FormatErr::FromHexError(e)
-    }
-}
-
 impl From<Infallible> for FormatErr {
     fn from(e: Infallible) -> Self {
         FormatErr::Infallible(e)
-    }
-}
-
-impl From<Utf8Error> for FormatErr {
-    fn from(e: Utf8Error) -> Self {
-        FormatErr::Utf8Error(e)
     }
 }
 
@@ -167,6 +148,7 @@ impl From<anyhow::ErrReport> for FormatErr {
         FormatErr::CryptoError(e.to_string())
     }
 }
+
 #[derive(Error, Debug, Clone, PartialEq)]
 pub enum ParsingError {
     #[error("{0}")]
@@ -179,10 +161,4 @@ pub enum ParsingError {
     RangeError,
     #[error("{0}")]
     RegexError(#[from] regex::Error),
-}
-
-impl From<ParsingError> for FormatErr {
-    fn from(pe: ParsingError) -> Self {
-        FormatErr::ParsingError(pe)
-    }
 }
