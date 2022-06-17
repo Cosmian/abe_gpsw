@@ -53,7 +53,7 @@ pub fn test_aes_hybrid_encryption() -> anyhow::Result<()> {
         &policy,
         &public_key,
         &policy_attributes,
-        meta_data.clone(),
+        Some(meta_data.clone()),
     )?;
 
     let symmetric_key = &encrypted_header.symmetric_key;

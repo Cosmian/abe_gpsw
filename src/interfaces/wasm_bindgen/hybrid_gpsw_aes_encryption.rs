@@ -71,10 +71,10 @@ pub fn webassembly_encrypt_hybrid_header(
         Attributes::try_from(attributes_str)
             .map_err(|e| JsValue::from_str(&format!("Error parsing attributes: {e:?}")))?
             .attributes(),
-        Metadata {
+        Some(Metadata {
             uid: uid_bytes.to_vec(),
             additional_data: None,
-        },
+        }),
     )
     .map_err(|e| JsValue::from_str(&format!("Error encrypting header: {e:?}")))?;
 
@@ -168,10 +168,10 @@ pub fn webassembly_encrypt_hybrid_header_using_cache(
         Attributes::try_from(attributes_str)
             .map_err(|e| JsValue::from_str(&format!("Error parsing attributes: {e:?}")))?
             .attributes(),
-        Metadata {
+        Some(Metadata {
             uid: uid_bytes.to_vec(),
             additional_data: None,
-        },
+        }),
     )
     .map_err(|e| JsValue::from_str(&format!("Error encrypting header: {e:?}")))?;
 

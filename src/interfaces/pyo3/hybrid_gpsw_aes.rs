@@ -74,7 +74,7 @@ pub fn encrypt_hybrid_header(
         &policy,
         &public_key,
         &attributes,
-        metadata,
+        Some(metadata),
     )
     .map_err(|e| PyTypeError::new_err(format!("Error encrypting header: {e}")))?;
 

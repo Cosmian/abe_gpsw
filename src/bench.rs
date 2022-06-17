@@ -167,7 +167,7 @@ pub fn bench_header_encryption_size() -> anyhow::Result<()> {
         &policy,
         &public_key,
         &policy_attributes_1,
-        meta_data.clone(),
+        Some(meta_data.clone()),
     )?;
     let policy_attributes_3 = vec![
         attr("Department", "FIN"),
@@ -179,7 +179,7 @@ pub fn bench_header_encryption_size() -> anyhow::Result<()> {
         &policy,
         &public_key,
         &policy_attributes_3,
-        meta_data,
+        Some(meta_data),
     )?;
 
     println!(
@@ -224,7 +224,7 @@ pub fn bench_header_encryption_speed() -> anyhow::Result<()> {
             &policy,
             &public_key,
             &policy_attributes,
-            meta_data.clone(),
+            Some(meta_data.clone()),
         )?;
     }
     let avg_time = before.elapsed().as_micros() / loops;
@@ -264,7 +264,7 @@ fn generate_encrypted_header() -> anyhow::Result<EncryptedHeader<Aes256GcmCrypto
         &policy,
         &public_key,
         &policy_attributes,
-        meta_data,
+        Some(meta_data),
     )
 }
 

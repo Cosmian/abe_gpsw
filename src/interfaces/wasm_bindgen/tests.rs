@@ -121,7 +121,7 @@ pub fn test_decrypt_hybrid_header() {
         &policy,
         &public_key,
         policy_attributes.attributes(),
-        meta_data,
+        Some(meta_data),
     )
     .unwrap();
 

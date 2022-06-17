@@ -98,7 +98,7 @@ pub fn encrypt_hybrid_header<A, S>(
     policy: &Policy,
     public_key: &A::MasterPublicKey,
     attributes: &[Attribute],
-    meta_data: Metadata,
+    meta_data: Option<Metadata>,
 ) -> anyhow::Result<EncryptedHeader<S>>
 where
     A: AbeScheme + std::marker::Sync + std::marker::Send,
@@ -114,13 +114,13 @@ where
     let mut header_bytes = u32_len(&encrypted_sk)?.to_vec();
     // ...bytes
     header_bytes.extend(&encrypted_sk);
-    if !&meta_data.is_empty() {
+    if let Some(meta) = meta_data {
         // Nonce
         let nonce = S::Nonce::new(&mut CsRng::new());
         header_bytes.extend(nonce.to_bytes());
 
         // Encrypted metadata
-        let encrypted_metadata = S::encrypt(&symmetric_key, &meta_data.to_bytes()?, &nonce, None)?;
+        let encrypted_metadata = S::encrypt(&symmetric_key, &meta.to_bytes()?, &nonce, None)?;
         // ... size
         header_bytes.extend(u32_len(&encrypted_metadata)?);
         // ... bytes
@@ -223,7 +223,7 @@ where
     }
     block.write(0, plaintext)?;
 
-    //TODO: try passing an already instatiated CsRng
+    //TODO: try passing an already instantiated CsRng
     block
         .to_encrypted_bytes(&mut CsRng::new(), symmetric_key, uid, block_number)
         .map_err(|e| anyhow::anyhow!(e))

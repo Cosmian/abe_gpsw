@@ -3,12 +3,15 @@
 All notable changes to this project will be documented in this file.
 
 ---
-## [0.6.12] - 2022-06-16
+## [0.7.0] - 2022-06-16
 ### Added
 - [pyo3] Add Rust bindings for Python thanks to pyo3
 ### Changed
+- API change in `encrypt_hybrid_header`: meta_data becomes optional
+- Python notebook updated with new Python fast-FFI ABE module
 ### Fixed
 ### Removed
+- Github CI du to storage and time limitations
 ---
 
 ---

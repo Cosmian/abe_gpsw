@@ -210,7 +210,7 @@ pub unsafe extern "C" fn h_aes_encrypt_header_using_cache(
         &cache.policy,
         &cache.public_key,
         &attributes,
-        meta_data
+        Some(meta_data)
     ));
 
     let allocated = *symmetric_key_len;
@@ -339,7 +339,7 @@ pub unsafe extern "C" fn h_aes_encrypt_header(
         &policy,
         &public_key,
         &attributes,
-        meta_data
+        Some(meta_data)
     ));
 
     let allocated = *symmetric_key_len;
