@@ -7,7 +7,9 @@ All notable changes to this project will be documented in this file.
 ### Added
 - [pyo3] Add Rust bindings for Python thanks to pyo3
 ### Changed
-- API change in `encrypt_hybrid_header`: meta_data becomes optional
+- API changes:
+    * in statics.rs: `encrypt_hybrid_header`: meta_data becomes optional
+    * in UserDecryptionKey: `from_bytes` becomes `try_from_bytes`
 - Python notebook updated with new Python fast-FFI ABE module
 ### Fixed
 ### Removed

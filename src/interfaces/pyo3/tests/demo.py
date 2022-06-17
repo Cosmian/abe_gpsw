@@ -2,62 +2,35 @@ import abe_gpsw
 import json
 
 
-# Data to be written
-policy_json = {
-    "last_attribute": 10,
-    "max_attribute": 100,
-    "store": {
-        "Security Level": [
-            [
-                "Protected",
-                "Low Secret",
-                "Medium Secret",
-                "High Secret",
-                "Top Secret"
-            ], True
+# Declare 2 ABE policy axis:
+policy_axis_json = [
+    {
+        "name": "Security Level",
+        "attributes": [
+            "Protected",
+            "Low Secret",
+            "Medium Secret",
+            "High Secret",
+            "Top Secret"
         ],
-        "Department": [
-            [
-                "R&D",
-                "HR",
-                "MKG",
-                "FIN"
-            ], False
-        ]
+        "hierarchical": True
     },
-    "attribute_to_int": {
-        "Security Level::Low Secret": [
-            2
+    {
+        "name": "Department",
+        "attributes": [
+            "R&D",
+            "HR",
+            "MKG",
+            "FIN"
         ],
-        "Department::MKG": [
-            8
-        ],
-        "Security Level::Medium Secret": [
-            3
-        ],
-        "Security Level::Top Secret": [
-            5
-        ],
-        "Security Level::Protected": [
-            1
-        ],
-        "Department::FIN": [
-            10,
-            9
-        ],
-        "Department::HR": [
-            7
-        ],
-        "Department::R&D": [
-            6
-        ],
-        "Security Level::High Secret": [
-            4
-        ]
+        "hierarchical": False
     }
-}
+]
 
-policy = bytes(json.dumps(policy_json), 'utf-8')
+policy_axis = bytes(json.dumps(policy_axis_json), 'utf-8')
+
+policy = abe_gpsw.generate_policy(
+    policy_axis_bytes=policy_axis, max_attribute_value=100)
 
 master_keys = abe_gpsw.generate_master_keys(policy)
 
@@ -134,5 +107,11 @@ new_medium_secret_mkg_user = abe_gpsw.generate_user_private_key(
     master_keys[0], "Security Level::Medium Secret && Department::MKG", new_policy)
 
 # New messages can now be decrypted
-cleartext = abe_gpsw.decrypt(new_medium_secret_mkg_user, new_low_secret_mkg_data)
+cleartext = abe_gpsw.decrypt(
+    new_medium_secret_mkg_user, new_low_secret_mkg_data)
 assert(str(bytes(cleartext), "utf-8") == plaintext)
+
+print("Before the rotation of attribute Security Level::Low Secret")
+print(json.loads(str(bytes(policy), "utf-8")))
+print("After attributes rotation")
+print(json.loads(str(bytes(new_policy), "utf-8")))

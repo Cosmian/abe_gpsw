@@ -1,13 +1,27 @@
 use std::{
     array::TryFromSliceError,
-    convert::From,
+    convert::{From, Infallible},
+    ffi::NulError,
     num::{ParseIntError, TryFromIntError},
+    str::Utf8Error,
 };
 
+use cosmian_crypto_base::Error as CryptoError;
+use hex::FromHexError;
 use thiserror::Error;
 
 #[derive(Error, Debug, Clone, PartialEq)]
 pub enum FormatErr {
+    #[error("{0}")]
+    CryptoError(String),
+    #[error("{0}")]
+    FromHexError(FromHexError),
+    #[error("{0}")]
+    Infallible(Infallible),
+    #[error("{0}")]
+    Utf8Error(Utf8Error),
+    #[error("{0}")]
+    NulError(NulError),
     #[error("attribute not found: {0}")]
     AttributeNotFound(String),
     #[error("{} is missing{}",
@@ -71,6 +85,14 @@ pub enum FormatErr {
     ConversionFailed,
     #[error("error parsing formula")]
     ParsingError(ParsingError),
+    #[error("Empty private key")]
+    EmptyPrivateKey,
+    #[error("Empty ciphertext")]
+    EmptyCiphertext,
+    #[error("Empty plaintext")]
+    EmptyPlaintext,
+    #[error("Header length must be at least 4 bytes. Found {0}")]
+    InvalidHeaderSize(usize),
 }
 
 impl From<TryFromIntError> for FormatErr {
@@ -103,6 +125,48 @@ impl From<serde_json::Error> for FormatErr {
     }
 }
 
+impl From<cosmian_crypto_base::Error> for FormatErr {
+    fn from(e: cosmian_crypto_base::Error) -> Self {
+        match e {
+            CryptoError::SizeError { given, expected } => {
+                FormatErr::InvalidSize(format!("expected: {}, given: {}", expected, given))
+            }
+            CryptoError::InvalidSize(e) => FormatErr::InvalidSize(e),
+            e => FormatErr::CryptoError(e.to_string()),
+        }
+    }
+}
+
+impl From<FromHexError> for FormatErr {
+    fn from(e: FromHexError) -> Self {
+        FormatErr::FromHexError(e)
+    }
+}
+
+impl From<Infallible> for FormatErr {
+    fn from(e: Infallible) -> Self {
+        FormatErr::Infallible(e)
+    }
+}
+
+impl From<Utf8Error> for FormatErr {
+    fn from(e: Utf8Error) -> Self {
+        FormatErr::Utf8Error(e)
+    }
+}
+
+#[cfg(feature = "ffi")]
+impl From<std::ffi::NulError> for FormatErr {
+    fn from(e: std::ffi::NulError) -> Self {
+        FormatErr::NulError(e)
+    }
+}
+
+impl From<anyhow::ErrReport> for FormatErr {
+    fn from(e: anyhow::ErrReport) -> Self {
+        FormatErr::CryptoError(e.to_string())
+    }
+}
 #[derive(Error, Debug, Clone, PartialEq)]
 pub enum ParsingError {
     #[error("{0}")]

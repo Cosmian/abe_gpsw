@@ -22,7 +22,7 @@ use crate::{
     interfaces::hybrid_crypto::{decrypt_hybrid_block, decrypt_hybrid_header, ClearTextHeader},
 };
 
-pub const MAX_CLEAR_TEXT_SIZE: usize = 1_usize << 30;
+pub const MAX_CLEAR_TEXT_SIZE: usize = 1 << 30;
 
 type UserDecryptionKey = <Gpsw<Bls12_381> as AbeScheme>::UserDecryptionKey;
 

@@ -182,6 +182,9 @@ impl<G: BilinearMap> AsBytes for GpswDecryptionKey<G> {
     }
 
     fn from_bytes(bytes: &[u8]) -> Result<Self, FormatErr> {
+        if bytes.is_empty() {
+            return Err(FormatErr::EmptyPrivateKey);
+        }
         let raw_d_i = Vec::<G::G3>::from_bytes(bytes)?;
         let raw_d_i_len = raw_d_i.len_bytes();
         let msp = MonotoneSpanProgram::<G::Scalar>::from_bytes(&bytes[raw_d_i_len..])?;

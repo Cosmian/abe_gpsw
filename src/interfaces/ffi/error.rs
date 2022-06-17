@@ -18,12 +18,6 @@ pub enum FfiError {
     Deserialize(String),
 }
 
-impl From<anyhow::Report> for FfiError {
-    fn from(e: anyhow::Report) -> Self {
-        FfiError::Generic(e.to_string())
-    }
-}
-
 /// Return early with an error if a pointer is null
 ///
 /// This macro is equivalent to

@@ -128,6 +128,7 @@ build_osx:
 build_android:
   <<: *base_compile
   stage: build
+  image: gitlab.cosmian.com:5000/core/ci-rust-android:latest
   before_script:
     - rustup target add i686-linux-android x86_64-linux-android armv7-linux-androideabi aarch64-linux-android
   script:

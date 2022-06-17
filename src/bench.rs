@@ -5,6 +5,19 @@
 
 use std::env;
 
+#[cfg(feature = "interfaces")]
+use abe_gpsw::error::FormatErr;
+use abe_gpsw::{
+    core::{
+        bilinear_map::bls12_381::Bls12_381,
+        gpsw::{AbeScheme, AsBytes, Gpsw},
+        policy::{attr, Policy},
+    },
+    interfaces::hybrid_crypto::{decrypt_hybrid_header, encrypt_hybrid_header, EncryptedHeader},
+};
+use cosmian_crypto_base::{
+    hybrid_crypto::Metadata, symmetric_crypto::aes_256_gcm_pure::Aes256GcmCrypto,
+};
 #[cfg(feature = "ffi")]
 use {
     abe_gpsw::interfaces::ffi::{
@@ -18,22 +31,6 @@ use {
     std::{
         ffi::{CStr, CString},
         os::raw::c_int,
-    },
-};
-#[cfg(feature = "interfaces")]
-use {
-    abe_gpsw::{
-        core::{
-            bilinear_map::bls12_381::Bls12_381,
-            gpsw::{AbeScheme, AsBytes, Gpsw},
-            policy::{attr, Policy},
-        },
-        interfaces::hybrid_crypto::{
-            decrypt_hybrid_header, encrypt_hybrid_header, EncryptedHeader,
-        },
-    },
-    cosmian_crypto_base::{
-        hybrid_crypto::Metadata, symmetric_crypto::aes_256_gcm_pure::Aes256GcmCrypto,
     },
 };
 #[cfg(any(feature = "interfaces", feature = "ffi"))]
@@ -234,7 +231,7 @@ pub fn bench_header_encryption_speed() -> anyhow::Result<()> {
 }
 
 #[cfg(feature = "interfaces")]
-fn generate_encrypted_header() -> anyhow::Result<EncryptedHeader<Aes256GcmCrypto>> {
+fn generate_encrypted_header() -> Result<EncryptedHeader<Aes256GcmCrypto>, FormatErr> {
     let public_key_json: Value = serde_json::from_str(include_str!(
         "./interfaces/hybrid_crypto/tests/public_master_key.json"
     ))?;

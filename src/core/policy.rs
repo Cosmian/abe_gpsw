@@ -615,11 +615,11 @@ pub fn ap(axis: &str, name: &str) -> AccessPolicy {
 // Define a policy axis by its name and its underlying attribute names
 // If `hierarchical` is `true`, we assume a lexicographical order based on the
 // attribute name
-#[derive(Clone)]
+#[derive(Clone, Deserialize, Debug)]
 pub(crate) struct PolicyAxis {
-    name: String,
-    attributes: Vec<String>,
-    hierarchical: bool,
+    pub name: String,
+    pub attributes: Vec<String>,
+    pub hierarchical: bool,
 }
 
 impl PolicyAxis {
