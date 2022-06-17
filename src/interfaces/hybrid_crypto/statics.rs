@@ -23,7 +23,7 @@ where
 }
 
 impl<S: SymmetricCrypto> EncryptedHeader<S> {
-    pub fn as_bytes(&self) -> Result<Vec<u8>, FormatErr> {
+    pub fn try_into_bytes(&self) -> Result<Vec<u8>, FormatErr> {
         let mut bytes: Vec<u8> =
             u32::to_be_bytes(<S as SymmetricCrypto>::Key::LENGTH as u32).try_into()?;
         bytes.extend_from_slice(&self.symmetric_key.to_bytes());
@@ -31,7 +31,7 @@ impl<S: SymmetricCrypto> EncryptedHeader<S> {
         Ok(bytes)
     }
 
-    pub fn from_bytes(header: &[u8]) -> Result<Self, FormatErr> {
+    pub fn try_from_bytes(header: &[u8]) -> Result<Self, FormatErr> {
         if header.len() < 4 {
             return Err(FormatErr::InvalidHeaderSize(header.len()));
         }
@@ -58,7 +58,7 @@ where
 }
 
 impl<S: SymmetricCrypto> ClearTextHeader<S> {
-    pub fn as_bytes(&self) -> Result<Vec<u8>, FormatErr> {
+    pub fn try_into_bytes(&self) -> Result<Vec<u8>, FormatErr> {
         let mut bytes: Vec<u8> =
             u32::to_be_bytes(<S as SymmetricCrypto>::Key::LENGTH as u32).try_into()?;
         bytes.extend_from_slice(&self.symmetric_key.to_bytes());
@@ -66,7 +66,7 @@ impl<S: SymmetricCrypto> ClearTextHeader<S> {
         Ok(bytes)
     }
 
-    pub fn from_bytes(header: &[u8]) -> Result<Self, FormatErr> {
+    pub fn try_from_bytes(header: &[u8]) -> Result<Self, FormatErr> {
         if header.len() < 4 {
             return Err(FormatErr::InvalidHeaderSize(header.len()));
         }

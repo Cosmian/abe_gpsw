@@ -23,7 +23,7 @@ pub struct MonotoneSpanProgram<I> {
 }
 
 impl<I: AsBytes> AsBytes for MonotoneSpanProgram<I> {
-    fn as_bytes(&self) -> Result<Vec<u8>, FormatErr> {
+    fn try_into_bytes(&self) -> Result<Vec<u8>, FormatErr> {
         let mut res = Vec::with_capacity(
             8 + (self.nb_row * self.nb_col * self.matrix[0][0].len_bytes()) + (self.nb_row * 4),
         );
@@ -34,14 +34,14 @@ impl<I: AsBytes> AsBytes for MonotoneSpanProgram<I> {
         }
         for r in &self.matrix {
             for c in r {
-                res.append(&mut c.as_bytes()?);
+                res.append(&mut c.try_into_bytes()?);
             }
         }
 
         Ok(res)
     }
 
-    fn from_bytes(bytes: &[u8]) -> Result<Self, FormatErr> {
+    fn try_from_bytes(bytes: &[u8]) -> Result<Self, FormatErr> {
         if bytes.len() < 8 {
             return Err(FormatErr::InvalidSize(
                 "minimum len of 8 bytes is required for MSP".to_string(),
@@ -72,7 +72,7 @@ impl<I: AsBytes> AsBytes for MonotoneSpanProgram<I> {
 
         let mut matrix = Vec::with_capacity(nb_row);
         let mut row = Vec::with_capacity(nb_col);
-        row.push(I::from_bytes(&bytes[8 + (4 * nb_row)..])?);
+        row.push(I::try_from_bytes(&bytes[8 + (4 * nb_row)..])?);
         if bytes.len() < 8 + (4 * nb_row) + (nb_row * nb_col * row[0].len_bytes()) {
             return Err(FormatErr::InvalidSize(
                 "invalid matrix size read from bytes".to_string(),
@@ -80,14 +80,14 @@ impl<I: AsBytes> AsBytes for MonotoneSpanProgram<I> {
         }
         for c in 1..nb_col {
             let index = 8 + (4 * nb_row) + (c * row[0].len_bytes());
-            row.push(I::from_bytes(&bytes[index..])?);
+            row.push(I::try_from_bytes(&bytes[index..])?);
         }
         matrix.push(row);
         for r in 1..nb_row {
             let mut row = Vec::with_capacity(nb_col);
             for c in 0..nb_col {
                 let index = 8 + (4 * nb_row) + (((r * nb_col) + c) * matrix[0][0].len_bytes());
-                row.push(I::from_bytes(&bytes[index..])?);
+                row.push(I::try_from_bytes(&bytes[index..])?);
             }
             matrix.push(row);
         }

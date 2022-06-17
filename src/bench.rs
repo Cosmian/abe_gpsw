@@ -143,7 +143,7 @@ pub fn bench_header_encryption_size() -> anyhow::Result<()> {
 
     // Public Key bytes
     let hex_key = key_value[0]["value"].as_str().unwrap();
-    let public_key = PublicKey::from_bytes(&hex::decode(hex_key)?)?;
+    let public_key = PublicKey::try_from_bytes(&hex::decode(hex_key)?)?;
 
     // Policy
     let policy_hex = key_value[1]["value"][4]["value"][0]["value"][2]["value"]
@@ -198,7 +198,7 @@ pub fn bench_header_encryption_speed() -> anyhow::Result<()> {
 
     // Public Key bytes
     let hex_key = key_value[0]["value"].as_str().unwrap();
-    let public_key = PublicKey::from_bytes(&hex::decode(hex_key)?)?;
+    let public_key = PublicKey::try_from_bytes(&hex::decode(hex_key)?)?;
 
     // Policy
     let policy_hex = key_value[1]["value"][4]["value"][0]["value"][2]["value"]
@@ -239,7 +239,7 @@ fn generate_encrypted_header() -> Result<EncryptedHeader<Aes256GcmCrypto>, Forma
 
     // Public Key bytes
     let hex_key = key_value[0]["value"].as_str().unwrap();
-    let public_key = PublicKey::from_bytes(&hex::decode(hex_key)?)?;
+    let public_key = PublicKey::try_from_bytes(&hex::decode(hex_key)?)?;
 
     // Policy
 
@@ -277,7 +277,7 @@ pub unsafe fn bench_ffi_header_encryption() -> anyhow::Result<()> {
 
     // Public Key bytes
     let hex_key = &key_value[0]["value"].as_str().unwrap();
-    let public_key = PublicKey::from_bytes(&hex::decode(hex_key)?)?;
+    let public_key = PublicKey::try_from_bytes(&hex::decode(hex_key)?)?;
 
     // Policy
 
@@ -306,7 +306,7 @@ pub unsafe fn bench_ffi_header_encryption() -> anyhow::Result<()> {
     let policy_cs = CString::new(serde_json::to_string(&policy)?.as_str())?;
     let policy_ptr = policy_cs.as_ptr();
 
-    let public_key_bytes = public_key.as_bytes()?;
+    let public_key_bytes = public_key.try_into_bytes()?;
     let public_key_ptr = public_key_bytes.as_ptr();
     let public_key_len = public_key_bytes.len() as i32;
 
@@ -354,7 +354,7 @@ pub unsafe fn bench_ffi_header_encryption_using_cache() -> anyhow::Result<()> {
 
     // Public Key bytes
     let hex_key = &key_value[0]["value"].as_str().unwrap();
-    let public_key = PublicKey::from_bytes(&hex::decode(hex_key)?)?;
+    let public_key = PublicKey::try_from_bytes(&hex::decode(hex_key)?)?;
 
     // Policy
 
@@ -376,7 +376,7 @@ pub unsafe fn bench_ffi_header_encryption_using_cache() -> anyhow::Result<()> {
     let policy_cs = CString::new(serde_json::to_string(&policy)?.as_str())?;
     let policy_ptr = policy_cs.as_ptr();
 
-    let public_key_bytes = public_key.as_bytes()?;
+    let public_key_bytes = public_key.try_into_bytes()?;
     let public_key_ptr = public_key_bytes.as_ptr().cast::<i8>();
     let public_key_len = public_key_bytes.len() as i32;
 
@@ -439,7 +439,7 @@ pub fn bench_header_decryption() -> anyhow::Result<()> {
     ))?;
     let key_value = &user_decryption_key_json["value"][0]["value"][1]["value"];
     let hex_key = &key_value[0]["value"].as_str().unwrap();
-    let user_decryption_key = UserDecryptionKey::from_bytes(&hex::decode(hex_key)?)?;
+    let user_decryption_key = UserDecryptionKey::try_from_bytes(&hex::decode(hex_key)?)?;
 
     let loops = 5000;
     let before = Instant::now();
@@ -467,7 +467,7 @@ pub unsafe fn bench_ffi_header_decryption() -> anyhow::Result<()> {
     ))?;
     let key_value = &user_decryption_key_json["value"][0]["value"][1]["value"];
     let hex_key = &key_value[0]["value"].as_str().unwrap();
-    let user_decryption_key = UserDecryptionKey::from_bytes(&hex::decode(hex_key)?)?;
+    let user_decryption_key = UserDecryptionKey::try_from_bytes(&hex::decode(hex_key)?)?;
 
     let mut symmetric_key = vec![0u8; 32];
     let symmetric_key_ptr = symmetric_key.as_mut_ptr().cast::<i8>();
@@ -481,7 +481,7 @@ pub unsafe fn bench_ffi_header_decryption() -> anyhow::Result<()> {
     let additional_data_ptr = additional_data.as_mut_ptr().cast::<i8>();
     let mut additional_data_len = additional_data.len() as c_int;
 
-    let user_decryption_key_bytes = user_decryption_key.as_bytes()?;
+    let user_decryption_key_bytes = user_decryption_key.try_into_bytes()?;
     let user_decryption_key_ptr = user_decryption_key_bytes.as_ptr().cast::<i8>();
     let user_decryption_key_len = user_decryption_key_bytes.len() as i32;
 
@@ -522,7 +522,7 @@ pub unsafe fn bench_ffi_header_decryption_using_cache() -> anyhow::Result<()> {
     ))?;
     let key_value = &user_decryption_key_json["value"][0]["value"][1]["value"];
     let hex_key = &key_value[0]["value"].as_str().unwrap();
-    let user_decryption_key = UserDecryptionKey::from_bytes(&hex::decode(hex_key)?)?;
+    let user_decryption_key = UserDecryptionKey::try_from_bytes(&hex::decode(hex_key)?)?;
 
     let mut symmetric_key = vec![0u8; 32];
     let symmetric_key_ptr = symmetric_key.as_mut_ptr().cast::<i8>();
@@ -536,7 +536,7 @@ pub unsafe fn bench_ffi_header_decryption_using_cache() -> anyhow::Result<()> {
     let additional_data_ptr = additional_data.as_mut_ptr().cast::<i8>();
     let mut additional_data_len = additional_data.len() as c_int;
 
-    let user_decryption_key_bytes = user_decryption_key.as_bytes()?;
+    let user_decryption_key_bytes = user_decryption_key.try_into_bytes()?;
     let user_decryption_key_ptr = user_decryption_key_bytes.as_ptr().cast::<i8>();
     let user_decryption_key_len = user_decryption_key_bytes.len() as i32;
 

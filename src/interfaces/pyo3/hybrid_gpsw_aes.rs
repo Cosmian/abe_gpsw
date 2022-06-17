@@ -64,7 +64,7 @@ pub fn encrypt_hybrid_header(
         .map_err(|e| PyTypeError::new_err(format!("Error deserializing policy: {e}")))?;
     let attributes: Vec<Attribute> = serde_json::from_slice(&attributes_bytes)
         .map_err(|e| PyTypeError::new_err(format!("Error deserializing attributes: {e}")))?;
-    let public_key = PublicKey::from_bytes(&public_key_bytes)?;
+    let public_key = PublicKey::try_from_bytes(&public_key_bytes)?;
 
     //
     // Encrypt
@@ -88,7 +88,7 @@ fn internal_decrypt_hybrid_header(
 ) -> PyResult<(Vec<u8>, Vec<u8>)> {
     //
     // Parse user decryption key
-    let user_decryption_key = UserDecryptionKey::from_bytes(user_decryption_key_bytes)?;
+    let user_decryption_key = UserDecryptionKey::try_from_bytes(user_decryption_key_bytes)?;
 
     //
     // Finally decrypt symmetric key using given user decryption key

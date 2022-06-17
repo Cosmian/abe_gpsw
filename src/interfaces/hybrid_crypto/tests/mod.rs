@@ -34,7 +34,7 @@ pub fn test_aes_hybrid_encryption() -> Result<(), FormatErr> {
 
     // Public Key bytes
     let hex_key = &key_value[0]["value"].as_str().unwrap();
-    let public_key = PublicKey::from_bytes(&hex::decode(hex_key)?)?;
+    let public_key = PublicKey::try_from_bytes(&hex::decode(hex_key)?)?;
 
     // Policy
     let policy_hex = &key_value[1]["value"][4]["value"][0]["value"][2]["value"]
@@ -78,10 +78,10 @@ pub fn test_aes_hybrid_encryption() -> Result<(), FormatErr> {
         serde_json::from_str(include_str!("./fin_confidential_user_key.json"))?;
     let key_value = &user_decryption_key_json["value"][0]["value"][1]["value"];
     let hex_key = &key_value[0]["value"].as_str().unwrap();
-    let user_decryption_key = UserDecryptionKey::from_bytes(&hex::decode(hex_key)?)?;
+    let user_decryption_key = UserDecryptionKey::try_from_bytes(&hex::decode(hex_key)?)?;
     println!(
         "User decryption Key len {}",
-        &user_decryption_key.as_bytes()?.len()
+        &user_decryption_key.try_into_bytes()?.len()
     );
 
     let header_ = decrypt_hybrid_header::<Gpsw<Bls12_381>, Aes256GcmCrypto>(

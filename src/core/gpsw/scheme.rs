@@ -46,7 +46,7 @@ pub struct GpswDecryptionKey<G: BilinearMap> {
 
 impl<G: BilinearMap> Display for GpswDecryptionKey<G> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        if let Ok(bytes) = self.as_bytes() {
+        if let Ok(bytes) = self.try_into_bytes() {
             write!(f, "{}", hex::encode(bytes))
         } else {
             write!(f, "Invalid input")
@@ -56,7 +56,7 @@ impl<G: BilinearMap> Display for GpswDecryptionKey<G> {
 
 impl<G: BilinearMap> Display for GpswMasterPrivateKey<G> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        if let Ok(bytes) = self.as_bytes() {
+        if let Ok(bytes) = self.try_into_bytes() {
             write!(f, "{}", hex::encode(bytes))
         } else {
             write!(f, "Invalid input")
@@ -66,7 +66,7 @@ impl<G: BilinearMap> Display for GpswMasterPrivateKey<G> {
 
 impl<G: BilinearMap> Display for GpswMasterPublicKey<G> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        if let Ok(bytes) = self.as_bytes() {
+        if let Ok(bytes) = self.try_into_bytes() {
             write!(f, "{}", hex::encode(bytes))
         } else {
             write!(f, "Invalid input")
@@ -76,7 +76,7 @@ impl<G: BilinearMap> Display for GpswMasterPublicKey<G> {
 
 impl<G: BilinearMap> Display for GpswMasterPublicDelegationKey<G> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        if let Ok(bytes) = self.as_bytes() {
+        if let Ok(bytes) = self.try_into_bytes() {
             write!(f, "{}", hex::encode(bytes))
         } else {
             write!(f, "Invalid input")
@@ -99,9 +99,9 @@ impl<G: BilinearMap> PartialEq for GpswDecryptionKey<G> {
 }
 
 impl<G: BilinearMap> AsBytes for GpswMasterPrivateKey<G> {
-    fn as_bytes(&self) -> Result<Vec<u8>, FormatErr> {
-        let mut t_i_bytes = self.t_i.as_bytes()?;
-        let mut y_bytes = self.y.as_bytes()?;
+    fn try_into_bytes(&self) -> Result<Vec<u8>, FormatErr> {
+        let mut t_i_bytes = self.t_i.try_into_bytes()?;
+        let mut y_bytes = self.y.try_into_bytes()?;
         let mut res = Vec::with_capacity(t_i_bytes.len() + y_bytes.len());
 
         res.append(&mut t_i_bytes);
@@ -110,10 +110,10 @@ impl<G: BilinearMap> AsBytes for GpswMasterPrivateKey<G> {
         Ok(res)
     }
 
-    fn from_bytes(bytes: &[u8]) -> Result<Self, FormatErr> {
-        let t_i = Vec::<G::Scalar>::from_bytes(bytes)?;
+    fn try_from_bytes(bytes: &[u8]) -> Result<Self, FormatErr> {
+        let t_i = Vec::<G::Scalar>::try_from_bytes(bytes)?;
         let t_i_len = t_i.len_bytes();
-        let y = G::Scalar::from_bytes(&bytes[t_i_len..])?;
+        let y = G::Scalar::try_from_bytes(&bytes[t_i_len..])?;
 
         Ok(Self { t_i, y })
     }
@@ -124,9 +124,9 @@ impl<G: BilinearMap> AsBytes for GpswMasterPrivateKey<G> {
 }
 
 impl<G: BilinearMap> AsBytes for GpswMasterPublicKey<G> {
-    fn as_bytes(&self) -> Result<Vec<u8>, FormatErr> {
-        let mut t_i_bytes = self.t_i.as_bytes()?;
-        let mut y_bytes = self.y.as_bytes()?;
+    fn try_into_bytes(&self) -> Result<Vec<u8>, FormatErr> {
+        let mut t_i_bytes = self.t_i.try_into_bytes()?;
+        let mut y_bytes = self.y.try_into_bytes()?;
         let mut res = Vec::with_capacity(t_i_bytes.len() + y_bytes.len());
 
         res.append(&mut t_i_bytes);
@@ -135,10 +135,10 @@ impl<G: BilinearMap> AsBytes for GpswMasterPublicKey<G> {
         Ok(res)
     }
 
-    fn from_bytes(bytes: &[u8]) -> Result<Self, FormatErr> {
-        let t_i = Vec::<G::G2>::from_bytes(bytes)?;
+    fn try_from_bytes(bytes: &[u8]) -> Result<Self, FormatErr> {
+        let t_i = Vec::<G::G2>::try_from_bytes(bytes)?;
         let t_i_len = t_i.len_bytes();
-        let y = G::Gt::from_bytes(&bytes[t_i_len..])?;
+        let y = G::Gt::try_from_bytes(&bytes[t_i_len..])?;
 
         Ok(Self { t_i, y })
     }
@@ -149,8 +149,8 @@ impl<G: BilinearMap> AsBytes for GpswMasterPublicKey<G> {
 }
 
 impl<G: BilinearMap> AsBytes for GpswMasterPublicDelegationKey<G> {
-    fn as_bytes(&self) -> Result<Vec<u8>, FormatErr> {
-        let mut inv_t_i_bytes = self.inv_t_i.as_bytes()?;
+    fn try_into_bytes(&self) -> Result<Vec<u8>, FormatErr> {
+        let mut inv_t_i_bytes = self.inv_t_i.try_into_bytes()?;
         let mut res = Vec::with_capacity(inv_t_i_bytes.len());
 
         res.append(&mut inv_t_i_bytes);
@@ -158,8 +158,8 @@ impl<G: BilinearMap> AsBytes for GpswMasterPublicDelegationKey<G> {
         Ok(res)
     }
 
-    fn from_bytes(bytes: &[u8]) -> Result<Self, FormatErr> {
-        let inv_t_i = Vec::<G::G3>::from_bytes(bytes)?;
+    fn try_from_bytes(bytes: &[u8]) -> Result<Self, FormatErr> {
+        let inv_t_i = Vec::<G::G3>::try_from_bytes(bytes)?;
 
         Ok(Self { inv_t_i })
     }
@@ -170,9 +170,9 @@ impl<G: BilinearMap> AsBytes for GpswMasterPublicDelegationKey<G> {
 }
 
 impl<G: BilinearMap> AsBytes for GpswDecryptionKey<G> {
-    fn as_bytes(&self) -> Result<Vec<u8>, FormatErr> {
-        let mut raw_d_i_bytes = self.raw_d_i.as_bytes()?;
-        let mut msp_bytes = self.msp.as_bytes()?;
+    fn try_into_bytes(&self) -> Result<Vec<u8>, FormatErr> {
+        let mut raw_d_i_bytes = self.raw_d_i.try_into_bytes()?;
+        let mut msp_bytes = self.msp.try_into_bytes()?;
         let mut res = Vec::with_capacity(raw_d_i_bytes.len() + msp_bytes.len());
 
         res.append(&mut raw_d_i_bytes);
@@ -181,13 +181,13 @@ impl<G: BilinearMap> AsBytes for GpswDecryptionKey<G> {
         Ok(res)
     }
 
-    fn from_bytes(bytes: &[u8]) -> Result<Self, FormatErr> {
+    fn try_from_bytes(bytes: &[u8]) -> Result<Self, FormatErr> {
         if bytes.is_empty() {
             return Err(FormatErr::EmptyPrivateKey);
         }
-        let raw_d_i = Vec::<G::G3>::from_bytes(bytes)?;
+        let raw_d_i = Vec::<G::G3>::try_from_bytes(bytes)?;
         let raw_d_i_len = raw_d_i.len_bytes();
-        let msp = MonotoneSpanProgram::<G::Scalar>::from_bytes(&bytes[raw_d_i_len..])?;
+        let msp = MonotoneSpanProgram::<G::Scalar>::try_from_bytes(&bytes[raw_d_i_len..])?;
         let d_i = raw_d_i.iter().map(|g3| G::g3_to_g1(g3)).collect();
 
         Ok(Self { raw_d_i, d_i, msp })
@@ -199,10 +199,10 @@ impl<G: BilinearMap> AsBytes for GpswDecryptionKey<G> {
 }
 
 impl<G: BilinearMap> AsBytes for GpswCipherText<G> {
-    fn as_bytes(&self) -> Result<Vec<u8>, FormatErr> {
-        let mut gamma_bytes = self.gamma.as_bytes()?;
-        let mut e_prime_bytes = self.e_prime.as_bytes()?;
-        let mut e_i_bytes = self.e_i.as_bytes()?;
+    fn try_into_bytes(&self) -> Result<Vec<u8>, FormatErr> {
+        let mut gamma_bytes = self.gamma.try_into_bytes()?;
+        let mut e_prime_bytes = self.e_prime.try_into_bytes()?;
+        let mut e_i_bytes = self.e_i.try_into_bytes()?;
         let mut res = Vec::with_capacity(gamma_bytes.len() + e_prime_bytes.len() + e_i_bytes.len());
 
         res.append(&mut gamma_bytes);
@@ -212,12 +212,12 @@ impl<G: BilinearMap> AsBytes for GpswCipherText<G> {
         Ok(res)
     }
 
-    fn from_bytes(bytes: &[u8]) -> Result<Self, FormatErr> {
-        let gamma = Vec::<u32>::from_bytes(&bytes[0..])?;
+    fn try_from_bytes(bytes: &[u8]) -> Result<Self, FormatErr> {
+        let gamma = Vec::<u32>::try_from_bytes(&bytes[0..])?;
         let gamma_len = gamma.len_bytes();
-        let e_i = Vec::<G::G2>::from_bytes(&bytes[gamma_len..])?;
+        let e_i = Vec::<G::G2>::try_from_bytes(&bytes[gamma_len..])?;
         let e_i_len = e_i.len_bytes();
-        let e_prime = G::Gt::from_bytes(&bytes[gamma_len + e_i_len..])?;
+        let e_prime = G::Gt::try_from_bytes(&bytes[gamma_len + e_i_len..])?;
 
         Ok(Self {
             gamma,

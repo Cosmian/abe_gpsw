@@ -20,8 +20,8 @@ pub fn generate_master_keys(policy_bytes: Vec<u8>) -> PyResult<(Vec<u8>, Vec<u8>
         Engine::<Gpsw<Bls12_381>>::new().generate_master_key(&policy)?;
 
     Ok((
-        master_private_key.as_bytes()?,
-        master_public_key.as_bytes()?,
+        master_private_key.try_into_bytes()?,
+        master_public_key.try_into_bytes()?,
     ))
 }
 
@@ -32,7 +32,7 @@ pub fn generate_user_private_key(
     policy_bytes: Vec<u8>,
 ) -> PyResult<Vec<u8>> {
     let master_private_key =
-        GpswMasterPrivateKey::<Bls12_381>::from_bytes(&master_private_key_bytes)?;
+        GpswMasterPrivateKey::<Bls12_381>::try_from_bytes(&master_private_key_bytes)?;
     let policy = serde_json::from_slice(&policy_bytes)
         .map_err(|e| PyTypeError::new_err(format!("Policy deserialization failed: {e}")))?;
     let access_policy = AccessPolicy::from_boolean_expression(&access_policy_str)?;
@@ -43,7 +43,7 @@ pub fn generate_user_private_key(
         &access_policy,
     )?;
 
-    Ok(user_key.as_bytes()?)
+    Ok(user_key.try_into_bytes()?)
 }
 
 #[pyfunction]

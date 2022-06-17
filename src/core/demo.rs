@@ -1,14 +1,14 @@
-use crate::core::gpsw::AsBytes;
+use std::convert::TryFrom;
+
 use crate::{
     core::{
         bilinear_map::bls12_381::Bls12_381,
         engine::Engine,
-        gpsw::Gpsw,
+        gpsw::{AsBytes, Gpsw},
         policy::{AccessPolicy, Attributes, Policy},
     },
     error::FormatErr,
 };
-use std::convert::TryFrom;
 
 /// # Encryption using an Authorization Policy
 /// This test demonstrates how data can be encrypted with policy attributes.
@@ -69,10 +69,13 @@ fn abe() -> Result<(), FormatErr> {
     let engine = Engine::<Gpsw<Bls12_381>>::new();
     println!("Instantiating the ABE Master Keys (only once)...");
     let (master_private_key, public_key, delegation_key) = engine.generate_master_key(&policy)?;
-    println!("public_key: {:?}", hex::encode(public_key.as_bytes()?));
+    println!(
+        "public_key: {:?}",
+        hex::encode(public_key.try_into_bytes()?)
+    );
     println!(
         "master_private_key: {:?}",
-        hex::encode(master_private_key.as_bytes()?)
+        hex::encode(master_private_key.try_into_bytes()?)
     );
     println!("... done. Running demo");
 
@@ -103,7 +106,7 @@ fn abe() -> Result<(), FormatErr> {
     )?;
     println!(
         "top_secret_mkg_fin_delegate: {:?}",
-        hex::encode(top_secret_mkg_fin_delegate.as_bytes()?)
+        hex::encode(top_secret_mkg_fin_delegate.try_into_bytes()?)
     );
 
     //
@@ -134,7 +137,7 @@ fn abe() -> Result<(), FormatErr> {
     )?;
     println!(
         "medium_secret_mkg_user: {:?}",
-        hex::encode(medium_secret_mkg_user.as_bytes()?)
+        hex::encode(medium_secret_mkg_user.try_into_bytes()?)
     );
 
     // However, a Delegate cannot generate user keys for which it does not have the

@@ -9,7 +9,9 @@ All notable changes to this project will be documented in this file.
 ### Changed
 - API changes:
     * in statics.rs: `encrypt_hybrid_header`: meta_data becomes optional
-    * in UserDecryptionKey: `from_bytes` becomes `try_from_bytes`
+    * in trait core/gpsw/mod.rs `AsBytes`:
+      - `from_bytes` becomes `try_from_bytes`
+      - `as_bytes` becomes `try_into_bytes`
 - Python notebook updated with new Python fast-FFI ABE module
 ### Fixed
 ### Removed

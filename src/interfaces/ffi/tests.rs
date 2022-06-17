@@ -41,7 +41,7 @@ unsafe fn encrypt_header(
 
     // Public Key bytes
     let hex_key = &key_value[0]["value"].as_str().unwrap();
-    let public_key = PublicKey::from_bytes(&hex::decode(hex_key)?)?;
+    let public_key = PublicKey::try_from_bytes(&hex::decode(hex_key)?)?;
 
     // Policy
     let policy_hex = key_value[1]["value"][4]["value"][0]["value"][2]["value"]
@@ -65,7 +65,7 @@ unsafe fn encrypt_header(
     let policy_cs = CString::new(serde_json::to_string(&policy)?.as_str())?;
     let policy_ptr = policy_cs.as_ptr();
 
-    let public_key_bytes = public_key.as_bytes()?;
+    let public_key_bytes = public_key.try_into_bytes()?;
     let public_key_ptr = public_key_bytes.as_ptr();
     let public_key_len = public_key_bytes.len() as i32;
 
@@ -116,7 +116,7 @@ unsafe fn decrypt_header(
     ))?;
     let key_value = &user_decryption_key_json["value"][0]["value"][1]["value"];
     let hex_key = &key_value[0]["value"].as_str().unwrap();
-    let user_decryption_key = UserDecryptionKey::from_bytes(&hex::decode(hex_key)?)?;
+    let user_decryption_key = UserDecryptionKey::try_from_bytes(&hex::decode(hex_key)?)?;
 
     let mut symmetric_key = vec![0u8; 32];
     let symmetric_key_ptr = symmetric_key.as_mut_ptr() as *mut c_char;
@@ -130,7 +130,7 @@ unsafe fn decrypt_header(
     let additional_data_ptr = additional_data.as_mut_ptr() as *mut c_char;
     let mut additional_data_len = additional_data.len() as c_int;
 
-    let user_decryption_key_bytes = user_decryption_key.as_bytes()?;
+    let user_decryption_key_bytes = user_decryption_key.try_into_bytes()?;
     let user_decryption_key_ptr = user_decryption_key_bytes.as_ptr() as *const c_char;
     let user_decryption_key_len = user_decryption_key_bytes.len() as i32;
 
@@ -195,7 +195,7 @@ unsafe fn encrypt_header_using_cache(
 
     // Public Key bytes
     let hex_key = &key_value[0]["value"].as_str().unwrap();
-    let public_key = PublicKey::from_bytes(&hex::decode(hex_key)?)?;
+    let public_key = PublicKey::try_from_bytes(&hex::decode(hex_key)?)?;
 
     // Policy
     let policy_hex = key_value[1]["value"][4]["value"][0]["value"][2]["value"]
@@ -206,7 +206,7 @@ unsafe fn encrypt_header_using_cache(
     let policy_cs = CString::new(serde_json::to_string(&policy)?.as_str())?;
     let policy_ptr = policy_cs.as_ptr();
 
-    let public_key_bytes = public_key.as_bytes()?;
+    let public_key_bytes = public_key.try_into_bytes()?;
     let public_key_ptr = public_key_bytes.as_ptr() as *const c_char;
     let public_key_len = public_key_bytes.len() as i32;
 
@@ -275,9 +275,9 @@ unsafe fn decrypt_header_using_cache(
     ))?;
     let key_value = &user_decryption_key_json["value"][0]["value"][1]["value"];
     let hex_key = &key_value[0]["value"].as_str().unwrap();
-    let user_decryption_key = UserDecryptionKey::from_bytes(&hex::decode(hex_key)?)?;
+    let user_decryption_key = UserDecryptionKey::try_from_bytes(&hex::decode(hex_key)?)?;
 
-    let user_decryption_key_bytes = user_decryption_key.as_bytes()?;
+    let user_decryption_key_bytes = user_decryption_key.try_into_bytes()?;
     let user_decryption_key_ptr = user_decryption_key_bytes.as_ptr() as *const c_char;
     let user_decryption_key_len = user_decryption_key_bytes.len() as i32;
 

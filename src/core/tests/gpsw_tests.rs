@@ -60,7 +60,7 @@ fn user_key_as_bytes() -> Result<(), FormatErr> {
 
     let mk = abe.generate_master_key(10)?;
     let uk = abe.key_generation(&msp, &mk.priv_key)?;
-    let uk_2 = GpswDecryptionKey::<Bls12_381>::from_bytes(&uk.as_bytes()?)?;
+    let uk_2 = GpswDecryptionKey::<Bls12_381>::try_from_bytes(&uk.try_into_bytes()?)?;
 
     assert_eq!(uk.msp, uk_2.msp);
     assert_eq!(uk.raw_d_i, uk_2.raw_d_i);
@@ -86,7 +86,7 @@ fn ciphertext_as_bytes() -> Result<(), FormatErr> {
     let message = abe.msg_encode("test".as_bytes())?;
     let gamma = [1, 4];
     let enc = abe.encrypt(&message, &gamma, &mk.pub_key)?;
-    let enc_2 = GpswCipherText::<Bls12_381>::from_bytes(&enc.as_bytes()?)?;
+    let enc_2 = GpswCipherText::<Bls12_381>::try_from_bytes(&enc.try_into_bytes()?)?;
 
     assert_eq!(enc.gamma, enc_2.gamma);
     assert_eq!(enc.e_prime, enc_2.e_prime);
@@ -111,7 +111,7 @@ fn master_public_key_as_bytes() -> Result<(), FormatErr> {
 
     let mk = abe.generate_master_key(10)?;
     let mpk = mk.pub_key;
-    let mpk_2 = GpswMasterPublicKey::<Bls12_381>::from_bytes(&mpk.as_bytes()?)?;
+    let mpk_2 = GpswMasterPublicKey::<Bls12_381>::try_from_bytes(&mpk.try_into_bytes()?)?;
 
     assert_eq!(mpk.t_i, mpk_2.t_i);
     assert_eq!(mpk.y, mpk_2.y);
@@ -176,7 +176,7 @@ fn master_private_key_as_bytes() -> Result<(), FormatErr> {
     };
     let mk = abe.generate_master_key(10)?;
     let mpk = mk.priv_key;
-    let mpk_2 = GpswMasterPrivateKey::<Bls12_381>::from_bytes(&mpk.as_bytes()?)?;
+    let mpk_2 = GpswMasterPrivateKey::<Bls12_381>::try_from_bytes(&mpk.try_into_bytes()?)?;
 
     assert_eq!(mpk.t_i, mpk_2.t_i);
     assert_eq!(mpk.y, mpk_2.y);
@@ -190,7 +190,7 @@ fn master_public_delegation_key_as_bytes() -> Result<(), FormatErr> {
     };
     let mk = abe.generate_master_key(10)?;
     let mpk = mk.del_key;
-    let mpk_2 = GpswMasterPublicDelegationKey::<Bls12_381>::from_bytes(&mpk.as_bytes()?)?;
+    let mpk_2 = GpswMasterPublicDelegationKey::<Bls12_381>::try_from_bytes(&mpk.try_into_bytes()?)?;
 
     assert_eq!(mpk.inv_t_i, mpk_2.inv_t_i);
     Ok(())

@@ -74,7 +74,7 @@ pub fn webassembly_decrypt_hybrid_header(
     //
     // Parse user decryption key
     let user_decryption_key =
-        UserDecryptionKey::from_bytes(user_decryption_key_bytes.to_vec().as_slice()).map_err(
+        UserDecryptionKey::try_from_bytes(user_decryption_key_bytes.to_vec().as_slice()).map_err(
             |e| return JsValue::from_str(&format!("Error deserializing user decryption key: {e}")),
         )?;
 
@@ -87,7 +87,7 @@ pub fn webassembly_decrypt_hybrid_header(
         )
         .map_err(|e| return JsValue::from_str(&format!("Error decrypting hybrid header: {e}")))?;
 
-    let cleartext_header_bytes = cleartext_header.as_bytes().map_err(|e| {
+    let cleartext_header_bytes = cleartext_header.try_into_bytes().map_err(|e| {
         return JsValue::from_str(&format!("Error serializing cleartext header: {e}"));
     })?;
 
@@ -119,10 +119,12 @@ pub fn webassembly_create_decryption_cache(
     }
     //
     // Parse user decryption key
-    let user_decryption_key =
-        UserDecryptionKey::from_bytes(user_decryption_key.to_vec().as_slice()).map_err(|e| {
-            return JsValue::from_str(&format!("Error deserializing user decryption key: {e}"));
-        })?;
+    let user_decryption_key = UserDecryptionKey::try_from_bytes(
+        user_decryption_key.to_vec().as_slice(),
+    )
+    .map_err(|e| {
+        return JsValue::from_str(&format!("Error deserializing user decryption key: {e}"));
+    })?;
 
     let cache = DecryptionCache {
         user_decryption_key,
@@ -166,7 +168,7 @@ pub fn webassembly_decrypt_hybrid_header_using_cache(
         )
         .map_err(|e| return JsValue::from_str(&format!("Error decrypting hybrid header: {e}")))?;
 
-    let cleartext_header_bytes = cleartext_header.as_bytes().map_err(|e| {
+    let cleartext_header_bytes = cleartext_header.try_into_bytes().map_err(|e| {
         return JsValue::from_str(&format!("Error serializing cleartext header: {e}"));
     })?;
 
