@@ -9,6 +9,9 @@ use crate::{
     interfaces::policy::{AccessPolicy, Attribute, Policy, PolicyAxis},
 };
 
+/// Generate the master authority keys for supplied Policy
+///
+///  - `policy_bytes` : Policy to use to generate the keys (JSON serialized)
 #[pyfunction]
 pub fn generate_master_keys(policy_bytes: Vec<u8>) -> PyResult<(Vec<u8>, Vec<u8>)> {
     let policy: Policy = serde_json::from_slice(policy_bytes.as_slice())
@@ -25,6 +28,11 @@ pub fn generate_master_keys(policy_bytes: Vec<u8>) -> PyResult<(Vec<u8>, Vec<u8>
     ))
 }
 
+/// Generate a user private key.
+///
+/// - `master_private_key_bytes`    : master secret key
+/// - `access_policy_str`           : user access policy
+/// - `policy_bytes`                : global policy
 #[pyfunction]
 pub fn generate_user_private_key(
     master_private_key_bytes: Vec<u8>,
@@ -46,6 +54,11 @@ pub fn generate_user_private_key(
     Ok(user_key.try_into_bytes()?)
 }
 
+/// Generate ABE policy from axis given in serialized JSON
+///
+/// - `policy_axis_bytes`: as many axis as needed
+/// - `max_attribute_value`: maximum number of attributes that can be used in
+///   policy
 #[pyfunction]
 pub fn generate_policy(
     policy_axis_bytes: Vec<u8>,

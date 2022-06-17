@@ -33,7 +33,20 @@ type UserDecryptionKey = <Gpsw<Bls12_381> as AbeScheme>::UserDecryptionKey;
 
 pub const MAX_CLEAR_TEXT_SIZE: usize = 1 << 30;
 
-/// Extract header from encrypted bytes
+/// Get size of header inside an encrypted data
+/// * ENCRYPTED_DATA = HEADER_SIZE (4 bytes) | HEADER | AES_DATA
+///
+/// # Arguments
+///
+/// * `encrypted_bytes`: encrypted data
+///
+/// # Returns
+///
+/// * the length header
+///
+/// # Errors
+///
+/// Function fails if input data is less than 4 bytes
 #[pyfunction]
 pub fn get_encrypted_header_size(encrypted_bytes: Vec<u8>) -> PyResult<u32> {
     //
@@ -49,6 +62,18 @@ pub fn get_encrypted_header_size(encrypted_bytes: Vec<u8>) -> PyResult<u32> {
     Ok(u32::from_be_bytes(encrypted_bytes[..4].try_into()?))
 }
 
+/// Generate an encrypted header. A header contains the following elements:
+///
+/// - `encapsulation_size`  : the size of the symmetric key encapsulation (u32)
+/// - `encapsulation`       : symmetric key encapsulation using CoverCrypt
+/// - `encrypted_metadata`  : Optional metadata encrypted using the DEM
+///
+/// Parameters:
+///
+/// - `metadata_bytes`         : meta data
+/// - `policy_bytes`           : global policy
+/// - `attributes_bytes`       : access policy
+/// - `public_key_bytes`       : CoverCrypt public key
 #[pyfunction]
 pub fn encrypt_hybrid_header(
     metadata_bytes: Vec<u8>,
@@ -82,6 +107,11 @@ pub fn encrypt_hybrid_header(
     ))
 }
 
+/// [Private internal function] Decrypt the given header bytes using a user
+/// decryption key.
+///
+/// - `user_decryption_key_bytes`     : private key to use for decryption
+/// - `encrypted_header_bytes`        : encrypted header bytes
 fn internal_decrypt_hybrid_header(
     user_decryption_key_bytes: &[u8],
     encrypted_header_bytes: &[u8],
@@ -114,8 +144,10 @@ fn internal_decrypt_hybrid_header(
     Ok((cleartext_header.symmetric_key.to_bytes(), metadata))
 }
 
-/// Decrypt with a user decryption key an encrypted header
-/// of a resource encrypted using an hybrid crypto scheme.
+/// Decrypt the given header bytes using a user decryption key.
+///
+/// - `user_decryption_key_bytes`     : private key to use for decryption
+/// - `encrypted_header_bytes`        : encrypted header bytes
 #[pyfunction]
 pub fn decrypt_hybrid_header(
     user_decryption_key_bytes: Vec<u8>,
@@ -124,7 +156,11 @@ pub fn decrypt_hybrid_header(
     internal_decrypt_hybrid_header(&user_decryption_key_bytes, &encrypted_header_bytes)
 }
 
-/// Symmetrically Encrypt plaintext data in a block.
+/// Encrypt data symmetrically in a block.
+///
+/// The `uid` should be different for every resource  and `block_number`
+/// different for every block. They are part of the AEAD of the symmetric scheme
+/// if any.
 #[pyfunction]
 pub fn encrypt_hybrid_block(
     symmetric_key_bytes: Vec<u8>,
@@ -171,7 +207,11 @@ fn internal_decrypt_hybrid_block(
     )
     .map_err(|e| PyTypeError::new_err(format!("Error encrypting block: {e}")))
 }
+
 /// Symmetrically Decrypt encrypted data in a block.
+///
+/// The `uid` and `block_number` are part of the AEAD
+/// of the crypto scheme (when applicable)
 #[pyfunction]
 pub fn decrypt_hybrid_block(
     symmetric_key_bytes: Vec<u8>,
@@ -187,6 +227,8 @@ pub fn decrypt_hybrid_block(
     )
 }
 
+/// Hybrid encryption producing:
+/// - ENCRYPTED_DATA = HEADER_SIZE | HEADER | AES_DATA
 #[pyfunction]
 pub fn encrypt(
     metadata_bytes: Vec<u8>,
@@ -215,6 +257,7 @@ pub fn encrypt(
     Ok(encrypted)
 }
 
+/// Hybrid decryption
 #[pyfunction]
 pub fn decrypt(user_decryption_key_bytes: Vec<u8>, encrypted_bytes: Vec<u8>) -> PyResult<Vec<u8>> {
     let header_size = get_encrypted_header_size(encrypted_bytes.clone())?;
