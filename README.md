@@ -21,8 +21,6 @@ The implementation uses the [BLS12-381](https://crates.io/crates/cosmian_bls12_3
 - [BLS12-381: Pairing-friendly elliptic curve](#bls12-381-pairing-friendly-elliptic-curve)
 
 
-
-
 # Quick start
 
 See the [demo code](./src/core/demo.rs) which contains a complete usage of the API with detailed comments.
@@ -37,24 +35,24 @@ cargo test core::demo::abe -- --nocapture`
 
 The crate is separated in 2 main modules:
 
- - `core`: contains the cryptographic code for GPSW. The main entry point is the [engine](./src/core/engine.rs) which use is demonstrated in the [demo code](./src/core/demo.rs).
- - `interfaces`: contains interfaces useful for Cosmian matching those in [crypto_base](https://github.com/Cosmian/crypto_base) as well as a Foreign Function Interface (FFI) useful to integrate with other languages. In particular, the code in this module demonstrates the use of hybrid cryptography involving ABE and AES and exposes it as a FFI.
+- `core`: contains the cryptographic code for GPSW. The main entry point is the [engine](./src/core/engine.rs) which use is demonstrated in the [demo code](./src/core/demo.rs).
+- `interfaces`: contains interfaces useful for Cosmian matching those in [crypto_base](https://github.com/Cosmian/crypto_base) as well as a Foreign Function Interface (FFI) useful to integrate with other languages. In particular, the code in this module demonstrates the use of hybrid cryptography involving ABE and AES and exposes it as a FFI.
 
- To build the core only, run
+To build the core only, run
 
- ```bash
- cargo build --release
- ```
+```bash
+cargo build --release
+```
 
- To build the Cosmian interfaces without FFI, pass the `interfaces` feature flag, i.e.
- ```bash
- cargo build --release --features interfaces
- ```
+To build the Cosmian interfaces without FFI, pass the `interfaces` feature flag, i.e.
+```bash
+cargo build --release --features interfaces
+```
 
- To build everything, including the FFI, pass the `ffi` feature flag, or use `--all-features` i.e.
- ```bash
- cargo build --release --all-features
- ```
+To build everything, including the FFI, pass the `ffi` feature flag, or use `--all-features` i.e.
+```bash
+cargo build --release --all-features
+```
 
 The latter will build a shared library and one can verify that the FFI symbols are present using (linux)
 ```bash
@@ -63,15 +61,39 @@ objdump -T  target/release/libabe_gpsw.so
 
 The code contains numerous tests that you can run using
 
- ```bash
- cargo test --release --all-features
- ```
-
+```bash
+cargo test --release --all-features
+```
 
 ## Building the library for a different glibc
 
 Go to the [build](build/glibc-2.17/) directory for an example on hw to build for GLIBC 2.17
 
+## Benchmarks
+
+Benchmarking is using [Criterion](https://github.com/bheisler/criterion.rs) library.
+
+Run all benchmarks:
+
+```bash
+cargo bench --all-features
+```
+
+note: unfortunately, we cannot automatically tell Criterion to run benchmarks with `ffi` feature activated, we need to specify it.
+
+Run only non-FFI benchmarks:
+
+```console
+cargo bench --features interfaces
+```
+
+## Flamegraph
+
+To generate a [Flamegraph](https://github.com/flamegraph-rs/flamegraph) on Criterion's benchmark:
+
+```console
+cargo flamegraph --bench benches --features ffi -- --bench
+```
 
 # Introduction to this repository cryptography
 
@@ -136,7 +158,7 @@ Contrarily to the `Department` axis, the `Security Level` axis is hierarchical: 
 All unique attribute names (7 in the example above) are derived by concatenating the axis names and the possible values for that axis, and are assigned a unique attribute value:
 
 | Attribute name         | Value |
-|------------------------|-------|
+| ---------------------- | ----- |
 | Department::HR         | 1     |
 | Department::FIN        | 2     |
 | Department::MKG        | 3     |
