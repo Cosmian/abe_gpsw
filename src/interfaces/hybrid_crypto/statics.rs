@@ -78,7 +78,8 @@ impl<S: SymmetricCrypto> ClearTextHeader<S> {
 
         Ok(Self {
             symmetric_key: S::Key::try_from_bytes(symmetric_key_bytes)?,
-            meta_data: Metadata::from_bytes(&meta_data_bytes)?,
+            meta_data: Metadata::from_bytes(&meta_data_bytes)
+                .map_err(|e| FormatErr::CryptoError(e.to_string()))?,
         })
     }
 }
@@ -145,8 +146,14 @@ where
     let mut scanner = BytesScanner::new(encrypted_header);
 
     // encrypted symmetric key size
-    let encrypted_symmetric_key_size = scanner.read_u32()? as usize;
-    let encrypted_symmetric_key = scanner.next(encrypted_symmetric_key_size)?.to_vec();
+    let encrypted_symmetric_key_size = scanner
+        .read_u32()
+        .map_err(|e| FormatErr::CryptoError(e.to_string()))?
+        as usize;
+    let encrypted_symmetric_key = scanner
+        .next(encrypted_symmetric_key_size)
+        .map_err(|e| FormatErr::CryptoError(e.to_string()))?
+        .to_vec();
 
     // symmetric key
     let engine = Engine::<A>::new();
@@ -159,19 +166,30 @@ where
 
     let meta_data = if scanner.has_more() {
         // Nonce
-        let nonce = S::Nonce::try_from_bytes(scanner.next(S::Nonce::LENGTH)?.to_vec())?;
+        let nonce = S::Nonce::try_from_bytes(
+            scanner
+                .next(S::Nonce::LENGTH)
+                .map_err(|e| FormatErr::CryptoError(e.to_string()))?
+                .to_vec(),
+        )?;
 
         // encrypted metadata
-        let encrypted_metadata_size = scanner.read_u32()? as usize;
+        let encrypted_metadata_size = scanner
+            .read_u32()
+            .map_err(|e| FormatErr::CryptoError(e.to_string()))?
+            as usize;
 
         // UID
-        let encrypted_metadata = scanner.next(encrypted_metadata_size)?;
+        let encrypted_metadata = scanner
+            .next(encrypted_metadata_size)
+            .map_err(|e| FormatErr::CryptoError(e.to_string()))?;
         Metadata::from_bytes(&S::decrypt(
             &symmetric_key,
             encrypted_metadata,
             &nonce,
             None,
-        )?)?
+        )?)
+        .map_err(|e| FormatErr::CryptoError(e.to_string()))?
     } else {
         Metadata::default()
     };

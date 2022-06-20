@@ -43,7 +43,7 @@ type PublicKey = <Gpsw<Bls12_381> as AbeScheme>::MasterPublicKey;
 type UserDecryptionKey = <Gpsw<Bls12_381> as AbeScheme>::UserDecryptionKey;
 
 #[allow(clippy::if_same_then_else)]
-fn main() -> anyhow::Result<()> {
+fn main() -> Result<(), FormatErr> {
     let args: Vec<String> = env::args().collect();
 
     let selector = if args.len() < 2 { "all" } else { &args[1] };
@@ -133,7 +133,7 @@ see above for the OPTION values
 }
 
 #[cfg(feature = "interfaces")]
-pub fn bench_header_encryption_size() -> anyhow::Result<()> {
+pub fn bench_header_encryption_size() -> Result<(), FormatErr> {
     print!("Running header encryption size...");
 
     let public_key_json: Value = serde_json::from_str(include_str!(
@@ -189,7 +189,7 @@ pub fn bench_header_encryption_size() -> anyhow::Result<()> {
 }
 
 #[cfg(feature = "interfaces")]
-pub fn bench_header_encryption_speed() -> anyhow::Result<()> {
+pub fn bench_header_encryption_speed() -> Result<(), FormatErr> {
     print!("Running 'direct' header encryption...");
     let public_key_json: Value = serde_json::from_str(include_str!(
         "./interfaces/hybrid_crypto/tests/public_master_key.json"
@@ -268,7 +268,7 @@ fn generate_encrypted_header() -> Result<EncryptedHeader<Aes256GcmCrypto>, Forma
 ///
 /// # Safety
 #[cfg(feature = "ffi")]
-pub unsafe fn bench_ffi_header_encryption() -> anyhow::Result<()> {
+pub unsafe fn bench_ffi_header_encryption() -> Result<(), FormatErr> {
     print!("Running 'FFI' header encryption...");
     let public_key_json: Value = serde_json::from_str(include_str!(
         "./interfaces/hybrid_crypto/tests/public_master_key.json"
@@ -345,7 +345,7 @@ pub unsafe fn bench_ffi_header_encryption() -> anyhow::Result<()> {
 ///
 /// # Safety
 #[cfg(feature = "ffi")]
-pub unsafe fn bench_ffi_header_encryption_using_cache() -> anyhow::Result<()> {
+pub unsafe fn bench_ffi_header_encryption_using_cache() -> Result<(), FormatErr> {
     print!("Running 'FFI' header encryption using cache...");
     let public_key_json: Value = serde_json::from_str(include_str!(
         "./interfaces/hybrid_crypto/tests/public_master_key.json"
@@ -430,7 +430,7 @@ pub unsafe fn bench_ffi_header_encryption_using_cache() -> anyhow::Result<()> {
 ///
 /// # Safety
 #[cfg(feature = "interfaces")]
-pub fn bench_header_decryption() -> anyhow::Result<()> {
+pub fn bench_header_decryption() -> Result<(), FormatErr> {
     print!("Running direct header decryption...");
     let encrypted_header = generate_encrypted_header()?;
 
@@ -458,7 +458,7 @@ pub fn bench_header_decryption() -> anyhow::Result<()> {
 ///
 /// # Safety
 #[cfg(feature = "ffi")]
-pub unsafe fn bench_ffi_header_decryption() -> anyhow::Result<()> {
+pub unsafe fn bench_ffi_header_decryption() -> Result<(), FormatErr> {
     print!("Running FFI header decryption...");
     let encrypted_header = generate_encrypted_header()?;
 
@@ -513,7 +513,7 @@ pub unsafe fn bench_ffi_header_decryption() -> anyhow::Result<()> {
 ///
 /// # Safety
 #[cfg(feature = "ffi")]
-pub unsafe fn bench_ffi_header_decryption_using_cache() -> anyhow::Result<()> {
+pub unsafe fn bench_ffi_header_decryption_using_cache() -> Result<(), FormatErr> {
     print!("Running FFI header decryption using cache...");
     let encrypted_header = generate_encrypted_header()?;
 
@@ -575,14 +575,14 @@ pub unsafe fn bench_ffi_header_decryption_using_cache() -> anyhow::Result<()> {
 }
 
 #[cfg(feature = "ffi")]
-unsafe fn unwrap_ffi_error(val: i32) -> anyhow::Result<()> {
+unsafe fn unwrap_ffi_error(val: i32) -> Result<(), FormatErr> {
     if val != 0 {
         let mut message_bytes_key = vec![0u8; 4096];
         let message_bytes_ptr = message_bytes_key.as_mut_ptr().cast::<i8>();
         let mut message_bytes_len = message_bytes_key.len() as c_int;
         get_last_error(message_bytes_ptr, &mut message_bytes_len);
         let cstr = CStr::from_ptr(message_bytes_ptr);
-        anyhow::bail!("ERROR: {}", cstr.to_str()?);
+        Err(FormatErr::CryptoError(format!("ERROR: {}", cstr.to_str()?)))
     } else {
         Ok(())
     }

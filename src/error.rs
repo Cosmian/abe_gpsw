@@ -135,12 +135,6 @@ impl From<std::ffi::NulError> for FormatErr {
     }
 }
 
-impl From<anyhow::ErrReport> for FormatErr {
-    fn from(e: anyhow::ErrReport) -> Self {
-        FormatErr::CryptoError(e.to_string())
-    }
-}
-
 #[derive(Error, Debug, Clone, PartialEq)]
 pub enum ParsingError {
     #[error("{0}")]

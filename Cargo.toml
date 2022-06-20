@@ -26,7 +26,6 @@ python = ["interfaces", "pyo3"]
 wasm_bindgen = ["interfaces", "js-sys", "wasm-bindgen", "wasm-bindgen-test"]
 
 [dependencies]
-anyhow = { package = "eyre", version = "0.6.0" }
 cosmian_bls12_381 = "0.4"
 ff = "0.9"
 getrandom = { version = "0.2", features = ["js"] }
