@@ -15,7 +15,7 @@ All notable changes to this project will be documented in this file.
 - Python notebook updated with new Python fast-FFI ABE module
 ### Fixed
 ### Removed
-- Github CI du to storage and time limitations
+- Github CI due to storage and time limitations
 ---
 
 ---
