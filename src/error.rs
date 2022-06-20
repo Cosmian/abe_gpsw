@@ -6,6 +6,7 @@ use std::{
     str::Utf8Error,
 };
 
+#[cfg(feature = "interfaces")]
 use cosmian_crypto_base::Error as CryptoError;
 use hex::FromHexError;
 use thiserror::Error;
@@ -110,6 +111,7 @@ impl From<serde_json::Error> for FormatErr {
     }
 }
 
+#[cfg(feature = "interfaces")]
 impl From<cosmian_crypto_base::Error> for FormatErr {
     fn from(e: cosmian_crypto_base::Error) -> Self {
         match e {

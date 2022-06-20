@@ -5,8 +5,8 @@
 
 use std::env;
 
-#[cfg(feature = "interfaces")]
 use abe_gpsw::error::FormatErr;
+#[cfg(feature = "interfaces")]
 use abe_gpsw::{
     core::{
         bilinear_map::bls12_381::Bls12_381,
@@ -15,6 +15,7 @@ use abe_gpsw::{
     },
     interfaces::hybrid_crypto::{decrypt_hybrid_header, encrypt_hybrid_header, EncryptedHeader},
 };
+#[cfg(feature = "interfaces")]
 use cosmian_crypto_base::{
     hybrid_crypto::Metadata, symmetric_crypto::aes_256_gcm_pure::Aes256GcmCrypto,
 };
