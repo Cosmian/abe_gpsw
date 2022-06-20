@@ -1,6 +1,4 @@
 use criterion::{criterion_group, criterion_main, Criterion};
-#[cfg(any(feature = "interfaces", feature = "ffi"))]
-use serde_json::Value;
 #[cfg(feature = "ffi")]
 use {
     abe_gpsw::interfaces::ffi::{
@@ -11,6 +9,7 @@ use {
             h_aes_destroy_encryption_cache, h_aes_encrypt_header, h_aes_encrypt_header_using_cache,
         },
     },
+    cosmian_crypto_base::{symmetric_crypto::SymmetricCrypto, KeyTrait},
     std::{
         ffi::{CStr, CString},
         os::raw::c_int,
@@ -42,7 +41,7 @@ type UserDecryptionKey = <Gpsw<Bls12_381> as AbeScheme>::UserDecryptionKey;
 /// Generate encrypted header with some metadata
 #[cfg(feature = "interfaces")]
 fn generate_encrypted_header() -> EncryptedHeader<Aes256GcmCrypto> {
-    let public_key_json: Value = serde_json::from_str(include_str!(
+    let public_key_json: serde_json::Value = serde_json::from_str(include_str!(
         "../src/interfaces/hybrid_crypto/tests/public_master_key.json"
     ))
     .expect("cannot deserialize public key JSON");
@@ -84,7 +83,7 @@ fn generate_encrypted_header() -> EncryptedHeader<Aes256GcmCrypto> {
 
 #[cfg(feature = "interfaces")]
 fn bench_header_encryption(c: &mut Criterion) {
-    let public_key_json: Value = serde_json::from_str(include_str!(
+    let public_key_json: serde_json::Value = serde_json::from_str(include_str!(
         "../src/interfaces/hybrid_crypto/tests/public_master_key.json"
     ))
     .expect("cannot deserialize public key JSON");
@@ -166,18 +165,16 @@ fn bench_header_encryption(c: &mut Criterion) {
             .expect("cannot encrypt header 3")
         })
     });
-
-    let metadata = Metadata {
-        uid: vec![1, 2, 3, 4, 5, 6, 7, 8, 9],
-        additional_data: Some(vec![10, 11, 12, 13, 14]),
-    };
     group.bench_function("speed with metadata", |b| {
         b.iter(|| {
             encrypt_hybrid_header::<Gpsw<Bls12_381>, Aes256GcmCrypto>(
                 &policy,
                 &public_key,
                 &policy_attributes_1,
-                metadata.clone(),
+                Metadata {
+                    uid: vec![1, 2, 3, 4, 5, 6, 7, 8, 9],
+                    additional_data: Some(vec![10, 11, 12, 13, 14]),
+                },
             )
             .expect("cannot encrypt header 1")
         })
@@ -186,7 +183,7 @@ fn bench_header_encryption(c: &mut Criterion) {
 
 #[cfg(feature = "ffi")]
 fn bench_ffi_header_encryption(c: &mut Criterion) {
-    let public_key_json: Value = serde_json::from_str(include_str!(
+    let public_key_json: serde_json::Value = serde_json::from_str(include_str!(
         "../src/interfaces/hybrid_crypto/tests/public_master_key.json"
     ))
     .expect("cannot deserialize public key JSON");
@@ -217,7 +214,7 @@ fn bench_ffi_header_encryption(c: &mut Criterion) {
         additional_data: Some(vec![10, 11, 12, 13, 14]),
     };
 
-    let mut symmetric_key = vec![0u8; 32];
+    let mut symmetric_key = vec![0u8; <Aes256GcmCrypto as SymmetricCrypto>::Key::LENGTH];
     let symmetric_key_ptr = symmetric_key.as_mut_ptr().cast::<i8>();
     let mut symmetric_key_len = symmetric_key.len() as c_int;
 
@@ -231,13 +228,10 @@ fn bench_ffi_header_encryption(c: &mut Criterion) {
             .as_str(),
     )
     .expect("cannot create CString from String converted policy");
-    let policy_ptr = policy_cs.as_ptr();
 
     let public_key_bytes = public_key
         .as_bytes()
         .expect("cannot get bytes from public key");
-    let public_key_ptr = public_key_bytes.as_ptr();
-    let public_key_len = public_key_bytes.len() as i32;
 
     let attributes_json = CString::new(
         serde_json::to_string(&policy_attributes)
@@ -245,7 +239,6 @@ fn bench_ffi_header_encryption(c: &mut Criterion) {
             .as_str(),
     )
     .expect("cannot create CString from String converted policy attributes");
-    let attributes_ptr = attributes_json.as_ptr();
 
     c.bench_function("FFI AES header encryption", |b| {
         b.iter(|| unsafe {
@@ -254,10 +247,10 @@ fn bench_ffi_header_encryption(c: &mut Criterion) {
                 &mut symmetric_key_len,
                 header_bytes_ptr,
                 &mut header_bytes_len,
-                policy_ptr,
-                public_key_ptr.cast::<i8>(),
-                public_key_len,
-                attributes_ptr,
+                policy_cs.as_ptr(),
+                public_key_bytes.as_ptr().cast::<i8>(),
+                public_key_bytes.len() as i32,
+                attributes_json.as_ptr(),
                 meta_data.uid.as_ptr().cast::<i8>(),
                 meta_data.uid.len() as i32,
                 meta_data
@@ -275,7 +268,7 @@ fn bench_ffi_header_encryption(c: &mut Criterion) {
 
 #[cfg(feature = "ffi")]
 fn bench_ffi_header_encryption_using_cache(c: &mut Criterion) {
-    let public_key_json: Value = serde_json::from_str(include_str!(
+    let public_key_json: serde_json::Value = serde_json::from_str(include_str!(
         "../src/interfaces/hybrid_crypto/tests/public_master_key.json"
     ))
     .expect("cannot deserialize public key JSON");
@@ -310,26 +303,23 @@ fn bench_ffi_header_encryption_using_cache(c: &mut Criterion) {
             .as_str(),
     )
     .expect("cannot create CString from String converted policy");
-    let policy_ptr = policy_cs.as_ptr();
 
     let public_key_bytes = public_key
         .as_bytes()
         .expect("cannot get bytes from public key");
-    let public_key_ptr = public_key_bytes.as_ptr().cast::<i8>();
-    let public_key_len = public_key_bytes.len() as i32;
 
     let mut cache_handle: i32 = 0;
     unsafe {
         unwrap_ffi_error(h_aes_create_encryption_cache(
             &mut cache_handle,
-            policy_ptr,
-            public_key_ptr,
-            public_key_len,
+            policy_cs.as_ptr(),
+            public_key_bytes.as_ptr().cast::<i8>(),
+            public_key_bytes.len() as i32,
         ))
         .expect("cannot create aes encryption cache");
     }
 
-    let mut symmetric_key = vec![0u8; 32];
+    let mut symmetric_key = vec![0u8; <Aes256GcmCrypto as SymmetricCrypto>::Key::LENGTH];
     let symmetric_key_ptr = symmetric_key.as_mut_ptr().cast::<i8>();
     let mut symmetric_key_len = symmetric_key.len() as c_int;
 
@@ -343,7 +333,6 @@ fn bench_ffi_header_encryption_using_cache(c: &mut Criterion) {
             .as_str(),
     )
     .expect("cannot create CString from String converted policy attributes");
-    let attributes_ptr = attributes_json.as_ptr();
 
     c.bench_function("FFI AES header encryption using cache", |b| {
         b.iter(|| unsafe {
@@ -353,7 +342,7 @@ fn bench_ffi_header_encryption_using_cache(c: &mut Criterion) {
                 header_bytes_ptr,
                 &mut header_bytes_len,
                 cache_handle,
-                attributes_ptr,
+                attributes_json.as_ptr(),
                 meta_data.uid.as_ptr().cast::<i8>(),
                 meta_data.uid.len() as i32,
                 meta_data
@@ -378,7 +367,7 @@ fn bench_ffi_header_encryption_using_cache(c: &mut Criterion) {
 fn bench_header_decryption(c: &mut Criterion) {
     let encrypted_header = generate_encrypted_header();
 
-    let user_decryption_key_json: Value = serde_json::from_str(include_str!(
+    let user_decryption_key_json: serde_json::Value = serde_json::from_str(include_str!(
         "../src/interfaces/hybrid_crypto/tests/fin_confidential_user_key.json"
     ))
     .expect("cannot deserialize user key JSON");
@@ -405,7 +394,7 @@ fn bench_header_decryption(c: &mut Criterion) {
 fn bench_ffi_header_decryption(c: &mut Criterion) {
     let encrypted_header = generate_encrypted_header();
 
-    let user_decryption_key_json: Value = serde_json::from_str(include_str!(
+    let user_decryption_key_json: serde_json::Value = serde_json::from_str(include_str!(
         "../src/interfaces/hybrid_crypto/tests/fin_confidential_user_key.json"
     ))
     .expect("cannot deserialize user key JSON");
@@ -417,7 +406,7 @@ fn bench_ffi_header_decryption(c: &mut Criterion) {
         UserDecryptionKey::from_bytes(&hex::decode(hex_key).expect("cannot hex decode key"))
             .expect("cannot generate user private key");
 
-    let mut symmetric_key = vec![0u8; 32];
+    let mut symmetric_key = vec![0u8; <Aes256GcmCrypto as SymmetricCrypto>::Key::LENGTH];
     let symmetric_key_ptr = symmetric_key.as_mut_ptr().cast::<i8>();
     let mut symmetric_key_len = symmetric_key.len() as c_int;
 
@@ -463,7 +452,7 @@ fn bench_ffi_header_decryption(c: &mut Criterion) {
 fn bench_ffi_header_decryption_using_cache(c: &mut Criterion) {
     let encrypted_header = generate_encrypted_header();
 
-    let user_decryption_key_json: Value = serde_json::from_str(include_str!(
+    let user_decryption_key_json: serde_json::Value = serde_json::from_str(include_str!(
         "../src/interfaces/hybrid_crypto/tests/fin_confidential_user_key.json"
     ))
     .expect("cannot deserialize user key JSON");
@@ -475,7 +464,7 @@ fn bench_ffi_header_decryption_using_cache(c: &mut Criterion) {
         UserDecryptionKey::from_bytes(&hex::decode(hex_key).expect("cannot hex decode key"))
             .expect("cannot generate user private key");
 
-    let mut symmetric_key = vec![0u8; 32];
+    let mut symmetric_key = vec![0u8; <Aes256GcmCrypto as SymmetricCrypto>::Key::LENGTH];
     let symmetric_key_ptr = symmetric_key.as_mut_ptr().cast::<i8>();
     let mut symmetric_key_len = symmetric_key.len() as c_int;
 
