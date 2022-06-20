@@ -21,17 +21,13 @@ pub enum FormatErr {
     #[error(transparent)]
     NulError(NulError),
     #[error(transparent)]
-    RegexError(#[from] regex::Error),
+    TryFromIntError(#[from] TryFromIntError),
     #[error(transparent)]
-    ParseIntError(#[from] ParseIntError),
-    #[error(transparent)]
-    TryFromSliceError(#[from] TryFromIntError),
+    ParsingError(#[from] ParsingError),
     #[error(transparent)]
     FromHexError(#[from] FromHexError),
     #[error(transparent)]
     Utf8Error(#[from] Utf8Error),
-    #[error(transparent)]
-    ParsingError(#[from] ParsingError),
 
     //
     // Internal errors
@@ -51,10 +47,6 @@ pub enum FormatErr {
     MissingAxis(String),
     #[error("attribute {0} expected in {1:?}")]
     ExpectedAttribute(String, Vec<String>),
-    #[error("unsupported operand {0}")]
-    UnsupportedOperand(String),
-    #[error("unsupported operator {0}")]
-    UnsupportedOperator(String),
     #[error("symmetric key generation {0}")]
     SymmetricKeyGeneration(String),
     #[error("symmetric encryption {0}")]
@@ -159,6 +151,12 @@ pub enum ParsingError {
     EmptyString,
     #[error("wrong range")]
     RangeError,
-    #[error("{0}")]
+    #[error(transparent)]
     RegexError(#[from] regex::Error),
+    #[error(transparent)]
+    ParseIntError(#[from] ParseIntError),
+    #[error("unsupported operand {0}")]
+    UnsupportedOperand(String),
+    #[error("unsupported operator {0}")]
+    UnsupportedOperator(String),
 }

@@ -67,7 +67,7 @@ pub fn generate_policy(
     let policy_axis: Vec<PolicyAxis> = serde_json::from_slice(&policy_axis_bytes)
         .map_err(|e| PyTypeError::new_err(format!("Policy Axis deserialization failed: {e}")))?;
     let mut policy = Policy::new(max_attribute_value);
-    for axis in policy_axis.iter() {
+    for axis in &policy_axis {
         let attrs = axis
             .attributes
             .iter()
@@ -88,7 +88,7 @@ pub fn rotate_attributes(attributes_bytes: Vec<u8>, policy_bytes: Vec<u8>) -> Py
     let mut policy: Policy = serde_json::from_slice(&policy_bytes)
         .map_err(|e| PyTypeError::new_err(format!("Error deserializing policy: {e}")))?;
 
-    for attr in attributes.iter() {
+    for attr in &attributes {
         policy.rotate(attr)?;
     }
     serde_json::to_vec(&policy)

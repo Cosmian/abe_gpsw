@@ -286,7 +286,7 @@ impl Node {
     // Example: convert the string "1 & (4 | (2 & 3))" to And(a, Box::new(Or(d,
     // Box::new(And(b, c))))) In this implementation, only digits are allowed
     // and parenthesis is expected to respect the operators priorities
-    pub fn parse(s: &str) -> Result<Self, FormatErr> {
+    pub fn parse(s: &str) -> Result<Self, ParsingError> {
         // Authorize only digits and operators & and |
         let authorized = [
             ' ', '(', ')', '&', '|', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9',
@@ -296,8 +296,7 @@ impl Node {
                 "formula must contain only digits, parenthesis and operators & and |. Given \
                  formula: {}",
                 s
-            ))
-            .into());
+            )));
         }
         // Remove all spaces
         let new_s = str::replace(s, " ", "");
@@ -308,8 +307,7 @@ impl Node {
             if int_reg.captures_len() != 1 {
                 return Err(ParsingError::UnexpectedCharacter(
                     "it must starts with an integer".to_string(),
-                )
-                .into());
+                ));
             }
             let integer_str = int_reg
                 .find_at(&new_s, 0)
@@ -329,10 +327,10 @@ impl Node {
             }
             let a = Box::new(Node::Leaf(integer));
             let operator = new_s.chars().next().ok_or_else(|| {
-                FormatErr::from(ParsingError::UnexpectedEnd(format!(
+                ParsingError::UnexpectedEnd(format!(
                     "no further character while detecting operator in: {}",
                     &new_s
-                )))
+                ))
             })?;
 
             // Remove operator from input string
@@ -340,22 +338,21 @@ impl Node {
             match operator {
                 '&' => Ok(Node::And(a, Box::new(Node::parse(new_s)?))),
                 '|' => Ok(Node::Or(a, Box::new(Node::parse(new_s)?))),
-                _ => Err(FormatErr::UnsupportedOperator(operator.to_string())),
+                _ => Err(ParsingError::UnsupportedOperator(operator.to_string())),
             }
         } else {
             // Remove parenthesis on current part of formula and continue
             let first_char = new_s.chars().next().ok_or_else(|| {
-                FormatErr::from(ParsingError::UnexpectedEnd(format!(
+                ParsingError::UnexpectedEnd(format!(
                     "no further character while getting first char in: {}",
                     &new_s
-                )))
+                ))
             })?;
             let new_s = &new_s[1..];
             if first_char != '(' {
                 return Err(ParsingError::UnexpectedCharacter(
                     "opening parenthesis expected".to_string(),
-                )
-                .into());
+                ));
             }
 
             // Check if formula contains a closing parenthesis
@@ -363,8 +360,7 @@ impl Node {
             if c == 0 {
                 return Err(ParsingError::UnexpectedCharacter(
                     "closing parenthesis expected".to_string(),
-                )
-                .into());
+                ));
             }
 
             // Search right closing parenthesis, avoiding false positive
@@ -407,7 +403,7 @@ impl Node {
                     Box::new(Node::parse(between_parenthesis)?),
                     Box::new(Node::parse(new_s)?),
                 )),
-                _ => Err(FormatErr::UnsupportedOperator(operator.to_string())),
+                _ => Err(ParsingError::UnsupportedOperator(operator.to_string())),
             }
         }
     }

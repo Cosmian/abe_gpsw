@@ -22,7 +22,7 @@ use crate::{
             decrypt_hybrid_block as core_decrypt_hybrid_block,
             decrypt_hybrid_header as core_decrypt_hybrid_header,
             encrypt_hybrid_block as core_encrypt_hybrid_block,
-            encrypt_hybrid_header as core_encrypt_hybrid_header, ClearTextHeader,
+            encrypt_hybrid_header as core_encrypt_hybrid_header,
         },
         policy::Attribute,
     },
@@ -122,24 +122,16 @@ fn internal_decrypt_hybrid_header(
 
     //
     // Finally decrypt symmetric key using given user decryption key
-    let cleartext_header: ClearTextHeader<Aes256GcmCrypto> =
-        core_decrypt_hybrid_header::<Gpsw<Bls12_381>, Aes256GcmCrypto>(
-            &user_decryption_key,
-            encrypted_header_bytes,
-        )
-        .map_err(|e| {
-            PyTypeError::new_err(format!(
-                "Error decrypting header:
-    {e}"
-            ))
-        })?;
+    let cleartext_header = core_decrypt_hybrid_header::<Gpsw<Bls12_381>, Aes256GcmCrypto>(
+        &user_decryption_key,
+        encrypted_header_bytes,
+    )
+    .map_err(|e| PyTypeError::new_err(format!("Error decrypting header: {e}")))?;
 
-    let metadata = cleartext_header.meta_data.to_bytes().map_err(|e| {
-        PyTypeError::new_err(format!(
-            "Serialize metadata failed:
-    {e}"
-        ))
-    })?;
+    let metadata = cleartext_header
+        .meta_data
+        .to_bytes()
+        .map_err(|e| PyTypeError::new_err(format!("Serialize metadata failed: {e}")))?;
 
     Ok((cleartext_header.symmetric_key.to_bytes(), metadata))
 }

@@ -11,7 +11,7 @@ use serde::{Deserialize, Deserializer, Serialize};
 
 use crate::{
     core::msp::{MonotoneSpanProgram, Node},
-    error::FormatErr,
+    error::{FormatErr, ParsingError},
 };
 
 const OPERATOR_SIZE: usize = 2;
@@ -452,7 +452,9 @@ impl AccessPolicy {
             let ap = match operator.as_str() {
                 "&&" => Ok(AccessPolicy::And(ap1, ap2)),
                 "||" => Ok(AccessPolicy::Or(ap1, ap2)),
-                _ => Err(FormatErr::UnsupportedOperator(operator.to_string())),
+                _ => Err(FormatErr::from(ParsingError::UnsupportedOperator(
+                    operator.to_string(),
+                ))),
             }?;
             Ok(ap)
         } else {
@@ -502,7 +504,9 @@ impl AccessPolicy {
             let ap = match operator.as_str() {
                 "&&" => Ok(AccessPolicy::And(ap1, ap2)),
                 "||" => Ok(AccessPolicy::Or(ap1, ap2)),
-                _ => Err(FormatErr::UnsupportedOperator(operator.to_string())),
+                _ => Err(FormatErr::from(ParsingError::UnsupportedOperator(
+                    operator.to_string(),
+                ))),
             }?;
 
             Ok(ap)
