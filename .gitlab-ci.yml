@@ -24,6 +24,9 @@ clippy:
   stage: prebuild
   cache: {}
   script:
+    # no feature activated
+    - cargo clippy --all-targets -- -D warnings
+    # all features activated
     - cargo clippy-all
 
 # Security check
