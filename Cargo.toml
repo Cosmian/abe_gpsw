@@ -43,8 +43,8 @@ sha3 = "0.10"
 thiserror = "1"
 
 # Optional ones
-cosmian_crypto_base = { version = "1.2.2", optional = true }
-pyo3 = { version = "0.16.3", features = ["extension-module"], optional = true }
+cosmian_crypto_base = { version = "1.2", optional = true }
+pyo3 = { version = "0.16", features = ["extension-module"], optional = true }
 js-sys = { version = "0.3", optional = true }
 wasm-bindgen = { version = "0.2", features = [
   "serde-serialize",
