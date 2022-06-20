@@ -13,6 +13,7 @@ use crate::{
         gpsw::{AbeScheme, AsBytes, Gpsw},
         policy::{attr, Policy},
     },
+    error::FormatErr,
     interfaces::hybrid_crypto::{
         decrypt_hybrid_block, decrypt_hybrid_header, encrypt_hybrid_block, encrypt_hybrid_header,
         symmetric_encryption_overhead,
@@ -24,16 +25,16 @@ type UserDecryptionKey = <Gpsw<Bls12_381> as AbeScheme>::UserDecryptionKey;
 
 // maximum clear text size that can be safely encrypted with AES GCM (using a
 // single random nonce)
-pub const MAX_CLEAR_TEXT_SIZE: usize = 1_usize << 30;
+pub const MAX_CLEAR_TEXT_SIZE: usize = 1 << 30;
 
 #[test]
-pub fn test_aes_hybrid_encryption() -> anyhow::Result<()> {
+pub fn test_aes_hybrid_encryption() -> Result<(), FormatErr> {
     let public_key_json: Value = serde_json::from_str(include_str!("./public_master_key.json"))?;
     let key_value = &public_key_json["value"][0]["value"][1]["value"];
 
     // Public Key bytes
     let hex_key = &key_value[0]["value"].as_str().unwrap();
-    let public_key = PublicKey::from_bytes(&hex::decode(hex_key)?)?;
+    let public_key = PublicKey::try_from_bytes(&hex::decode(hex_key)?)?;
 
     // Policy
     let policy_hex = &key_value[1]["value"][4]["value"][0]["value"][2]["value"]
@@ -53,7 +54,7 @@ pub fn test_aes_hybrid_encryption() -> anyhow::Result<()> {
         &policy,
         &public_key,
         &policy_attributes,
-        meta_data.clone(),
+        Some(meta_data.clone()),
     )?;
 
     let symmetric_key = &encrypted_header.symmetric_key;
@@ -77,10 +78,10 @@ pub fn test_aes_hybrid_encryption() -> anyhow::Result<()> {
         serde_json::from_str(include_str!("./fin_confidential_user_key.json"))?;
     let key_value = &user_decryption_key_json["value"][0]["value"][1]["value"];
     let hex_key = &key_value[0]["value"].as_str().unwrap();
-    let user_decryption_key = UserDecryptionKey::from_bytes(&hex::decode(hex_key)?)?;
+    let user_decryption_key = UserDecryptionKey::try_from_bytes(&hex::decode(hex_key)?)?;
     println!(
         "User decryption Key len {}",
-        &user_decryption_key.as_bytes()?.len()
+        &user_decryption_key.try_into_bytes()?.len()
     );
 
     let header_ = decrypt_hybrid_header::<Gpsw<Bls12_381>, Aes256GcmCrypto>(
@@ -104,7 +105,7 @@ pub fn test_aes_hybrid_encryption() -> anyhow::Result<()> {
 }
 
 #[test]
-pub fn test_non_reg_decrypt_hybrid_block() -> anyhow::Result<()> {
+pub fn test_non_reg_decrypt_hybrid_block() -> Result<(), FormatErr> {
     let symmetric_key_hex = "802de96f19589fbc0eb2f26705dc1ed261e9c80f2fec301ca7d0ecea3176405b";
     let symmetric_key =
         <Aes256GcmCrypto as SymmetricCrypto>::Key::try_from(hex::decode(symmetric_key_hex)?)?;

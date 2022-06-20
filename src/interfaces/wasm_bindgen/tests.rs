@@ -78,9 +78,11 @@ fn test_generate_keys() {
 
     //
     // Check deserialization
-    GpswMasterPrivateKey::<Bls12_381>::from_bytes(private_key_bytes).unwrap();
-    GpswMasterPublicKey::<Bls12_381>::from_bytes(&master_keys_vec[4 + private_key_size as usize..])
-        .unwrap();
+    GpswMasterPrivateKey::<Bls12_381>::try_from_bytes(private_key_bytes).unwrap();
+    GpswMasterPublicKey::<Bls12_381>::try_from_bytes(
+        &master_keys_vec[4 + private_key_size as usize..],
+    )
+    .unwrap();
 
     //
     // Generate user private key
@@ -102,7 +104,7 @@ pub fn test_decrypt_hybrid_header() {
 
     // Public Key bytes
     let hex_key = &key_value[0]["value"].as_str().unwrap();
-    let public_key = PublicKey::from_bytes(&hex::decode(hex_key).unwrap()).unwrap();
+    let public_key = PublicKey::try_from_bytes(&hex::decode(hex_key).unwrap()).unwrap();
 
     // Policy
     let policy_hex = &key_value[1]["value"][4]["value"][0]["value"][2]["value"]
@@ -121,7 +123,7 @@ pub fn test_decrypt_hybrid_header() {
         &policy,
         &public_key,
         policy_attributes.attributes(),
-        meta_data,
+        Some(meta_data),
     )
     .unwrap();
 
@@ -141,7 +143,7 @@ pub fn test_decrypt_hybrid_header() {
     let cleartext_header_bytes =
         webassembly_decrypt_hybrid_header(user_decryption_key_js, encrypted_header_js).unwrap();
     let _cleartext_header =
-        ClearTextHeader::<Aes256GcmCrypto>::from_bytes(&cleartext_header_bytes.to_vec()[..])
+        ClearTextHeader::<Aes256GcmCrypto>::try_from_bytes(&cleartext_header_bytes.to_vec()[..])
             .unwrap();
 }
 
@@ -193,7 +195,8 @@ pub fn test_encrypt_hybrid_header() {
     .unwrap();
 
     let encrypted_header =
-        EncryptedHeader::<Aes256GcmCrypto>::from_bytes(&encrypted_header_js.to_vec()[..]).unwrap();
+        EncryptedHeader::<Aes256GcmCrypto>::try_from_bytes(&encrypted_header_js.to_vec()[..])
+            .unwrap();
 
     // Decrypt
     let user_decryption_key_json: Value = serde_json::from_str(include_str!(
@@ -203,7 +206,7 @@ pub fn test_encrypt_hybrid_header() {
     let key_value = &user_decryption_key_json["value"][0]["value"][1]["value"];
     let hex_key = &key_value[0]["value"].as_str().unwrap();
     let user_decryption_key =
-        UserDecryptionKey::from_bytes(&hex::decode(hex_key).unwrap()).unwrap();
+        UserDecryptionKey::try_from_bytes(&hex::decode(hex_key).unwrap()).unwrap();
     decrypt_hybrid_header::<Gpsw<Bls12_381>, Aes256GcmCrypto>(
         &user_decryption_key,
         &encrypted_header.encrypted_header_bytes,

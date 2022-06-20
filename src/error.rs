@@ -1,13 +1,36 @@
 use std::{
     array::TryFromSliceError,
-    convert::From,
+    convert::{From, Infallible},
+    ffi::NulError,
     num::{ParseIntError, TryFromIntError},
+    str::Utf8Error,
 };
 
+use cosmian_crypto_base::Error as CryptoError;
+use hex::FromHexError;
 use thiserror::Error;
 
 #[derive(Error, Debug, Clone, PartialEq)]
 pub enum FormatErr {
+    //
+    // External errors conversion
+    #[error("{0}")]
+    CryptoError(String),
+    #[error(transparent)]
+    Infallible(Infallible),
+    #[error(transparent)]
+    NulError(NulError),
+    #[error(transparent)]
+    TryFromIntError(#[from] TryFromIntError),
+    #[error(transparent)]
+    ParsingError(#[from] ParsingError),
+    #[error(transparent)]
+    FromHexError(#[from] FromHexError),
+    #[error(transparent)]
+    Utf8Error(#[from] Utf8Error),
+
+    //
+    // Internal errors
     #[error("attribute not found: {0}")]
     AttributeNotFound(String),
     #[error("{} is missing{}",
@@ -24,10 +47,6 @@ pub enum FormatErr {
     MissingAxis(String),
     #[error("attribute {0} expected in {1:?}")]
     ExpectedAttribute(String, Vec<String>),
-    #[error("unsupported operand {0}")]
-    UnsupportedOperand(String),
-    #[error("unsupported operator {0}")]
-    UnsupportedOperator(String),
     #[error("symmetric key generation {0}")]
     SymmetricKeyGeneration(String),
     #[error("symmetric encryption {0}")]
@@ -69,14 +88,14 @@ pub enum FormatErr {
     InvalidEncryptedData,
     #[error("conversion failed")]
     ConversionFailed,
-    #[error("error parsing formula")]
-    ParsingError(ParsingError),
-}
-
-impl From<TryFromIntError> for FormatErr {
-    fn from(_e: TryFromIntError) -> Self {
-        FormatErr::ConversionFailed
-    }
+    #[error("Empty private key")]
+    EmptyPrivateKey,
+    #[error("Empty ciphertext")]
+    EmptyCiphertext,
+    #[error("Empty plaintext")]
+    EmptyPlaintext,
+    #[error("Header length must be at least 4 bytes. Found {0}")]
+    InvalidHeaderSize(usize),
 }
 
 impl From<TryFromSliceError> for FormatErr {
@@ -85,21 +104,34 @@ impl From<TryFromSliceError> for FormatErr {
     }
 }
 
-impl From<ParseIntError> for FormatErr {
-    fn from(_e: ParseIntError) -> Self {
-        FormatErr::ConversionFailed
-    }
-}
-
-impl From<regex::Error> for FormatErr {
-    fn from(e: regex::Error) -> Self {
-        ParsingError::RegexError(e).into()
-    }
-}
-
 impl From<serde_json::Error> for FormatErr {
     fn from(e: serde_json::Error) -> Self {
         FormatErr::Deserialization(e.to_string())
+    }
+}
+
+impl From<cosmian_crypto_base::Error> for FormatErr {
+    fn from(e: cosmian_crypto_base::Error) -> Self {
+        match e {
+            CryptoError::SizeError { given, expected } => {
+                FormatErr::InvalidSize(format!("expected: {}, given: {}", expected, given))
+            }
+            CryptoError::InvalidSize(e) => FormatErr::InvalidSize(e),
+            e => FormatErr::CryptoError(e.to_string()),
+        }
+    }
+}
+
+impl From<Infallible> for FormatErr {
+    fn from(e: Infallible) -> Self {
+        FormatErr::Infallible(e)
+    }
+}
+
+#[cfg(feature = "ffi")]
+impl From<std::ffi::NulError> for FormatErr {
+    fn from(e: std::ffi::NulError) -> Self {
+        FormatErr::NulError(e)
     }
 }
 
@@ -113,12 +145,12 @@ pub enum ParsingError {
     EmptyString,
     #[error("wrong range")]
     RangeError,
-    #[error("{0}")]
+    #[error(transparent)]
     RegexError(#[from] regex::Error),
-}
-
-impl From<ParsingError> for FormatErr {
-    fn from(pe: ParsingError) -> Self {
-        FormatErr::ParsingError(pe)
-    }
+    #[error(transparent)]
+    ParseIntError(#[from] ParseIntError),
+    #[error("unsupported operand {0}")]
+    UnsupportedOperand(String),
+    #[error("unsupported operator {0}")]
+    UnsupportedOperator(String),
 }

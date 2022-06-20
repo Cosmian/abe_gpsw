@@ -11,6 +11,7 @@ use crate::{
         gpsw::{AbeScheme, AsBytes, Gpsw},
         policy::{attr, Policy},
     },
+    error::FormatErr,
     interfaces::{ffi::error::get_last_error, hybrid_crypto::EncryptedHeader},
 };
 
@@ -30,7 +31,9 @@ use super::hybrid_gpsw_aes::{
     h_aes_destroy_encryption_cache, h_aes_encrypt_header, h_aes_encrypt_header_using_cache,
 };
 
-unsafe fn encrypt_header(meta_data: &Metadata) -> anyhow::Result<EncryptedHeader<Aes256GcmCrypto>> {
+unsafe fn encrypt_header(
+    meta_data: &Metadata,
+) -> Result<EncryptedHeader<Aes256GcmCrypto>, FormatErr> {
     let public_key_json: Value = serde_json::from_str(include_str!(
         "../hybrid_crypto/tests/public_master_key.json"
     ))?;
@@ -38,7 +41,7 @@ unsafe fn encrypt_header(meta_data: &Metadata) -> anyhow::Result<EncryptedHeader
 
     // Public Key bytes
     let hex_key = &key_value[0]["value"].as_str().unwrap();
-    let public_key = PublicKey::from_bytes(&hex::decode(hex_key)?)?;
+    let public_key = PublicKey::try_from_bytes(&hex::decode(hex_key)?)?;
 
     // Policy
     let policy_hex = key_value[1]["value"][4]["value"][0]["value"][2]["value"]
@@ -62,7 +65,7 @@ unsafe fn encrypt_header(meta_data: &Metadata) -> anyhow::Result<EncryptedHeader
     let policy_cs = CString::new(serde_json::to_string(&policy)?.as_str())?;
     let policy_ptr = policy_cs.as_ptr();
 
-    let public_key_bytes = public_key.as_bytes()?;
+    let public_key_bytes = public_key.try_into_bytes()?;
     let public_key_ptr = public_key_bytes.as_ptr();
     let public_key_len = public_key_bytes.len() as i32;
 
@@ -107,13 +110,13 @@ struct DecryptedHeader {
 
 unsafe fn decrypt_header(
     header: &EncryptedHeader<Aes256GcmCrypto>,
-) -> anyhow::Result<DecryptedHeader> {
+) -> Result<DecryptedHeader, FormatErr> {
     let user_decryption_key_json: Value = serde_json::from_str(include_str!(
         "../hybrid_crypto/tests/fin_confidential_user_key.json"
     ))?;
     let key_value = &user_decryption_key_json["value"][0]["value"][1]["value"];
     let hex_key = &key_value[0]["value"].as_str().unwrap();
-    let user_decryption_key = UserDecryptionKey::from_bytes(&hex::decode(hex_key)?)?;
+    let user_decryption_key = UserDecryptionKey::try_from_bytes(&hex::decode(hex_key)?)?;
 
     let mut symmetric_key = vec![0u8; 32];
     let symmetric_key_ptr = symmetric_key.as_mut_ptr() as *mut c_char;
@@ -127,7 +130,7 @@ unsafe fn decrypt_header(
     let additional_data_ptr = additional_data.as_mut_ptr() as *mut c_char;
     let mut additional_data_len = additional_data.len() as c_int;
 
-    let user_decryption_key_bytes = user_decryption_key.as_bytes()?;
+    let user_decryption_key_bytes = user_decryption_key.try_into_bytes()?;
     let user_decryption_key_ptr = user_decryption_key_bytes.as_ptr() as *const c_char;
     let user_decryption_key_len = user_decryption_key_bytes.len() as i32;
 
@@ -166,14 +169,17 @@ unsafe fn decrypt_header(
     })
 }
 
-unsafe fn unwrap_ffi_error(val: i32) -> anyhow::Result<()> {
+unsafe fn unwrap_ffi_error(val: i32) -> Result<(), FormatErr> {
     if val != 0 {
         let mut message_bytes_key = vec![0u8; 4096];
         let message_bytes_ptr = message_bytes_key.as_mut_ptr() as *mut c_char;
         let mut message_bytes_len = message_bytes_key.len() as c_int;
         get_last_error(message_bytes_ptr, &mut message_bytes_len);
         let cstr = CStr::from_ptr(message_bytes_ptr);
-        anyhow::bail!("ERROR: {}", cstr.to_str()?);
+        return Err(FormatErr::InternalOperation(format!(
+            "ERROR: {}",
+            cstr.to_str()?
+        )));
     } else {
         Ok(())
     }
@@ -181,7 +187,7 @@ unsafe fn unwrap_ffi_error(val: i32) -> anyhow::Result<()> {
 
 unsafe fn encrypt_header_using_cache(
     meta_data: &Metadata,
-) -> anyhow::Result<EncryptedHeader<Aes256GcmCrypto>> {
+) -> Result<EncryptedHeader<Aes256GcmCrypto>, FormatErr> {
     let public_key_json: Value = serde_json::from_str(include_str!(
         "../hybrid_crypto/tests/public_master_key.json"
     ))?;
@@ -189,7 +195,7 @@ unsafe fn encrypt_header_using_cache(
 
     // Public Key bytes
     let hex_key = &key_value[0]["value"].as_str().unwrap();
-    let public_key = PublicKey::from_bytes(&hex::decode(hex_key)?)?;
+    let public_key = PublicKey::try_from_bytes(&hex::decode(hex_key)?)?;
 
     // Policy
     let policy_hex = key_value[1]["value"][4]["value"][0]["value"][2]["value"]
@@ -200,7 +206,7 @@ unsafe fn encrypt_header_using_cache(
     let policy_cs = CString::new(serde_json::to_string(&policy)?.as_str())?;
     let policy_ptr = policy_cs.as_ptr();
 
-    let public_key_bytes = public_key.as_bytes()?;
+    let public_key_bytes = public_key.try_into_bytes()?;
     let public_key_ptr = public_key_bytes.as_ptr() as *const c_char;
     let public_key_len = public_key_bytes.len() as i32;
 
@@ -263,15 +269,15 @@ unsafe fn encrypt_header_using_cache(
 
 unsafe fn decrypt_header_using_cache(
     header: &EncryptedHeader<Aes256GcmCrypto>,
-) -> anyhow::Result<DecryptedHeader> {
+) -> Result<DecryptedHeader, FormatErr> {
     let user_decryption_key_json: Value = serde_json::from_str(include_str!(
         "../hybrid_crypto/tests/fin_confidential_user_key.json"
     ))?;
     let key_value = &user_decryption_key_json["value"][0]["value"][1]["value"];
     let hex_key = &key_value[0]["value"].as_str().unwrap();
-    let user_decryption_key = UserDecryptionKey::from_bytes(&hex::decode(hex_key)?)?;
+    let user_decryption_key = UserDecryptionKey::try_from_bytes(&hex::decode(hex_key)?)?;
 
-    let user_decryption_key_bytes = user_decryption_key.as_bytes()?;
+    let user_decryption_key_bytes = user_decryption_key.try_into_bytes()?;
     let user_decryption_key_ptr = user_decryption_key_bytes.as_ptr() as *const c_char;
     let user_decryption_key_len = user_decryption_key_bytes.len() as i32;
 
@@ -332,7 +338,7 @@ unsafe fn decrypt_header_using_cache(
 }
 
 #[test]
-fn test_ffi_hybrid_header() -> anyhow::Result<()> {
+fn test_ffi_hybrid_header() -> Result<(), FormatErr> {
     unsafe {
         let meta_data = Metadata {
             uid: vec![1, 2, 3, 4, 5, 6, 7, 8, 9],
@@ -356,7 +362,7 @@ fn test_ffi_hybrid_header() -> anyhow::Result<()> {
 }
 
 #[test]
-fn test_ffi_hybrid_header_using_cache() -> anyhow::Result<()> {
+fn test_ffi_hybrid_header_using_cache() -> Result<(), FormatErr> {
     unsafe {
         let meta_data = Metadata {
             uid: vec![1, 2, 3, 4, 5, 6, 7, 8, 9],

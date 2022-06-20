@@ -60,7 +60,7 @@ pub struct EncryptionCache {
 /// when encrypting multiple messages. This avoids having to re-instantiate
 /// the public key on the Rust side on every encryption which is costly.
 ///
-/// This method is to be used in conjonction with
+/// This method is to be used in conjunction with
 ///     h_aes_encrypt_header_using_cache
 ///
 /// WARN: h_aes_destroy_encrypt_cache() should be called
@@ -94,7 +94,7 @@ pub unsafe extern "C" fn h_aes_create_encryption_cache(
     // Public Key
     let public_key_bytes =
         std::slice::from_raw_parts(public_key_ptr as *const u8, public_key_len as usize);
-    let public_key = match PublicKey::from_bytes(public_key_bytes) {
+    let public_key = match PublicKey::try_from_bytes(public_key_bytes) {
         Ok(key) => key,
         Err(e) => {
             ffi_bail!(format!("Hybrid Cipher: invalid public key: {:?}", e));
@@ -210,7 +210,7 @@ pub unsafe extern "C" fn h_aes_encrypt_header_using_cache(
         &cache.policy,
         &cache.public_key,
         &attributes,
-        meta_data
+        Some(meta_data)
     ));
 
     let allocated = *symmetric_key_len;
@@ -296,7 +296,7 @@ pub unsafe extern "C" fn h_aes_encrypt_header(
     // Public Key
     let public_key_bytes =
         std::slice::from_raw_parts(public_key_ptr as *const u8, public_key_len as usize);
-    let public_key = ffi_unwrap!(PublicKey::from_bytes(public_key_bytes));
+    let public_key = ffi_unwrap!(PublicKey::try_from_bytes(public_key_bytes));
 
     // Attributes
     let attributes = match CStr::from_ptr(attributes_ptr).to_str() {
@@ -339,7 +339,7 @@ pub unsafe extern "C" fn h_aes_encrypt_header(
         &policy,
         &public_key,
         &attributes,
-        meta_data
+        Some(meta_data)
     ));
 
     let allocated = *symmetric_key_len;
@@ -416,7 +416,7 @@ pub unsafe extern "C" fn h_aes_create_decryption_cache(
         user_decryption_key_ptr as *const u8,
         user_decryption_key_len as usize,
     );
-    let user_decryption_key = match UserDecryptionKey::from_bytes(user_decryption_key_bytes) {
+    let user_decryption_key = match UserDecryptionKey::try_from_bytes(user_decryption_key_bytes) {
         Ok(key) => key,
         Err(e) => {
             ffi_bail!(format!(
@@ -635,7 +635,8 @@ pub unsafe extern "C" fn h_aes_decrypt_header(
         user_decryption_key_ptr as *const u8,
         user_decryption_key_len as usize,
     );
-    let user_decryption_key = ffi_unwrap!(UserDecryptionKey::from_bytes(user_decryption_key_bytes));
+    let user_decryption_key =
+        ffi_unwrap!(UserDecryptionKey::try_from_bytes(user_decryption_key_bytes));
 
     let header: ClearTextHeader<Aes256GcmCrypto> =
         ffi_unwrap!(decrypt_hybrid_header::<Gpsw<Bls12_381>, Aes256GcmCrypto>(
@@ -696,7 +697,7 @@ pub unsafe extern "C" fn h_aes_decrypt_header(
 
 // maximum clear text size that can be safely encrypted with AES GCM (using a a
 // single random nonce)
-pub const MAX_CLEAR_TEXT_SIZE: usize = 1_usize << 30;
+pub const MAX_CLEAR_TEXT_SIZE: usize = 1 << 30;
 
 #[no_mangle]
 ///

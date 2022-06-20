@@ -31,10 +31,10 @@ pub fn webassembly_generate_master_keys(
 
     // Serialize master keys
     let private_keys_bytes = private_key
-        .as_bytes()
+        .try_into_bytes()
         .map_err(|e| JsValue::from_str(&format!("Error serializing master private key: {e}")))?;
     let public_keys_bytes = public_key
-        .as_bytes()
+        .try_into_bytes()
         .map_err(|e| JsValue::from_str(&format!("Error serializing master public key: {e}")))?;
 
     let mut master_keys_bytes =
@@ -57,9 +57,10 @@ pub fn webassembly_generate_user_private_key(
     access_policy_str: &str,
     policy_bytes: js_sys::Uint8Array,
 ) -> Result<js_sys::Uint8Array, JsValue> {
-    let private_key =
-        GpswMasterPrivateKey::<Bls12_381>::from_bytes(master_private_key_bytes.to_vec().as_slice())
-            .map_err(|e| JsValue::from_str(&format!("Error deserializing private key: {e}")))?;
+    let private_key = GpswMasterPrivateKey::<Bls12_381>::try_from_bytes(
+        master_private_key_bytes.to_vec().as_slice(),
+    )
+    .map_err(|e| JsValue::from_str(&format!("Error deserializing private key: {e}")))?;
     let policy = serde_json::from_slice(policy_bytes.to_vec().as_slice())
         .map_err(|e| JsValue::from_str(&format!("Error deserializing policy: {e}")))?;
     let access_policy = AccessPolicy::from_boolean_expression(access_policy_str)
@@ -71,7 +72,7 @@ pub fn webassembly_generate_user_private_key(
         .map_err(|e| JsValue::from_str(&format!("Error generating user private key: {e}")))?;
 
     let user_key_bytes = user_key
-        .as_bytes()
+        .try_into_bytes()
         .map_err(|e| JsValue::from_str(&format!("Error serializing user key: {e}")))?;
     Ok(js_sys::Uint8Array::from(user_key_bytes.as_slice()))
 }

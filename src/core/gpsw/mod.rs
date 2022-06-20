@@ -6,17 +6,17 @@ pub use scheme::Gpsw;
 use crate::{core::msp::MonotoneSpanProgram, error::FormatErr};
 
 pub trait AsBytes: Sized {
-    fn as_bytes(&self) -> Result<Vec<u8>, FormatErr>;
-    fn from_bytes(bytes: &[u8]) -> Result<Self, FormatErr>;
+    fn try_into_bytes(&self) -> Result<Vec<u8>, FormatErr>;
+    fn try_from_bytes(bytes: &[u8]) -> Result<Self, FormatErr>;
     fn len_bytes(&self) -> usize;
 }
 
 impl AsBytes for u32 {
-    fn as_bytes(&self) -> Result<Vec<u8>, FormatErr> {
+    fn try_into_bytes(&self) -> Result<Vec<u8>, FormatErr> {
         Ok(self.to_be_bytes().to_vec())
     }
 
-    fn from_bytes(bytes: &[u8]) -> Result<Self, FormatErr> {
+    fn try_from_bytes(bytes: &[u8]) -> Result<Self, FormatErr> {
         if bytes.len() < 4 {
             return Err(FormatErr::Deserialization(
                 "cannot deserialize u32 element since input bytes size is less than 4 bytes"
@@ -32,11 +32,11 @@ impl AsBytes for u32 {
 }
 
 impl AsBytes for i32 {
-    fn as_bytes(&self) -> Result<Vec<u8>, FormatErr> {
+    fn try_into_bytes(&self) -> Result<Vec<u8>, FormatErr> {
         Ok(self.to_be_bytes().to_vec())
     }
 
-    fn from_bytes(bytes: &[u8]) -> Result<Self, FormatErr> {
+    fn try_from_bytes(bytes: &[u8]) -> Result<Self, FormatErr> {
         Ok(i32::from_be_bytes(bytes[0..4].try_into()?))
     }
 
@@ -46,7 +46,7 @@ impl AsBytes for i32 {
 }
 
 impl<T: AsBytes> AsBytes for Vec<T> {
-    fn as_bytes(&self) -> Result<Vec<u8>, FormatErr> {
+    fn try_into_bytes(&self) -> Result<Vec<u8>, FormatErr> {
         if self.is_empty() {
             return Ok(Vec::new());
         }
@@ -55,12 +55,12 @@ impl<T: AsBytes> AsBytes for Vec<T> {
         let len = u32::try_from(self.len())?.to_be_bytes();
         bytes.extend_from_slice(&len);
         for val in self.iter() {
-            bytes.append(&mut val.as_bytes()?)
+            bytes.append(&mut val.try_into_bytes()?)
         }
         Ok(bytes)
     }
 
-    fn from_bytes(bytes: &[u8]) -> Result<Self, FormatErr> {
+    fn try_from_bytes(bytes: &[u8]) -> Result<Self, FormatErr> {
         if bytes.is_empty() {
             return Ok(Vec::new());
         }
@@ -73,11 +73,11 @@ impl<T: AsBytes> AsBytes for Vec<T> {
             ));
         }
         let mut res = Vec::with_capacity(len);
-        res.push(T::from_bytes(&bytes[4..])?);
+        res.push(T::try_from_bytes(&bytes[4..])?);
         // deserialize
         for i in 1..len {
             let beg = i * res[0].len_bytes();
-            res.push(T::from_bytes(&bytes[4 + beg..])?)
+            res.push(T::try_from_bytes(&bytes[4 + beg..])?)
         }
         Ok(res)
     }

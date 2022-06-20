@@ -123,7 +123,7 @@ fn msp_as_bytes() -> Result<(), FormatErr> {
     let msp = formula.to_msp()?;
     println!("msp: {}", msp);
     //let msp_2 = msp.as_bytes()?;
-    let msp_2 = MonotoneSpanProgram::<i32>::from_bytes(&msp.as_bytes()?)?;
+    let msp_2 = MonotoneSpanProgram::<i32>::try_from_bytes(&msp.try_into_bytes()?)?;
     assert_eq!(msp.nb_row, msp_2.nb_row);
     assert_eq!(msp.nb_col, msp_2.nb_col);
     assert_eq!(msp.row_to_attr, msp_2.row_to_attr);

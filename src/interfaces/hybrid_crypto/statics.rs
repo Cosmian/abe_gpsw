@@ -9,6 +9,7 @@ use cosmian_crypto_base::{
 
 use crate::{
     core::{gpsw::AbeScheme, Engine},
+    error::FormatErr,
     interfaces::policy::{Attribute, Policy},
 };
 
@@ -22,7 +23,7 @@ where
 }
 
 impl<S: SymmetricCrypto> EncryptedHeader<S> {
-    pub fn as_bytes(&self) -> anyhow::Result<Vec<u8>> {
+    pub fn try_into_bytes(&self) -> Result<Vec<u8>, FormatErr> {
         let mut bytes: Vec<u8> =
             u32::to_be_bytes(<S as SymmetricCrypto>::Key::LENGTH as u32).try_into()?;
         bytes.extend_from_slice(&self.symmetric_key.to_bytes());
@@ -30,12 +31,9 @@ impl<S: SymmetricCrypto> EncryptedHeader<S> {
         Ok(bytes)
     }
 
-    pub fn from_bytes(header: &[u8]) -> anyhow::Result<Self> {
-        if header.is_empty() {
-            anyhow::bail!("Cannot deserialize an empty symmetric key");
-        }
+    pub fn try_from_bytes(header: &[u8]) -> Result<Self, FormatErr> {
         if header.len() < 4 {
-            anyhow::bail!("Invalid size: cannot deserialize symmetric key");
+            return Err(FormatErr::InvalidHeaderSize(header.len()));
         }
         let symmetric_key_len: [u8; 4] = header[0..4].try_into()?;
         let symmetric_key_len = u32::from_be_bytes(symmetric_key_len) as usize;
@@ -60,7 +58,7 @@ where
 }
 
 impl<S: SymmetricCrypto> ClearTextHeader<S> {
-    pub fn as_bytes(&self) -> anyhow::Result<Vec<u8>> {
+    pub fn try_into_bytes(&self) -> Result<Vec<u8>, FormatErr> {
         let mut bytes: Vec<u8> =
             u32::to_be_bytes(<S as SymmetricCrypto>::Key::LENGTH as u32).try_into()?;
         bytes.extend_from_slice(&self.symmetric_key.to_bytes());
@@ -68,12 +66,9 @@ impl<S: SymmetricCrypto> ClearTextHeader<S> {
         Ok(bytes)
     }
 
-    pub fn from_bytes(header: &[u8]) -> anyhow::Result<Self> {
-        if header.is_empty() {
-            anyhow::bail!("Cannot deserialize an empty symmetric key");
-        }
+    pub fn try_from_bytes(header: &[u8]) -> Result<Self, FormatErr> {
         if header.len() < 4 {
-            anyhow::bail!("Invalid size: cannot deserialize symmetric key");
+            return Err(FormatErr::InvalidHeaderSize(header.len()));
         }
         let symmetric_key_len: [u8; 4] = header[0..4].try_into()?;
         let symmetric_key_len = u32::from_be_bytes(symmetric_key_len) as usize;
@@ -83,7 +78,8 @@ impl<S: SymmetricCrypto> ClearTextHeader<S> {
 
         Ok(Self {
             symmetric_key: S::Key::try_from_bytes(symmetric_key_bytes)?,
-            meta_data: Metadata::from_bytes(&meta_data_bytes)?,
+            meta_data: Metadata::from_bytes(&meta_data_bytes)
+                .map_err(|e| FormatErr::CryptoError(e.to_string()))?,
         })
     }
 }
@@ -98,8 +94,8 @@ pub fn encrypt_hybrid_header<A, S>(
     policy: &Policy,
     public_key: &A::MasterPublicKey,
     attributes: &[Attribute],
-    meta_data: Metadata,
-) -> anyhow::Result<EncryptedHeader<S>>
+    meta_data: Option<Metadata>,
+) -> Result<EncryptedHeader<S>, FormatErr>
 where
     A: AbeScheme + std::marker::Sync + std::marker::Send,
     S: SymmetricCrypto,
@@ -114,13 +110,13 @@ where
     let mut header_bytes = u32_len(&encrypted_sk)?.to_vec();
     // ...bytes
     header_bytes.extend(&encrypted_sk);
-    if !&meta_data.is_empty() {
+    if let Some(meta) = meta_data {
         // Nonce
         let nonce = S::Nonce::new(&mut CsRng::new());
         header_bytes.extend(nonce.to_bytes());
 
         // Encrypted metadata
-        let encrypted_metadata = S::encrypt(&symmetric_key, &meta_data.to_bytes()?, &nonce, None)?;
+        let encrypted_metadata = S::encrypt(&symmetric_key, &meta.to_bytes()?, &nonce, None)?;
         // ... size
         header_bytes.extend(u32_len(&encrypted_metadata)?);
         // ... bytes
@@ -138,17 +134,26 @@ where
 pub fn decrypt_hybrid_header<A, S>(
     user_decryption_key: &A::UserDecryptionKey,
     encrypted_header: &[u8],
-) -> anyhow::Result<ClearTextHeader<S>>
+) -> Result<ClearTextHeader<S>, FormatErr>
 where
     A: AbeScheme + std::marker::Sync + std::marker::Send,
     S: SymmetricCrypto,
 {
+    if encrypted_header.len() < 4 {
+        return Err(FormatErr::InvalidHeaderSize(encrypted_header.len()));
+    }
     // scan the input bytes
     let mut scanner = BytesScanner::new(encrypted_header);
 
     // encrypted symmetric key size
-    let encrypted_symmetric_key_size = scanner.read_u32()? as usize;
-    let encrypted_symmetric_key = scanner.next(encrypted_symmetric_key_size)?.to_vec();
+    let encrypted_symmetric_key_size = scanner
+        .read_u32()
+        .map_err(|e| FormatErr::CryptoError(e.to_string()))?
+        as usize;
+    let encrypted_symmetric_key = scanner
+        .next(encrypted_symmetric_key_size)
+        .map_err(|e| FormatErr::CryptoError(e.to_string()))?
+        .to_vec();
 
     // symmetric key
     let engine = Engine::<A>::new();
@@ -161,19 +166,30 @@ where
 
     let meta_data = if scanner.has_more() {
         // Nonce
-        let nonce = S::Nonce::try_from_bytes(scanner.next(S::Nonce::LENGTH)?.to_vec())?;
+        let nonce = S::Nonce::try_from_bytes(
+            scanner
+                .next(S::Nonce::LENGTH)
+                .map_err(|e| FormatErr::CryptoError(e.to_string()))?
+                .to_vec(),
+        )?;
 
         // encrypted metadata
-        let encrypted_metadata_size = scanner.read_u32()? as usize;
+        let encrypted_metadata_size = scanner
+            .read_u32()
+            .map_err(|e| FormatErr::CryptoError(e.to_string()))?
+            as usize;
 
         // UID
-        let encrypted_metadata = scanner.next(encrypted_metadata_size)?;
+        let encrypted_metadata = scanner
+            .next(encrypted_metadata_size)
+            .map_err(|e| FormatErr::CryptoError(e.to_string()))?;
         Metadata::from_bytes(&S::decrypt(
             &symmetric_key,
             encrypted_metadata,
             &nonce,
             None,
-        )?)?
+        )?)
+        .map_err(|e| FormatErr::CryptoError(e.to_string()))?
     } else {
         Metadata::default()
     };
@@ -208,25 +224,26 @@ pub fn encrypt_hybrid_block<A, S, const MAX_CLEAR_TEXT_SIZE: usize>(
     uid: &[u8],
     block_number: usize,
     plaintext: &[u8],
-) -> anyhow::Result<Vec<u8>>
+) -> Result<Vec<u8>, FormatErr>
 where
     A: AbeScheme + std::marker::Sync + std::marker::Send,
     S: SymmetricCrypto,
 {
-    let mut block = Block::<S, MAX_CLEAR_TEXT_SIZE>::new();
+    if plaintext.is_empty() {
+        return Err(FormatErr::EmptyPlaintext);
+    }
     if plaintext.len() > MAX_CLEAR_TEXT_SIZE {
-        anyhow::bail!(
+        return Err(FormatErr::InvalidSize(format!(
             "The data to encrypt is too large: {} bytes, max size: {} ",
             plaintext.len(),
             MAX_CLEAR_TEXT_SIZE
-        );
+        )));
     }
+    let mut block = Block::<S, MAX_CLEAR_TEXT_SIZE>::new();
     block.write(0, plaintext)?;
 
-    //TODO: try passing an already instatiated CsRng
-    block
-        .to_encrypted_bytes(&mut CsRng::new(), symmetric_key, uid, block_number)
-        .map_err(|e| anyhow::anyhow!(e))
+    //TODO: try passing an already instantiated CsRng
+    Ok(block.to_encrypted_bytes(&mut CsRng::new(), symmetric_key, uid, block_number)?)
 }
 
 /// Symmetrically Decrypt encrypted data in a block.
@@ -238,18 +255,22 @@ pub fn decrypt_hybrid_block<A, S, const MAX_CLEAR_TEXT_SIZE: usize>(
     uid: &[u8],
     block_number: usize,
     ciphertext: &[u8],
-) -> anyhow::Result<Vec<u8>>
+) -> Result<Vec<u8>, FormatErr>
 where
     A: AbeScheme + std::marker::Sync + std::marker::Send,
     S: SymmetricCrypto,
 {
+    if ciphertext.is_empty() {
+        return Err(FormatErr::EmptyCiphertext);
+    }
     if ciphertext.len() > Block::<S, MAX_CLEAR_TEXT_SIZE>::MAX_ENCRYPTED_LENGTH {
-        anyhow::bail!(
+        return Err(FormatErr::InvalidSize(format!(
             "The encrypted data to decrypt is too large: {} bytes, max size: {} ",
             ciphertext.len(),
             Block::<S, MAX_CLEAR_TEXT_SIZE>::MAX_ENCRYPTED_LENGTH
-        );
+        )));
     }
+
     let block = Block::<S, MAX_CLEAR_TEXT_SIZE>::from_encrypted_bytes(
         ciphertext,
         symmetric_key,

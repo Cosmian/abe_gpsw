@@ -91,11 +91,11 @@ impl PartialEq for Scalar {
 }
 
 impl AsBytes for Scalar {
-    fn as_bytes(&self) -> Result<Vec<u8>, FormatErr> {
+    fn try_into_bytes(&self) -> Result<Vec<u8>, FormatErr> {
         Ok(self.to_bytes().to_vec())
     }
 
-    fn from_bytes(bytes: &[u8]) -> Result<Self, FormatErr> {
+    fn try_from_bytes(bytes: &[u8]) -> Result<Self, FormatErr> {
         if bytes.len() < 32 {
             return Err(FormatErr::InvalidSize(format!(
                 "Invalid scalar element (size {}, expected size at least: {} bytes long), unable \
@@ -121,11 +121,11 @@ impl AsBytes for Scalar {
 }
 
 impl AsBytes for cosmian_bls12_381::G1Affine {
-    fn as_bytes(&self) -> Result<Vec<u8>, FormatErr> {
+    fn try_into_bytes(&self) -> Result<Vec<u8>, FormatErr> {
         Ok(self.to_compressed().to_vec())
     }
 
-    fn from_bytes(bytes: &[u8]) -> Result<Self, FormatErr> {
+    fn try_from_bytes(bytes: &[u8]) -> Result<Self, FormatErr> {
         if bytes.len() < 48 {
             return Err(FormatErr::InvalidSize(format!(
                 "Invalid G1 element (size {}, compressed expected size at least: {} bytes long), \
@@ -150,11 +150,11 @@ impl AsBytes for cosmian_bls12_381::G1Affine {
 }
 
 impl AsBytes for cosmian_bls12_381::G2Affine {
-    fn as_bytes(&self) -> Result<Vec<u8>, FormatErr> {
+    fn try_into_bytes(&self) -> Result<Vec<u8>, FormatErr> {
         Ok(self.to_compressed().to_vec())
     }
 
-    fn from_bytes(bytes: &[u8]) -> Result<Self, FormatErr> {
+    fn try_from_bytes(bytes: &[u8]) -> Result<Self, FormatErr> {
         if bytes.len() < 96 {
             return Err(FormatErr::InvalidSize(format!(
                 "Invalid G2 element (size {}, compressed expected size at least: {} bytes long), \
@@ -184,11 +184,11 @@ impl AsBytes for cosmian_bls12_381::Gt {
     // serialization of Fp2, Fp6, Fp12 and Gt` Thanks to Aurore Guillevic, Gt
     // deserialization includes 2 new verifications see crate BLS12_381,
     // function is_get_element
-    fn as_bytes(&self) -> Result<Vec<u8>, FormatErr> {
+    fn try_into_bytes(&self) -> Result<Vec<u8>, FormatErr> {
         Ok(self.to_compressed().to_vec())
     }
 
-    fn from_bytes(bytes: &[u8]) -> Result<Self, FormatErr> {
+    fn try_from_bytes(bytes: &[u8]) -> Result<Self, FormatErr> {
         if bytes.len() < 288 {
             return Err(FormatErr::InvalidSize(format!(
                 "Invalid Gt element (size {}, compressed expected size at least: {} bytes long), \
@@ -346,7 +346,7 @@ mod tests {
     fn scalar_as_bytes() -> Result<(), FormatErr> {
         let grp = Bls12_381;
         let scl = grp.gen_random_scalar()?;
-        let scl_2 = Scalar::from_bytes(&scl.as_bytes()?)?;
+        let scl_2 = Scalar::try_from_bytes(&scl.try_into_bytes()?)?;
         assert_eq!(scl, scl_2);
         Ok(())
     }
@@ -355,7 +355,7 @@ mod tests {
     fn g1_affine_as_bytes() -> Result<(), FormatErr> {
         let grp = Bls12_381;
         let g1 = grp.g2_gen_exp(&grp.gen_random_scalar()?);
-        let g1_2 = G1Affine::from_bytes(&g1.as_bytes()?)?;
+        let g1_2 = G1Affine::try_from_bytes(&g1.try_into_bytes()?)?;
         assert_eq!(g1, g1_2);
         Ok(())
     }
@@ -364,7 +364,7 @@ mod tests {
     fn g2_affine_as_bytes() -> Result<(), FormatErr> {
         let grp = Bls12_381;
         let g2 = grp.g1_gen_exp(&grp.gen_random_scalar()?).1;
-        let g2_2 = G2Affine::from_bytes(&g2.as_bytes()?)?;
+        let g2_2 = G2Affine::try_from_bytes(&g2.try_into_bytes()?)?;
         assert_eq!(g2, g2_2);
         Ok(())
     }
@@ -373,7 +373,7 @@ mod tests {
     fn gt_as_bytes() -> Result<(), FormatErr> {
         let grp = Bls12_381;
         let gt = grp.gen_random_msg_in_gt()?;
-        let gt_2 = Gt::from_bytes(&gt.as_bytes()?)?;
+        let gt_2 = Gt::try_from_bytes(&gt.try_into_bytes()?)?;
         assert_eq!(gt, gt_2);
         Ok(())
     }

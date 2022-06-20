@@ -11,14 +11,14 @@ type UserDecryptionKey = <Gpsw<Bls12_381> as AbeScheme>::UserDecryptionKey;
 #[test]
 pub fn symmetric_key_test() {
     let public_key_str = include_str!("master_public_key.txt");
-    let public_key = PublicKey::from_bytes(&hex::decode(public_key_str).unwrap()).unwrap();
+    let public_key = PublicKey::try_from_bytes(&hex::decode(public_key_str).unwrap()).unwrap();
 
     let policy_str = include_str!("policy.txt");
     let policy: Policy = serde_json::from_slice(&hex::decode(policy_str).unwrap()).unwrap();
 
     let user_decryption_key_str = include_str!("user_decryption_key.txt");
     let user_decryption_key =
-        UserDecryptionKey::from_bytes(&hex::decode(user_decryption_key_str).unwrap()).unwrap();
+        UserDecryptionKey::try_from_bytes(&hex::decode(user_decryption_key_str).unwrap()).unwrap();
 
     let abe = Engine::<Gpsw<Bls12_381>>::new();
 

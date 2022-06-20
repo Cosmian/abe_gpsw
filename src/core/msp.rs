@@ -23,7 +23,7 @@ pub struct MonotoneSpanProgram<I> {
 }
 
 impl<I: AsBytes> AsBytes for MonotoneSpanProgram<I> {
-    fn as_bytes(&self) -> Result<Vec<u8>, FormatErr> {
+    fn try_into_bytes(&self) -> Result<Vec<u8>, FormatErr> {
         let mut res = Vec::with_capacity(
             8 + (self.nb_row * self.nb_col * self.matrix[0][0].len_bytes()) + (self.nb_row * 4),
         );
@@ -34,14 +34,14 @@ impl<I: AsBytes> AsBytes for MonotoneSpanProgram<I> {
         }
         for r in &self.matrix {
             for c in r {
-                res.append(&mut c.as_bytes()?);
+                res.append(&mut c.try_into_bytes()?);
             }
         }
 
         Ok(res)
     }
 
-    fn from_bytes(bytes: &[u8]) -> Result<Self, FormatErr> {
+    fn try_from_bytes(bytes: &[u8]) -> Result<Self, FormatErr> {
         if bytes.len() < 8 {
             return Err(FormatErr::InvalidSize(
                 "minimum len of 8 bytes is required for MSP".to_string(),
@@ -72,7 +72,7 @@ impl<I: AsBytes> AsBytes for MonotoneSpanProgram<I> {
 
         let mut matrix = Vec::with_capacity(nb_row);
         let mut row = Vec::with_capacity(nb_col);
-        row.push(I::from_bytes(&bytes[8 + (4 * nb_row)..])?);
+        row.push(I::try_from_bytes(&bytes[8 + (4 * nb_row)..])?);
         if bytes.len() < 8 + (4 * nb_row) + (nb_row * nb_col * row[0].len_bytes()) {
             return Err(FormatErr::InvalidSize(
                 "invalid matrix size read from bytes".to_string(),
@@ -80,14 +80,14 @@ impl<I: AsBytes> AsBytes for MonotoneSpanProgram<I> {
         }
         for c in 1..nb_col {
             let index = 8 + (4 * nb_row) + (c * row[0].len_bytes());
-            row.push(I::from_bytes(&bytes[index..])?);
+            row.push(I::try_from_bytes(&bytes[index..])?);
         }
         matrix.push(row);
         for r in 1..nb_row {
             let mut row = Vec::with_capacity(nb_col);
             for c in 0..nb_col {
                 let index = 8 + (4 * nb_row) + (((r * nb_col) + c) * matrix[0][0].len_bytes());
-                row.push(I::from_bytes(&bytes[index..])?);
+                row.push(I::try_from_bytes(&bytes[index..])?);
             }
             matrix.push(row);
         }
@@ -286,7 +286,7 @@ impl Node {
     // Example: convert the string "1 & (4 | (2 & 3))" to And(a, Box::new(Or(d,
     // Box::new(And(b, c))))) In this implementation, only digits are allowed
     // and parenthesis is expected to respect the operators priorities
-    pub fn parse(s: &str) -> Result<Self, FormatErr> {
+    pub fn parse(s: &str) -> Result<Self, ParsingError> {
         // Authorize only digits and operators & and |
         let authorized = [
             ' ', '(', ')', '&', '|', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9',
@@ -296,8 +296,7 @@ impl Node {
                 "formula must contain only digits, parenthesis and operators & and |. Given \
                  formula: {}",
                 s
-            ))
-            .into());
+            )));
         }
         // Remove all spaces
         let new_s = str::replace(s, " ", "");
@@ -308,8 +307,7 @@ impl Node {
             if int_reg.captures_len() != 1 {
                 return Err(ParsingError::UnexpectedCharacter(
                     "it must starts with an integer".to_string(),
-                )
-                .into());
+                ));
             }
             let integer_str = int_reg
                 .find_at(&new_s, 0)
@@ -329,10 +327,10 @@ impl Node {
             }
             let a = Box::new(Node::Leaf(integer));
             let operator = new_s.chars().next().ok_or_else(|| {
-                FormatErr::from(ParsingError::UnexpectedEnd(format!(
+                ParsingError::UnexpectedEnd(format!(
                     "no further character while detecting operator in: {}",
                     &new_s
-                )))
+                ))
             })?;
 
             // Remove operator from input string
@@ -340,22 +338,21 @@ impl Node {
             match operator {
                 '&' => Ok(Node::And(a, Box::new(Node::parse(new_s)?))),
                 '|' => Ok(Node::Or(a, Box::new(Node::parse(new_s)?))),
-                _ => Err(FormatErr::UnsupportedOperator(operator.to_string())),
+                _ => Err(ParsingError::UnsupportedOperator(operator.to_string())),
             }
         } else {
             // Remove parenthesis on current part of formula and continue
             let first_char = new_s.chars().next().ok_or_else(|| {
-                FormatErr::from(ParsingError::UnexpectedEnd(format!(
+                ParsingError::UnexpectedEnd(format!(
                     "no further character while getting first char in: {}",
                     &new_s
-                )))
+                ))
             })?;
             let new_s = &new_s[1..];
             if first_char != '(' {
                 return Err(ParsingError::UnexpectedCharacter(
                     "opening parenthesis expected".to_string(),
-                )
-                .into());
+                ));
             }
 
             // Check if formula contains a closing parenthesis
@@ -363,8 +360,7 @@ impl Node {
             if c == 0 {
                 return Err(ParsingError::UnexpectedCharacter(
                     "closing parenthesis expected".to_string(),
-                )
-                .into());
+                ));
             }
 
             // Search right closing parenthesis, avoiding false positive
@@ -407,7 +403,7 @@ impl Node {
                     Box::new(Node::parse(between_parenthesis)?),
                     Box::new(Node::parse(new_s)?),
                 )),
-                _ => Err(FormatErr::UnsupportedOperator(operator.to_string())),
+                _ => Err(ParsingError::UnsupportedOperator(operator.to_string())),
             }
         }
     }

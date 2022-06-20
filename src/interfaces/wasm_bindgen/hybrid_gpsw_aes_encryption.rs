@@ -28,7 +28,7 @@ use crate::{
     },
 };
 
-pub const MAX_CLEAR_TEXT_SIZE: usize = 1_usize << 30;
+pub const MAX_CLEAR_TEXT_SIZE: usize = 1 << 30;
 
 type PublicKey = <Gpsw<Bls12_381> as AbeScheme>::MasterPublicKey;
 
@@ -62,7 +62,7 @@ pub fn webassembly_encrypt_hybrid_header(
     // Convert JS type
     let policy: Policy = serde_json::from_slice(policy_bytes.to_vec().as_slice())
         .map_err(|e| JsValue::from_str(&format!("Error deserializing Policy: {e:?}")))?;
-    let public_key = PublicKey::from_bytes(public_key_bytes.to_vec().as_slice())
+    let public_key = PublicKey::try_from_bytes(public_key_bytes.to_vec().as_slice())
         .map_err(|e| JsValue::from_str(&format!("Error deserializing Public Key: {e:?}")))?;
 
     let encrypted_header = encrypt_hybrid_header::<Gpsw<Bls12_381>, Aes256GcmCrypto>(
@@ -71,17 +71,17 @@ pub fn webassembly_encrypt_hybrid_header(
         Attributes::try_from(attributes_str)
             .map_err(|e| JsValue::from_str(&format!("Error parsing attributes: {e:?}")))?
             .attributes(),
-        Metadata {
+        Some(Metadata {
             uid: uid_bytes.to_vec(),
             additional_data: None,
-        },
+        }),
     )
     .map_err(|e| JsValue::from_str(&format!("Error encrypting header: {e:?}")))?;
 
     //
     // Flatten struct Encrypted Header
     let encrypted_header_bytes = encrypted_header
-        .as_bytes()
+        .try_into_bytes()
         .map_err(|e| JsValue::from_str(&format!("Error serializing encrypted header: {e:?}")))?;
     Ok(js_sys::Uint8Array::from(&encrypted_header_bytes[..]))
 }
@@ -124,7 +124,7 @@ pub fn webassembly_create_encryption_cache(
 
     //
     // Parse public key
-    let public_key = PublicKey::from_bytes(public_key.to_vec().as_slice()).map_err(|e| {
+    let public_key = PublicKey::try_from_bytes(public_key.to_vec().as_slice()).map_err(|e| {
         return JsValue::from_str(&format!("Error deserializing public key: {e}"));
     })?;
 
@@ -168,17 +168,17 @@ pub fn webassembly_encrypt_hybrid_header_using_cache(
         Attributes::try_from(attributes_str)
             .map_err(|e| JsValue::from_str(&format!("Error parsing attributes: {e:?}")))?
             .attributes(),
-        Metadata {
+        Some(Metadata {
             uid: uid_bytes.to_vec(),
             additional_data: None,
-        },
+        }),
     )
     .map_err(|e| JsValue::from_str(&format!("Error encrypting header: {e:?}")))?;
 
     //
     // Flatten struct Encrypted Header
     let encrypted_header_bytes = encrypted_header
-        .as_bytes()
+        .try_into_bytes()
         .map_err(|e| JsValue::from_str(&format!("Error serializing encrypted header: {e:?}")))?;
     Ok(js_sys::Uint8Array::from(&encrypted_header_bytes[..]))
 }

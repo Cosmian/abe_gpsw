@@ -2,6 +2,21 @@
 
 All notable changes to this project will be documented in this file.
 
+---
+## [0.7.0] - 2022-06-16
+### Added
+- [pyo3] Add Rust bindings for Python thanks to pyo3
+### Changed
+- API changes:
+    * in statics.rs: `encrypt_hybrid_header`: meta_data becomes optional
+    * in trait core/gpsw/mod.rs `AsBytes`:
+      - `from_bytes` becomes `try_from_bytes`
+      - `as_bytes` becomes `try_into_bytes`
+- Python notebook updated with new Python fast-FFI ABE module
+### Fixed
+### Removed
+- Github CI due to storage and time limitations
+---
 
 ---
 ## [0.6.11] - 2022-06-07
