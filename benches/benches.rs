@@ -1,20 +1,5 @@
+#[cfg(any(feature = "ffi", feature = "interfaces"))]
 use criterion::{criterion_group, criterion_main, Criterion};
-#[cfg(feature = "ffi")]
-use {
-    abe_gpsw::interfaces::ffi::{
-        error::get_last_error,
-        hybrid_gpsw_aes::{
-            h_aes_create_decryption_cache, h_aes_create_encryption_cache, h_aes_decrypt_header,
-            h_aes_decrypt_header_using_cache, h_aes_destroy_decryption_cache,
-            h_aes_destroy_encryption_cache, h_aes_encrypt_header, h_aes_encrypt_header_using_cache,
-        },
-    },
-    cosmian_crypto_base::{symmetric_crypto::SymmetricCrypto, KeyTrait},
-    std::{
-        ffi::{CStr, CString},
-        os::raw::c_int,
-    },
-};
 #[cfg(feature = "interfaces")]
 use {
     abe_gpsw::{
@@ -29,6 +14,26 @@ use {
     },
     cosmian_crypto_base::{
         hybrid_crypto::Metadata, symmetric_crypto::aes_256_gcm_pure::Aes256GcmCrypto,
+    },
+};
+#[cfg(feature = "ffi")]
+use {
+    abe_gpsw::{
+        error::FormatErr,
+        interfaces::ffi::{
+            error::get_last_error,
+            hybrid_gpsw_aes::{
+                h_aes_create_decryption_cache, h_aes_create_encryption_cache, h_aes_decrypt_header,
+                h_aes_decrypt_header_using_cache, h_aes_destroy_decryption_cache,
+                h_aes_destroy_encryption_cache, h_aes_encrypt_header,
+                h_aes_encrypt_header_using_cache,
+            },
+        },
+    },
+    cosmian_crypto_base::{symmetric_crypto::SymmetricCrypto, KeyTrait},
+    std::{
+        ffi::{CStr, CString},
+        os::raw::c_int,
     },
 };
 
@@ -52,7 +57,7 @@ fn generate_encrypted_header() -> EncryptedHeader<Aes256GcmCrypto> {
         .as_str()
         .expect("no key as hex found in JSON");
     let public_key =
-        PublicKey::from_bytes(&hex::decode(hex_key).expect("cannot hex decode public key"))
+        PublicKey::try_from_bytes(&hex::decode(hex_key).expect("cannot hex decode public key"))
             .expect("cannot deserialize public key");
 
     // Policy
@@ -76,7 +81,7 @@ fn generate_encrypted_header() -> EncryptedHeader<Aes256GcmCrypto> {
         &policy,
         &public_key,
         &policy_attributes,
-        meta_data,
+        Some(meta_data),
     )
     .expect("cannot encrypt header")
 }
@@ -94,7 +99,7 @@ fn bench_header_encryption(c: &mut Criterion) {
         .as_str()
         .expect("no key as hex found in JSON");
     let public_key =
-        PublicKey::from_bytes(&hex::decode(hex_key).expect("cannot hex decode public key"))
+        PublicKey::try_from_bytes(&hex::decode(hex_key).expect("cannot hex decode public key"))
             .expect("cannot deserialize public key");
 
     // Policy
@@ -105,11 +110,6 @@ fn bench_header_encryption(c: &mut Criterion) {
         serde_json::from_slice(&hex::decode(policy_hex).expect("cannot hex decode policy"))
             .expect("cannot deserialize policy");
 
-    let metadata_empty = Metadata {
-        uid: vec![],
-        additional_data: None,
-    };
-
     let policy_attributes_1 = vec![
         attr("Department", "FIN"),
         attr("Security Level", "Confidential"),
@@ -118,7 +118,7 @@ fn bench_header_encryption(c: &mut Criterion) {
         &policy,
         &public_key,
         &policy_attributes_1,
-        metadata_empty.clone(),
+        None,
     )
     .expect("cannot encrypt header 1");
     let policy_attributes_3 = vec![
@@ -131,7 +131,7 @@ fn bench_header_encryption(c: &mut Criterion) {
         &policy,
         &public_key,
         &policy_attributes_3,
-        metadata_empty.clone(),
+        None,
     )
     .expect("cannot encrypt header 3");
 
@@ -149,7 +149,7 @@ fn bench_header_encryption(c: &mut Criterion) {
                 &policy,
                 &public_key,
                 &policy_attributes_1,
-                metadata_empty.clone(),
+                None,
             )
             .expect("cannot encrypt header 1")
         })
@@ -160,7 +160,7 @@ fn bench_header_encryption(c: &mut Criterion) {
                 &policy,
                 &public_key,
                 &policy_attributes_3,
-                metadata_empty.clone(),
+                None,
             )
             .expect("cannot encrypt header 3")
         })
@@ -171,10 +171,10 @@ fn bench_header_encryption(c: &mut Criterion) {
                 &policy,
                 &public_key,
                 &policy_attributes_1,
-                Metadata {
+                Some(Metadata {
                     uid: vec![1, 2, 3, 4, 5, 6, 7, 8, 9],
                     additional_data: Some(vec![10, 11, 12, 13, 14]),
-                },
+                }),
             )
             .expect("cannot encrypt header 1")
         })
@@ -194,7 +194,7 @@ fn bench_ffi_header_encryption(c: &mut Criterion) {
         .as_str()
         .expect("no key as hex found in JSON");
     let public_key =
-        PublicKey::from_bytes(&hex::decode(hex_key).expect("cannot hex decode public key"))
+        PublicKey::try_from_bytes(&hex::decode(hex_key).expect("cannot hex decode public key"))
             .expect("cannot deserialize public key");
 
     // Policy
@@ -230,7 +230,7 @@ fn bench_ffi_header_encryption(c: &mut Criterion) {
     .expect("cannot create CString from String converted policy");
 
     let public_key_bytes = public_key
-        .as_bytes()
+        .try_into_bytes()
         .expect("cannot get bytes from public key");
 
     let attributes_json = CString::new(
@@ -277,7 +277,7 @@ fn bench_ffi_header_encryption_using_cache(c: &mut Criterion) {
     // Public Key bytes
     let hex_key = &key_value[0]["value"].as_str().unwrap();
     let public_key =
-        PublicKey::from_bytes(&hex::decode(hex_key).expect("cannot hex decode public key"))
+        PublicKey::try_from_bytes(&hex::decode(hex_key).expect("cannot hex decode public key"))
             .expect("cannot deserialize public key");
 
     // Policy
@@ -305,7 +305,7 @@ fn bench_ffi_header_encryption_using_cache(c: &mut Criterion) {
     .expect("cannot create CString from String converted policy");
 
     let public_key_bytes = public_key
-        .as_bytes()
+        .try_into_bytes()
         .expect("cannot get bytes from public key");
 
     let mut cache_handle: i32 = 0;
@@ -376,7 +376,7 @@ fn bench_header_decryption(c: &mut Criterion) {
         .as_str()
         .expect("no key as hex found in JSON");
     let user_decryption_key =
-        UserDecryptionKey::from_bytes(&hex::decode(hex_key).expect("cannot hex decode key"))
+        UserDecryptionKey::try_from_bytes(&hex::decode(hex_key).expect("cannot hex decode key"))
             .expect("cannot generate user private key");
 
     c.bench_function("Header decryption", |b| {
@@ -403,7 +403,7 @@ fn bench_ffi_header_decryption(c: &mut Criterion) {
         .as_str()
         .expect("no key as hex found in JSON");
     let user_decryption_key =
-        UserDecryptionKey::from_bytes(&hex::decode(hex_key).expect("cannot hex decode key"))
+        UserDecryptionKey::try_from_bytes(&hex::decode(hex_key).expect("cannot hex decode key"))
             .expect("cannot generate user private key");
 
     let mut symmetric_key = vec![0u8; <Aes256GcmCrypto as SymmetricCrypto>::Key::LENGTH];
@@ -419,7 +419,7 @@ fn bench_ffi_header_decryption(c: &mut Criterion) {
     let mut additional_data_len = additional_data.len() as c_int;
 
     let user_decryption_key_bytes = user_decryption_key
-        .as_bytes()
+        .try_into_bytes()
         .expect("cannot get bytes from user decryption key");
     let user_decryption_key_ptr = user_decryption_key_bytes.as_ptr().cast::<i8>();
     let user_decryption_key_len = user_decryption_key_bytes.len() as i32;
@@ -461,7 +461,7 @@ fn bench_ffi_header_decryption_using_cache(c: &mut Criterion) {
         .as_str()
         .expect("no key as hex found in JSON");
     let user_decryption_key =
-        UserDecryptionKey::from_bytes(&hex::decode(hex_key).expect("cannot hex decode key"))
+        UserDecryptionKey::try_from_bytes(&hex::decode(hex_key).expect("cannot hex decode key"))
             .expect("cannot generate user private key");
 
     let mut symmetric_key = vec![0u8; <Aes256GcmCrypto as SymmetricCrypto>::Key::LENGTH];
@@ -477,7 +477,7 @@ fn bench_ffi_header_decryption_using_cache(c: &mut Criterion) {
     let mut additional_data_len = additional_data.len() as c_int;
 
     let user_decryption_key_bytes = user_decryption_key
-        .as_bytes()
+        .try_into_bytes()
         .expect("cannot get bytes from user decryption key");
     let user_decryption_key_ptr = user_decryption_key_bytes.as_ptr().cast::<i8>();
     let user_decryption_key_len = user_decryption_key_bytes.len() as i32;
@@ -519,14 +519,14 @@ fn bench_ffi_header_decryption_using_cache(c: &mut Criterion) {
 }
 
 #[cfg(feature = "ffi")]
-unsafe fn unwrap_ffi_error(val: i32) -> anyhow::Result<()> {
+unsafe fn unwrap_ffi_error(val: i32) -> Result<(), FormatErr> {
     if val != 0 {
         let mut message_bytes_key = vec![0u8; 4096];
         let message_bytes_ptr = message_bytes_key.as_mut_ptr().cast::<i8>();
         let mut message_bytes_len = message_bytes_key.len() as c_int;
         get_last_error(message_bytes_ptr, &mut message_bytes_len);
         let cstr = CStr::from_ptr(message_bytes_ptr);
-        anyhow::bail!("ERROR: {}", cstr.to_str()?);
+        Err(FormatErr::CryptoError(format!("ERROR: {}", cstr.to_str()?)))
     } else {
         Ok(())
     }
@@ -560,3 +560,8 @@ criterion_main!(benches);
 
 #[cfg(all(feature = "ffi", not(feature = "interfaces")))]
 criterion_main!(benches_ffi);
+
+/// if no feature enabled, can't run benchmark, but we
+/// need placeholder for compilation to succeed
+#[cfg(all(not(feature = "ffi"), not(feature = "interfaces")))]
+fn main() {}
