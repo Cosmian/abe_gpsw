@@ -23,7 +23,7 @@ crate-type = ["lib", "cdylib", "staticlib"]
 interfaces = ["cosmian_crypto_base"]
 ffi = ["interfaces"]
 python = ["interfaces", "pyo3"]
-wasm_bindgen = ["interfaces", "js-sys", "wasm-bindgen", "wasm-bindgen-test"]
+wasm_bindgen = ["interfaces", "js-sys", "wasm-bindgen"]
 
 [dependencies]
 cosmian_bls12_381 = "0.4"
@@ -48,8 +48,14 @@ js-sys = { version = "0.3", optional = true }
 wasm-bindgen = { version = "0.2", features = [
   "serde-serialize",
 ], optional = true }
-wasm-bindgen-test = { version = "0.3", optional = true }
 
-[[bin]]
-name = "bench_abe_gpsw"
-path = "src/bench.rs"
+[dev-dependencies]
+wasm-bindgen-test = { version = "0.3" }
+criterion = { version = "0.3", features = ["html_reports"] }
+
+[[bench]]
+name = "benches"
+harness = false
+
+[profile.bench]
+debug = true
