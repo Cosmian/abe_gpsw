@@ -3,6 +3,15 @@
 All notable changes to this project will be documented in this file.
 
 ---
+## [0.7.1] - 2022-06-23
+### Added
+- [pyo3 + JS/bindgen + FFI] Add CoverCrypt attributes rotation mechanism
+### Changed
+### Fixed
+### Removed
+---
+
+---
 ## [0.7.0] - 2022-06-16
 ### Added
 - [pyo3] Add Rust bindings for Python thanks to pyo3

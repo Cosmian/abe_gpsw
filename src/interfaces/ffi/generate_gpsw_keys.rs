@@ -12,7 +12,7 @@ use crate::{
     ffi_bail, ffi_not_null, ffi_unwrap,
     interfaces::{
         ffi::error::{set_last_error, FfiError},
-        policy::{AccessPolicy, Policy},
+        policy::{AccessPolicy, Attribute, Policy},
     },
 };
 
@@ -80,7 +80,7 @@ pub unsafe extern "C" fn h_generate_master_keys(
             allocated
         );
     }
-    std::slice::from_raw_parts_mut(master_keys_ptr as *mut u8, len)
+    std::slice::from_raw_parts_mut(master_keys_ptr.cast::<u8>(), len)
         .copy_from_slice(&master_keys_bytes);
     *master_keys_len = len as c_int;
 
@@ -131,7 +131,7 @@ pub unsafe extern "C" fn h_generate_user_private_key(
     //
     // Master private key deserialization
     let master_private_key_bytes = std::slice::from_raw_parts(
-        master_private_key_ptr as *const u8,
+        master_private_key_ptr.cast::<u8>(),
         master_private_key_len as usize,
     );
     let master_private_key = ffi_unwrap!(GpswMasterPrivateKey::<Bls12_381>::try_from_bytes(
@@ -187,9 +187,88 @@ pub unsafe extern "C" fn h_generate_user_private_key(
             allocated
         );
     }
-    std::slice::from_raw_parts_mut(user_private_key_ptr as *mut u8, len)
+    std::slice::from_raw_parts_mut(user_private_key_ptr.cast::<u8>(), len)
         .copy_from_slice(&user_key_bytes);
     *user_private_key_len = len as c_int;
+
+    0
+}
+
+#[no_mangle]
+/// Generate the user private key matching the given access policy
+///
+/// - `new_policy_ptr`: Output buffer containing new policy
+/// - `new_policy_len`: Size of the output buffer
+/// - `attributes_ptr`: Attributes to rotate (JSON)
+/// - `policy_ptr`: Policy to use to generate the keys (JSON)
+/// # Safety
+pub unsafe extern "C" fn h_rotate_attributes(
+    new_policy_ptr: *mut c_char,
+    new_policy_len: *mut c_int,
+    attributes_ptr: *const c_char,
+    policy_ptr: *const c_char,
+) -> c_int {
+    //
+    // Checks inputs
+    ffi_not_null!(
+        new_policy_ptr,
+        "New policy pointer should point to pre-allocated memory"
+    );
+    if *new_policy_len == 0 {
+        ffi_bail!("The new policy buffer should not be empty");
+    }
+    ffi_not_null!(attributes_ptr, "Attributes pointer should not be null");
+    ffi_not_null!(policy_ptr, "Policy pointer should not be null");
+
+    //
+    // Attributes
+    let attributes = match CStr::from_ptr(attributes_ptr).to_str() {
+        Ok(msg) => msg.to_owned(),
+        Err(e) => {
+            set_last_error(FfiError::Generic(format!(
+                "CoverCrypt attributes rotation: invalid Attributes: {e}"
+            )));
+            return 1;
+        }
+    };
+    let attributes: Vec<Attribute> = ffi_unwrap!(serde_json::from_str(&attributes));
+
+    //
+    // Policy
+    let policy = match CStr::from_ptr(policy_ptr).to_str() {
+        Ok(msg) => msg.to_owned(),
+        Err(e) => {
+            set_last_error(FfiError::Generic(format!(
+                "CoverCrypt keys generation: invalid Policy: {e}"
+            )));
+            return 1;
+        }
+    };
+    let mut policy: Policy = ffi_unwrap!(serde_json::from_str(&policy));
+
+    //
+    // Rotate attributes of the current policy
+    for attr in &attributes {
+        ffi_unwrap!(policy.rotate(attr));
+    }
+
+    //
+    // Serialize new policy
+    let new_policy_string = policy.to_string();
+
+    //
+    // Prepare output
+    let allocated = *new_policy_len;
+    let len = new_policy_string.len();
+    if (allocated as usize) < len {
+        ffi_bail!(
+            "The pre-allocated output policy buffer is too small; need {len} bytes, allocated \
+             {allocated}"
+        );
+    }
+    std::slice::from_raw_parts_mut(new_policy_ptr.cast::<u8>(), len)
+        .copy_from_slice(new_policy_string.as_bytes());
+    *new_policy_len = len as c_int;
 
     0
 }

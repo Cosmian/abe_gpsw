@@ -11,7 +11,7 @@ use rand::{CryptoRng, RngCore};
 use super::BilinearMap;
 use crate::{core::gpsw::AsBytes, error::FormatErr};
 
-#[derive(Default, Debug, PartialEq, Clone)]
+#[derive(Default, Debug, PartialEq, Eq, Clone)]
 pub struct Bls12_381;
 
 #[derive(Clone, Debug)]
@@ -75,7 +75,7 @@ impl Neg for Scalar {
 
 impl From<i32> for Scalar {
     fn from(int: i32) -> Self {
-        let scalar = cosmian_bls12_381::Scalar::from(int.abs() as u64);
+        let scalar = cosmian_bls12_381::Scalar::from(u64::from(int.unsigned_abs()));
         if int < 0 {
             Scalar(-scalar)
         } else {

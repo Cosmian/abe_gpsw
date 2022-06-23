@@ -73,10 +73,10 @@ pub fn webassembly_decrypt_hybrid_header(
 
     //
     // Parse user decryption key
-    let user_decryption_key =
-        UserDecryptionKey::try_from_bytes(user_decryption_key_bytes.to_vec().as_slice()).map_err(
-            |e| return JsValue::from_str(&format!("Error deserializing user decryption key: {e}")),
-        )?;
+    let user_decryption_key = UserDecryptionKey::try_from_bytes(
+        user_decryption_key_bytes.to_vec().as_slice(),
+    )
+    .map_err(|e| JsValue::from_str(&format!("Error deserializing user decryption key: {e}")))?;
 
     //
     // Finally decrypt symmetric key using given user decryption key
@@ -85,11 +85,11 @@ pub fn webassembly_decrypt_hybrid_header(
             &user_decryption_key,
             encrypted_header_bytes.to_vec().as_slice(),
         )
-        .map_err(|e| return JsValue::from_str(&format!("Error decrypting hybrid header: {e}")))?;
+        .map_err(|e| JsValue::from_str(&format!("Error decrypting hybrid header: {e}")))?;
 
-    let cleartext_header_bytes = cleartext_header.try_into_bytes().map_err(|e| {
-        return JsValue::from_str(&format!("Error serializing cleartext header: {e}"));
-    })?;
+    let cleartext_header_bytes = cleartext_header
+        .try_into_bytes()
+        .map_err(|e| JsValue::from_str(&format!("Error serializing cleartext header: {e}")))?;
 
     Ok(js_sys::Uint8Array::from(&cleartext_header_bytes[..]))
 }
@@ -122,9 +122,7 @@ pub fn webassembly_create_decryption_cache(
     let user_decryption_key = UserDecryptionKey::try_from_bytes(
         user_decryption_key.to_vec().as_slice(),
     )
-    .map_err(|e| {
-        return JsValue::from_str(&format!("Error deserializing user decryption key: {e}"));
-    })?;
+    .map_err(|e| JsValue::from_str(&format!("Error deserializing user decryption key: {e}")))?;
 
     let cache = DecryptionCache {
         user_decryption_key,
@@ -166,11 +164,11 @@ pub fn webassembly_decrypt_hybrid_header_using_cache(
             &cache.user_decryption_key,
             encrypted_header.to_vec().as_slice(),
         )
-        .map_err(|e| return JsValue::from_str(&format!("Error decrypting hybrid header: {e}")))?;
+        .map_err(|e| JsValue::from_str(&format!("Error decrypting hybrid header: {e}")))?;
 
-    let cleartext_header_bytes = cleartext_header.try_into_bytes().map_err(|e| {
-        return JsValue::from_str(&format!("Error serializing cleartext header: {e}"));
-    })?;
+    let cleartext_header_bytes = cleartext_header
+        .try_into_bytes()
+        .map_err(|e| JsValue::from_str(&format!("Error serializing cleartext header: {e}")))?;
 
     Ok(js_sys::Uint8Array::from(&cleartext_header_bytes[..]))
 }
@@ -197,15 +195,9 @@ pub fn webassembly_decrypt_hybrid_block(
 
     //
     // Parse symmetric key
-    let symmetric_key = <Aes256GcmCrypto as SymmetricCrypto>::Key::try_from(
-        symmetric_key_bytes.to_vec(),
-    )
-    .map_err(|e| {
-        return JsValue::from_str(&format!(
-            "Error parsing
-    symmetric key: {e}"
-        ));
-    })?;
+    let symmetric_key =
+        <Aes256GcmCrypto as SymmetricCrypto>::Key::try_from(symmetric_key_bytes.to_vec())
+            .map_err(|e| JsValue::from_str(&format!("Error parsing symmetric key: {e}")))?;
 
     let uid = uid_bytes.map_or(vec![], |v| v.to_vec());
     let block_number_value = block_number.unwrap_or(0);
@@ -217,12 +209,7 @@ pub fn webassembly_decrypt_hybrid_block(
         block_number_value as usize,
         &encrypted_bytes.to_vec(),
     )
-    .map_err(|e| {
-        return JsValue::from_str(&format!(
-            "Error decrypting block:
-    {e}"
-        ));
-    })?;
+    .map_err(|e| JsValue::from_str(&format!("Error decrypting block: {e}")))?;
 
     Ok(js_sys::Uint8Array::from(&cleartext[..]))
 }

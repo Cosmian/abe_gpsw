@@ -13,7 +13,7 @@ use crate::{
     error::{FormatErr, ParsingError},
 };
 
-#[derive(Clone, PartialEq, Debug)]
+#[derive(Clone, PartialEq, Eq, Debug)]
 pub struct MonotoneSpanProgram<I> {
     pub(crate) nb_row: usize,
     pub(crate) nb_col: usize,

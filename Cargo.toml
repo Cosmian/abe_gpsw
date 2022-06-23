@@ -11,7 +11,7 @@ documentation = "https://docs.rs/abe_gpsw/"
 edition = "2018"
 license = "MIT/Apache-2.0"
 repository = "https://github.com/Cosmian/abe_gpsw"
-version = "0.7.0"
+version = "0.7.1"
 
 [lib]
 name = "abe_gpsw"

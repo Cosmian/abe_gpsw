@@ -124,9 +124,8 @@ pub fn webassembly_create_encryption_cache(
 
     //
     // Parse public key
-    let public_key = PublicKey::try_from_bytes(public_key.to_vec().as_slice()).map_err(|e| {
-        return JsValue::from_str(&format!("Error deserializing public key: {e}"));
-    })?;
+    let public_key = PublicKey::try_from_bytes(public_key.to_vec().as_slice())
+        .map_err(|e| JsValue::from_str(&format!("Error deserializing public key: {e}")))?;
 
     let cache = EncryptionCache { policy, public_key };
     let id = NEXT_ENCRYPTION_CACHE_ID.fetch_add(1, Ordering::Acquire);
@@ -205,15 +204,9 @@ pub fn webassembly_encrypt_hybrid_block(
 
     //
     // Parse symmetric key
-    let symmetric_key = <Aes256GcmCrypto as SymmetricCrypto>::Key::try_from(
-        symmetric_key_bytes.to_vec(),
-    )
-    .map_err(|e| {
-        return JsValue::from_str(&format!(
-            "Error parsing
-    symmetric key: {e}"
-        ));
-    })?;
+    let symmetric_key =
+        <Aes256GcmCrypto as SymmetricCrypto>::Key::try_from(symmetric_key_bytes.to_vec())
+            .map_err(|e| JsValue::from_str(&format!("Error parsing symmetric key: {e}")))?;
 
     let uid = uid_bytes.map_or(vec![], |v| v.to_vec());
     let block_number_value = block_number.unwrap_or(0);
@@ -225,12 +218,7 @@ pub fn webassembly_encrypt_hybrid_block(
         block_number_value as usize,
         &data_bytes.to_vec(),
     )
-    .map_err(|e| {
-        return JsValue::from_str(&format!(
-            "Error encrypting block:
-    {e}"
-        ));
-    })?;
+    .map_err(|e| JsValue::from_str(&format!("Error encrypting block: {e}")))?;
 
     Ok(js_sys::Uint8Array::from(&ciphertext[..]))
 }

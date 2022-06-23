@@ -18,10 +18,7 @@ use crate::{
 type PublicKey = <Gpsw<Bls12_381> as AbeScheme>::MasterPublicKey;
 
 type UserDecryptionKey = <Gpsw<Bls12_381> as AbeScheme>::UserDecryptionKey;
-use std::{
-    ffi::CString,
-    os::raw::{c_char, c_int},
-};
+use std::{ffi::CString, os::raw::c_int};
 
 use serde_json::Value;
 
@@ -55,11 +52,11 @@ unsafe fn encrypt_header(
     ];
 
     let mut symmetric_key = vec![0u8; 32];
-    let symmetric_key_ptr = symmetric_key.as_mut_ptr() as *mut c_char;
+    let symmetric_key_ptr = symmetric_key.as_mut_ptr().cast::<i8>();
     let mut symmetric_key_len = symmetric_key.len() as c_int;
 
     let mut encrypted_header_bytes = vec![0u8; 4096];
-    let encrypted_header_ptr = encrypted_header_bytes.as_mut_ptr() as *mut c_char;
+    let encrypted_header_ptr = encrypted_header_bytes.as_mut_ptr().cast::<i8>();
     let mut encrypted_header_len = encrypted_header_bytes.len() as c_int;
 
     let policy_cs = CString::new(serde_json::to_string(&policy)?.as_str())?;
@@ -78,12 +75,17 @@ unsafe fn encrypt_header(
         encrypted_header_ptr,
         &mut encrypted_header_len,
         policy_ptr,
-        public_key_ptr as *const c_char,
+        public_key_ptr.cast::<i8>(),
         public_key_len,
         attributes_ptr,
-        meta_data.uid.as_ptr() as *const c_char,
+        meta_data.uid.as_ptr().cast::<i8>(),
         meta_data.uid.len() as i32,
-        meta_data.additional_data.as_ref().unwrap().as_ptr() as *const c_char,
+        meta_data
+            .additional_data
+            .as_ref()
+            .unwrap()
+            .as_ptr()
+            .cast::<i8>(),
         meta_data.additional_data.as_ref().unwrap().len() as i32,
     ))?;
 
@@ -119,19 +121,19 @@ unsafe fn decrypt_header(
     let user_decryption_key = UserDecryptionKey::try_from_bytes(&hex::decode(hex_key)?)?;
 
     let mut symmetric_key = vec![0u8; 32];
-    let symmetric_key_ptr = symmetric_key.as_mut_ptr() as *mut c_char;
+    let symmetric_key_ptr = symmetric_key.as_mut_ptr().cast::<i8>();
     let mut symmetric_key_len = symmetric_key.len() as c_int;
 
     let mut uid = vec![0u8; 4096];
-    let uid_ptr = uid.as_mut_ptr() as *mut c_char;
+    let uid_ptr = uid.as_mut_ptr().cast::<i8>();
     let mut uid_len = uid.len() as c_int;
 
     let mut additional_data = vec![0u8; 4096];
-    let additional_data_ptr = additional_data.as_mut_ptr() as *mut c_char;
+    let additional_data_ptr = additional_data.as_mut_ptr().cast::<i8>();
     let mut additional_data_len = additional_data.len() as c_int;
 
     let user_decryption_key_bytes = user_decryption_key.try_into_bytes()?;
-    let user_decryption_key_ptr = user_decryption_key_bytes.as_ptr() as *const c_char;
+    let user_decryption_key_ptr = user_decryption_key_bytes.as_ptr().cast::<i8>();
     let user_decryption_key_len = user_decryption_key_bytes.len() as i32;
 
     unwrap_ffi_error(h_aes_decrypt_header(
@@ -141,7 +143,7 @@ unsafe fn decrypt_header(
         &mut uid_len,
         additional_data_ptr,
         &mut additional_data_len,
-        header.encrypted_header_bytes.as_ptr() as *const c_char,
+        header.encrypted_header_bytes.as_ptr().cast::<i8>(),
         header.encrypted_header_bytes.len() as c_int,
         user_decryption_key_ptr,
         user_decryption_key_len,
@@ -172,14 +174,14 @@ unsafe fn decrypt_header(
 unsafe fn unwrap_ffi_error(val: i32) -> Result<(), FormatErr> {
     if val != 0 {
         let mut message_bytes_key = vec![0u8; 4096];
-        let message_bytes_ptr = message_bytes_key.as_mut_ptr() as *mut c_char;
+        let message_bytes_ptr = message_bytes_key.as_mut_ptr().cast::<i8>();
         let mut message_bytes_len = message_bytes_key.len() as c_int;
         get_last_error(message_bytes_ptr, &mut message_bytes_len);
         let cstr = CStr::from_ptr(message_bytes_ptr);
-        return Err(FormatErr::InternalOperation(format!(
+        Err(FormatErr::InternalOperation(format!(
             "ERROR: {}",
             cstr.to_str()?
-        )));
+        )))
     } else {
         Ok(())
     }
@@ -207,7 +209,7 @@ unsafe fn encrypt_header_using_cache(
     let policy_ptr = policy_cs.as_ptr();
 
     let public_key_bytes = public_key.try_into_bytes()?;
-    let public_key_ptr = public_key_bytes.as_ptr() as *const c_char;
+    let public_key_ptr = public_key_bytes.as_ptr().cast::<i8>();
     let public_key_len = public_key_bytes.len() as i32;
 
     let mut cache_handle: i32 = 0;
@@ -225,11 +227,11 @@ unsafe fn encrypt_header_using_cache(
     ];
 
     let mut symmetric_key = vec![0u8; 32];
-    let symmetric_key_ptr = symmetric_key.as_mut_ptr() as *mut c_char;
+    let symmetric_key_ptr = symmetric_key.as_mut_ptr().cast::<i8>();
     let mut symmetric_key_len = symmetric_key.len() as c_int;
 
     let mut encrypted_header_bytes = vec![0u8; 4096];
-    let encrypted_header_ptr = encrypted_header_bytes.as_mut_ptr() as *mut c_char;
+    let encrypted_header_ptr = encrypted_header_bytes.as_mut_ptr().cast::<i8>();
     let mut encrypted_header_len = encrypted_header_bytes.len() as c_int;
 
     let attributes_json = CString::new(serde_json::to_string(&policy_attributes)?.as_str())?;
@@ -242,9 +244,14 @@ unsafe fn encrypt_header_using_cache(
         &mut encrypted_header_len,
         cache_handle,
         attributes_ptr,
-        meta_data.uid.as_ptr() as *const c_char,
+        meta_data.uid.as_ptr().cast::<i8>(),
         meta_data.uid.len() as i32,
-        meta_data.additional_data.as_ref().unwrap().as_ptr() as *const c_char,
+        meta_data
+            .additional_data
+            .as_ref()
+            .unwrap()
+            .as_ptr()
+            .cast::<i8>(),
         meta_data.additional_data.as_ref().unwrap().len() as i32,
     ))?;
 
@@ -278,7 +285,7 @@ unsafe fn decrypt_header_using_cache(
     let user_decryption_key = UserDecryptionKey::try_from_bytes(&hex::decode(hex_key)?)?;
 
     let user_decryption_key_bytes = user_decryption_key.try_into_bytes()?;
-    let user_decryption_key_ptr = user_decryption_key_bytes.as_ptr() as *const c_char;
+    let user_decryption_key_ptr = user_decryption_key_bytes.as_ptr().cast::<i8>();
     let user_decryption_key_len = user_decryption_key_bytes.len() as i32;
 
     let mut cache_handle: i32 = 0;
@@ -290,15 +297,15 @@ unsafe fn decrypt_header_using_cache(
     ))?;
 
     let mut symmetric_key = vec![0u8; 32];
-    let symmetric_key_ptr = symmetric_key.as_mut_ptr() as *mut c_char;
+    let symmetric_key_ptr = symmetric_key.as_mut_ptr().cast::<i8>();
     let mut symmetric_key_len = symmetric_key.len() as c_int;
 
     let mut uid = vec![0u8; 4096];
-    let uid_ptr = uid.as_mut_ptr() as *mut c_char;
+    let uid_ptr = uid.as_mut_ptr().cast::<i8>();
     let mut uid_len = uid.len() as c_int;
 
     let mut additional_data = vec![0u8; 4096];
-    let additional_data_ptr = additional_data.as_mut_ptr() as *mut c_char;
+    let additional_data_ptr = additional_data.as_mut_ptr().cast::<i8>();
     let mut additional_data_len = additional_data.len() as c_int;
 
     unwrap_ffi_error(h_aes_decrypt_header_using_cache(
@@ -308,7 +315,7 @@ unsafe fn decrypt_header_using_cache(
         &mut uid_len,
         additional_data_ptr,
         &mut additional_data_len,
-        header.encrypted_header_bytes.as_ptr() as *const c_char,
+        header.encrypted_header_bytes.as_ptr().cast::<i8>(),
         header.encrypted_header_bytes.len() as c_int,
         cache_handle,
     ))?;
