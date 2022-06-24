@@ -75,7 +75,8 @@ pub fn generate_user_private_key(
 /// Remark: It is also possible to merge 2 keys by `Or` node, this latter
 /// functionality is not yet supported
 ///
-/// - `master_private_key_bytes`    : master secret key
+/// - `delegation_key_bytes`        : the master public delegation key
+/// - `user_decryption_key_bytes`   : the user decryption key
 /// - `access_policy_str`           : user access policy
 /// - `policy_bytes`                : global policy
 #[pyfunction]
@@ -88,9 +89,9 @@ pub fn generate_delegated_key(
     let delegation_key =
         GpswMasterPublicDelegationKey::<Bls12_381>::try_from_bytes(&delegation_key_bytes)?;
     let user_decryption_key = UserDecryptionKey::try_from_bytes(&user_decryption_key_bytes)?;
-    let policy = serde_json::from_slice(&policy_bytes)
-        .map_err(|e| PyTypeError::new_err(format!("Policy deserialization failed: {e}")))?;
     let access_policy = AccessPolicy::from_boolean_expression(&access_policy_str)?;
+    let policy: Policy = serde_json::from_slice(&policy_bytes)
+        .map_err(|e| PyTypeError::new_err(format!("Policy deserialization failed: {e}")))?;
 
     let user_key = Engine::<Gpsw<Bls12_381>>::new().delegate_user_key(
         &policy,

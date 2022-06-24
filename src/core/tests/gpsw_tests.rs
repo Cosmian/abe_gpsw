@@ -33,7 +33,7 @@ fn encrypt_decrypt() -> Result<(), FormatErr> {
 
     let mk = abe.generate_master_key(10)?;
     let uk = abe.key_generation(&msp, &mk.priv_key)?;
-    let message = abe.msg_encode("test".as_bytes())?;
+    let message = abe.msg_encode(b"test")?;
     let gamma = [1, 4];
     let enc = abe.encrypt(&message, &gamma, &mk.pub_key)?;
 
@@ -83,7 +83,7 @@ fn ciphertext_as_bytes() -> Result<(), FormatErr> {
     };
 
     let mk = abe.generate_master_key(10)?;
-    let message = abe.msg_encode("test".as_bytes())?;
+    let message = abe.msg_encode(b"test")?;
     let gamma = [1, 4];
     let enc = abe.encrypt(&message, &gamma, &mk.pub_key)?;
     let enc_2 = GpswCipherText::<Bls12_381>::try_from_bytes(&enc.try_into_bytes()?)?;
@@ -142,7 +142,7 @@ fn encrypt_decrypt_with_multiple_key_pair() -> Result<(), FormatErr> {
     println!("msp 2: {}", uk3.msp);
     println!("msp 2: {}", uk4.msp);
 
-    let msg = abe.msg_encode("test".as_bytes())?;
+    let msg = abe.msg_encode(b"test")?;
 
     let gamma = [1, 2];
     let enc = abe.encrypt(&msg, &gamma, &mk.pub_key)?;

@@ -101,13 +101,13 @@ pub enum FormatErr {
 
 impl From<TryFromSliceError> for FormatErr {
     fn from(_e: TryFromSliceError) -> Self {
-        FormatErr::ConversionFailed
+        Self::ConversionFailed
     }
 }
 
 impl From<serde_json::Error> for FormatErr {
     fn from(e: serde_json::Error) -> Self {
-        FormatErr::Deserialization(e.to_string())
+        Self::Deserialization(e.to_string())
     }
 }
 
@@ -116,24 +116,24 @@ impl From<cosmian_crypto_base::Error> for FormatErr {
     fn from(e: cosmian_crypto_base::Error) -> Self {
         match e {
             CryptoError::SizeError { given, expected } => {
-                FormatErr::InvalidSize(format!("expected: {}, given: {}", expected, given))
+                Self::InvalidSize(format!("expected: {}, given: {}", expected, given))
             }
-            CryptoError::InvalidSize(e) => FormatErr::InvalidSize(e),
-            e => FormatErr::CryptoError(e.to_string()),
+            CryptoError::InvalidSize(e) => Self::InvalidSize(e),
+            e => Self::CryptoError(e.to_string()),
         }
     }
 }
 
 impl From<Infallible> for FormatErr {
     fn from(e: Infallible) -> Self {
-        FormatErr::Infallible(e)
+        Self::Infallible(e)
     }
 }
 
 #[cfg(feature = "ffi")]
 impl From<std::ffi::NulError> for FormatErr {
     fn from(e: std::ffi::NulError) -> Self {
-        FormatErr::NulError(e)
+        Self::NulError(e)
     }
 }
 

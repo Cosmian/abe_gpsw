@@ -56,7 +56,7 @@ pub fn attr(axis: &str, name: &str) -> Attribute {
 
 impl From<(&str, &str)> for Attribute {
     fn from(input: (&str, &str)) -> Self {
-        Attribute {
+        Self {
             axis: input.0.to_owned(),
             name: input.1.to_owned(),
         }
@@ -65,7 +65,7 @@ impl From<(&str, &str)> for Attribute {
 
 impl From<(String, String)> for Attribute {
     fn from(input: (String, String)) -> Self {
-        Attribute {
+        Self {
             axis: input.0,
             name: input.1,
         }
@@ -168,7 +168,7 @@ impl<'de> Deserialize<'de> for Attribute {
             .split("::")
             .map(std::string::ToString::to_string)
             .collect::<Vec<_>>();
-        Ok(Attribute {
+        Ok(Self {
             axis: split[0].clone(),
             name: split[1].clone(),
         })
@@ -201,8 +201,8 @@ impl PartialEq for AccessPolicy {
 impl AccessPolicy {
     /// Create an access policy from a single attribute
     #[must_use]
-    pub fn from(axis_name: &str, attribute_name: &str) -> AccessPolicy {
-        AccessPolicy::Attr(Attribute {
+    pub fn from(axis_name: &str, attribute_name: &str) -> Self {
+        Self::Attr(Attribute {
             axis: axis_name.to_owned(),
             name: attribute_name.to_owned(),
         })
@@ -216,7 +216,7 @@ impl AccessPolicy {
     /// value
     fn to_u32(&self, attribute_mapping: &mut HashMap<Attribute, u32>) -> u32 {
         match self {
-            AccessPolicy::Attr(attr) => {
+            Self::Attr(attr) => {
                 if let Some(integer_value) = attribute_mapping.get(attr) {
                     *integer_value
                 } else {
@@ -228,9 +228,9 @@ impl AccessPolicy {
                     max
                 }
             }
-            AccessPolicy::And(l, r) => l.to_u32(attribute_mapping) * r.to_u32(attribute_mapping),
-            AccessPolicy::Or(l, r) => l.to_u32(attribute_mapping) + r.to_u32(attribute_mapping),
-            AccessPolicy::All => 0,
+            Self::And(l, r) => l.to_u32(attribute_mapping) * r.to_u32(attribute_mapping),
+            Self::Or(l, r) => l.to_u32(attribute_mapping) + r.to_u32(attribute_mapping),
+            Self::All => 0,
         }
     }
 
@@ -248,10 +248,8 @@ impl AccessPolicy {
     /// The example above would generate the access policy
     ///
     /// `Department("HR" OR "FIN") AND Level("level_2")`
-    pub fn from_axes(
-        axes_attributes: &HashMap<String, Vec<String>>,
-    ) -> Result<AccessPolicy, FormatErr> {
-        let mut access_policies: Vec<AccessPolicy> = Vec::with_capacity(axes_attributes.len());
+    pub fn from_axes(axes_attributes: &HashMap<String, Vec<String>>) -> Result<Self, FormatErr> {
+        let mut access_policies: Vec<Self> = Vec::with_capacity(axes_attributes.len());
         for (axis, attributes) in axes_attributes {
             access_policies.push(
                 attributes
@@ -414,7 +412,7 @@ impl AccessPolicy {
         let boolean_expression_example = "(Department::HR || Department::RnD) && Level::level_2";
 
         // Remove spaces around parenthesis and operators
-        let boolean_expression = AccessPolicy::sanitize_spaces(boolean_expression);
+        let boolean_expression = Self::sanitize_spaces(boolean_expression);
 
         if !boolean_expression.contains("::") {
             return Err(FormatErr::InvalidBooleanExpression(format!(
@@ -436,21 +434,20 @@ impl AccessPolicy {
                 )));
             }
             // Search right closing parenthesis, avoiding false positive
-            let matching_closing_parenthesis =
-                AccessPolicy::find_next_parenthesis(boolean_expression)?;
+            let matching_closing_parenthesis = Self::find_next_parenthesis(boolean_expression)?;
             let (left_part, operator, right_part) =
                 Self::decompose_expression(boolean_expression, matching_closing_parenthesis)?;
             if operator.is_none() {
-                return AccessPolicy::from_boolean_expression(left_part.as_str());
+                return Self::from_boolean_expression(left_part.as_str());
             }
 
             let operator = operator.unwrap_or_default();
             let right_part = right_part.unwrap_or_default();
-            let ap1 = Box::new(AccessPolicy::from_boolean_expression(left_part.as_str())?);
-            let ap2 = Box::new(AccessPolicy::from_boolean_expression(right_part.as_str())?);
+            let ap1 = Box::new(Self::from_boolean_expression(left_part.as_str())?);
+            let ap2 = Box::new(Self::from_boolean_expression(right_part.as_str())?);
             let ap = match operator.as_str() {
-                "&&" => Ok(AccessPolicy::And(ap1, ap2)),
-                "||" => Ok(AccessPolicy::Or(ap1, ap2)),
+                "&&" => Ok(Self::And(ap1, ap2)),
+                "||" => Ok(Self::Or(ap1, ap2)),
                 _ => Err(FormatErr::from(ParsingError::UnsupportedOperator(
                     operator.to_string(),
                 ))),
@@ -493,16 +490,16 @@ impl AccessPolicy {
             let (left_part, operator, right_part) =
                 Self::decompose_expression(&boolean_expression, position)?;
             if operator.is_none() {
-                return AccessPolicy::from_boolean_expression(left_part.as_str());
+                return Self::from_boolean_expression(left_part.as_str());
             }
             let operator = operator.unwrap_or_default();
             let right_part = right_part.unwrap_or_default();
 
-            let ap1 = Box::new(AccessPolicy::from_boolean_expression(left_part.as_str())?);
-            let ap2 = Box::new(AccessPolicy::from_boolean_expression(right_part.as_str())?);
+            let ap1 = Box::new(Self::from_boolean_expression(left_part.as_str())?);
+            let ap2 = Box::new(Self::from_boolean_expression(right_part.as_str())?);
             let ap = match operator.as_str() {
-                "&&" => Ok(AccessPolicy::And(ap1, ap2)),
-                "||" => Ok(AccessPolicy::Or(ap1, ap2)),
+                "&&" => Ok(Self::And(ap1, ap2)),
+                "||" => Ok(Self::Or(ap1, ap2)),
                 _ => Err(FormatErr::from(ParsingError::UnsupportedOperator(
                     operator.to_string(),
                 ))),
@@ -551,20 +548,20 @@ impl AccessPolicy {
 
     #[must_use]
     pub fn attributes(&self) -> Vec<Attribute> {
-        let mut attributes = AccessPolicy::_attributes(self);
+        let mut attributes = Self::_attributes(self);
         attributes.sort();
         attributes
     }
 
-    fn _attributes(access_policy: &AccessPolicy) -> Vec<Attribute> {
+    fn _attributes(access_policy: &Self) -> Vec<Attribute> {
         match access_policy {
-            AccessPolicy::Attr(att) => vec![att.clone()],
-            AccessPolicy::And(a1, a2) | AccessPolicy::Or(a1, a2) => {
-                let mut v = AccessPolicy::_attributes(a1);
-                v.extend(AccessPolicy::_attributes(a2));
+            Self::Attr(att) => vec![att.clone()],
+            Self::And(a1, a2) | Self::Or(a1, a2) => {
+                let mut v = Self::_attributes(a1);
+                v.extend(Self::_attributes(a2));
                 v
             }
-            AccessPolicy::All => vec![],
+            Self::All => vec![],
         }
     }
 }
@@ -589,7 +586,7 @@ impl BitOr for AccessPolicy {
 
 impl From<Attribute> for AccessPolicy {
     fn from(attribute: Attribute) -> Self {
-        AccessPolicy::Attr(attribute)
+        Self::Attr(attribute)
     }
 }
 

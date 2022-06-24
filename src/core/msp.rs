@@ -149,7 +149,7 @@ impl<I> MonotoneSpanProgram<I> {
 
 impl<I: From<i32>> MonotoneSpanProgram<I>
 where
-    MonotoneSpanProgram<I>: From<MonotoneSpanProgram<i32>>,
+    Self: From<MonotoneSpanProgram<i32>>,
 {
     pub fn parse(s: &str) -> Result<Self, FormatErr> {
         let msp = Node::parse(s)?.to_msp()?;
@@ -201,9 +201,9 @@ impl BitOr for Node {
 impl Display for Node {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let str = match self {
-            Node::And(n1, n2) => format!("AND( {}, {} )", n1, n2),
-            Node::Or(n1, n2) => format!("OR( {}, {} )", n1, n2),
-            Node::Leaf(v) => format!("LEAF({})", v),
+            Self::And(n1, n2) => format!("AND( {}, {} )", n1, n2),
+            Self::Or(n1, n2) => format!("OR( {}, {} )", n1, n2),
+            Self::Leaf(v) => format!("LEAF({})", v),
         };
         write!(f, "{}", str)
     }
@@ -221,7 +221,7 @@ impl Node {
         queue.push_back((self, vec![1]));
         while let Some((node, vector)) = queue.pop_front() {
             match node {
-                Node::And(n1, n2) => {
+                Self::And(n1, n2) => {
                     let mut vec_1 = vector.clone();
                     vec_1.resize(counter, 0_i32);
                     vec_1.push(1);
@@ -231,11 +231,11 @@ impl Node {
                     queue.push_back((n2, vec_2));
                     counter += 1;
                 }
-                Node::Or(n1, n2) => {
+                Self::Or(n1, n2) => {
                     queue.push_back((n1, vector.clone()));
                     queue.push_back((n2, vector.clone()));
                 }
-                leaf @ Node::Leaf(_) => {
+                leaf @ Self::Leaf(_) => {
                     matrix.push((leaf, vector.clone()));
                 }
             };
@@ -254,7 +254,7 @@ impl Node {
         let mut msp_map = HashMap::with_capacity(matrix.len());
         let mut msp_vec = Vec::with_capacity(matrix.len());
         for (i, row) in matrix.iter().enumerate() {
-            if let Node::Leaf(attr) = row.0 {
+            if let Self::Leaf(attr) = row.0 {
                 let mut vec = row.1.clone();
                 vec.resize(counter, 0);
                 for i in 1..vec.len() {
@@ -323,9 +323,9 @@ impl Node {
             // Remove integer from current formula
             let new_s = &new_s[integer_str.len()..];
             if new_s.is_empty() {
-                return Ok(Node::Leaf(integer));
+                return Ok(Self::Leaf(integer));
             }
-            let a = Box::new(Node::Leaf(integer));
+            let a = Box::new(Self::Leaf(integer));
             let operator = new_s.chars().next().ok_or_else(|| {
                 ParsingError::UnexpectedEnd(format!(
                     "no further character while detecting operator in: {}",
@@ -336,8 +336,8 @@ impl Node {
             // Remove operator from input string
             let new_s = &new_s[1..];
             match operator {
-                '&' => Ok(Node::And(a, Box::new(Node::parse(new_s)?))),
-                '|' => Ok(Node::Or(a, Box::new(Node::parse(new_s)?))),
+                '&' => Ok(Self::And(a, Box::new(Self::parse(new_s)?))),
+                '|' => Ok(Self::Or(a, Box::new(Self::parse(new_s)?))),
                 _ => Err(ParsingError::UnsupportedOperator(operator.to_string())),
             }
         } else {
@@ -384,7 +384,7 @@ impl Node {
             // Skip closing parenthesis
             let new_s = &new_s[1..];
             if new_s.is_empty() {
-                return Node::parse(between_parenthesis);
+                return Self::parse(between_parenthesis);
             }
             let operator = new_s.chars().next().ok_or_else(|| {
                 ParsingError::UnexpectedEnd(format!(
@@ -395,13 +395,13 @@ impl Node {
             let new_s = &new_s[1..];
 
             match operator {
-                '&' => Ok(Node::And(
-                    Box::new(Node::parse(between_parenthesis)?),
-                    Box::new(Node::parse(new_s)?),
+                '&' => Ok(Self::And(
+                    Box::new(Self::parse(between_parenthesis)?),
+                    Box::new(Self::parse(new_s)?),
                 )),
-                '|' => Ok(Node::Or(
-                    Box::new(Node::parse(between_parenthesis)?),
-                    Box::new(Node::parse(new_s)?),
+                '|' => Ok(Self::Or(
+                    Box::new(Self::parse(between_parenthesis)?),
+                    Box::new(Self::parse(new_s)?),
                 )),
                 _ => Err(ParsingError::UnsupportedOperator(operator.to_string())),
             }
