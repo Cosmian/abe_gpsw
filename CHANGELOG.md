@@ -3,10 +3,13 @@
 All notable changes to this project will be documented in this file.
 
 ---
-## [0.7.1] - 2022-06-23
+## [0.8.0] - 2022-06-23
 ### Added
 - [pyo3 + JS/bindgen + FFI] Add CoverCrypt attributes rotation mechanism
 ### Changed
+- In struct `Policy`:
+  * `last_attribute` becomes `last_attribute_value`
+  * `max_attribute` becomes `max_attribute_value`
 ### Fixed
 ### Removed
 ---

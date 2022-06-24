@@ -37,6 +37,19 @@ pub fn symmetric_key_test() {
         .decrypt_symmetric_key(&user_decryption_key, &encrypted_symmetric_key, 32)
         .unwrap();
     assert_eq!(&symmetric_key, &symmetric_key_);
+
+    // Regenerate test vector (if needed)
+    let mk = abe.generate_master_key(&policy).unwrap();
+    let public_key = mk.1;
+    println!("public_key: {}", public_key);
+    let access_policy =
+        AccessPolicy::from_boolean_expression("Security Level::Confidential && Department::FIN")
+            .unwrap();
+    let user_decryption_key = abe
+        .generate_user_key(&policy, &mk.0, &access_policy)
+        .unwrap();
+    println!("user_decryption_key: {user_decryption_key}");
+    //
 }
 
 #[test]

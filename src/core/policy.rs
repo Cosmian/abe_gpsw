@@ -651,8 +651,8 @@ impl PolicyAxis {
 // addition of attributes is allowed
 #[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct Policy {
-    pub(crate) last_attribute: usize,
-    pub(crate) max_attribute: usize,
+    pub(crate) last_attribute_value: usize,
+    pub(crate) max_attribute_value: usize,
     // store the policies by name
     pub(crate) store: HashMap<String, (Vec<String>, bool)>,
     // mapping between (policy_name, policy_attribute) -> integer
@@ -673,8 +673,8 @@ impl Policy {
     #[must_use]
     pub fn new(nb_revocation: usize) -> Self {
         Self {
-            last_attribute: 0,
-            max_attribute: nb_revocation,
+            last_attribute_value: 0,
+            max_attribute_value: nb_revocation,
             store: HashMap::new(),
             attribute_to_int: HashMap::new(),
         }
@@ -687,7 +687,7 @@ impl Policy {
 
     #[must_use]
     pub fn max_attr(&self) -> usize {
-        self.max_attribute
+        self.max_attribute_value
     }
 
     /// Add a policy axis, mapping each attribute to a unique number in this
@@ -702,7 +702,7 @@ impl Policy {
         hierarchical: bool,
     ) -> Result<Self, FormatErr> {
         let axis = PolicyAxis::new(name, attributes, hierarchical);
-        if axis.len() + self.last_attribute > self.max_attribute {
+        if axis.len() + self.last_attribute_value > self.max_attribute_value {
             return Err(FormatErr::CapacityOverflow);
         }
         // insert new policy
@@ -715,12 +715,12 @@ impl Policy {
             return Err(FormatErr::ExistingPolicy(axis.name));
         } else {
             for attr in &axis.attributes {
-                self.last_attribute += 1;
+                self.last_attribute_value += 1;
                 if self
                     .attribute_to_int
                     .insert(
                         (axis.name.clone(), attr.clone()).into(),
-                        vec![u32::try_from(self.last_attribute)?].into(),
+                        vec![u32::try_from(self.last_attribute_value)?].into(),
                     )
                     .is_some()
                 {
@@ -729,7 +729,7 @@ impl Policy {
                 }
             }
             // add attribute is not a revocation
-            self.max_attribute += axis.attributes.len();
+            self.max_attribute_value += axis.attributes.len();
         }
         Ok(self)
     }
@@ -737,12 +737,12 @@ impl Policy {
     /// Rotate an attribute, changing its underlying value with that of an
     /// unused slot
     pub fn rotate(&mut self, attr: &Attribute) -> Result<(), FormatErr> {
-        if self.last_attribute + 1 > self.max_attribute {
+        if self.last_attribute_value + 1 > self.max_attribute_value {
             return Err(FormatErr::CapacityOverflow);
         }
         if let Some(uint) = self.attribute_to_int.get_mut(attr) {
-            self.last_attribute += 1;
-            uint.push(u32::try_from(self.last_attribute)?);
+            self.last_attribute_value += 1;
+            uint.push(u32::try_from(self.last_attribute_value)?);
         } else {
             return Err(FormatErr::AttributeNotFound(format!("{:?}", attr)));
         }

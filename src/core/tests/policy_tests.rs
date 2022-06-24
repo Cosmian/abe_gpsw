@@ -85,10 +85,10 @@ fn partialeq_access_policy() {
 
 #[test]
 fn policy_group_from_java() {
-    let json = r#"{"last_attribute":10,"max_attribute":1000,"store":{"Department":[["HR","MKG","R&D","fin"],false],"Security Level":[["level 1","level 2","level 3","level 4","level 5"],true]},"attribute_to_int":{"Security Level::level 5":[5],"Security Level::level 3":[3],"Department::HR":[10,6],"Department::R&D":[8],"Security Level::level 4":[4],"Security Level::level 1":[1],"Department::MKG":[7],"Security Level::level 2":[2],"Department::fin":[9]}}"#;
+    let json = r#"{"last_attribute_value":10,"max_attribute_value":1000,"store":{"Department":[["HR","MKG","R&D","fin"],false],"Security Level":[["level 1","level 2","level 3","level 4","level 5"],true]},"attribute_to_int":{"Security Level::level 5":[5],"Security Level::level 3":[3],"Department::HR":[10,6],"Department::R&D":[8],"Security Level::level 4":[4],"Security Level::level 1":[1],"Department::MKG":[7],"Security Level::level 2":[2],"Department::fin":[9]}}"#;
     let policy_group: Policy = serde_json::from_str(json).unwrap();
-    assert_eq!(10, policy_group.last_attribute);
-    assert_eq!(1000, policy_group.max_attribute);
+    assert_eq!(10, policy_group.last_attribute_value);
+    assert_eq!(1000, policy_group.max_attribute_value);
     let (attributes, hierarchical) = policy_group
         .store
         .get("Department")
