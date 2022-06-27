@@ -439,7 +439,7 @@ pub unsafe extern "C" fn h_aes_create_decryption_cache(
 
 #[no_mangle]
 /// The function should be called to reclaim memory
-/// of the cache created using `h_aes_create_decryption_cache`()
+/// of the cache created using `h_aes_create_decryption_cache` function
 /// # Safety
 pub unsafe extern "C" fn h_aes_destroy_decryption_cache(cache_handle: c_int) -> c_int {
     let mut map = DECRYPTION_CACHE_MAP
