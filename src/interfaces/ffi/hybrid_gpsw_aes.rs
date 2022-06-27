@@ -392,7 +392,7 @@ pub struct DecryptionCache {
 /// the user key on the Rust side on every decryption which is costly.
 ///
 /// This method is to be used in conjunction with
-///     `h_aes_decrypt_header_using_cache`()
+///     `h_aes_decrypt_header_using_cache` function
 ///
 /// WARN: `h_aes_destroy_decryption_cache`() should be called
 /// to reclaim the memory of the cache when done
