@@ -25,6 +25,7 @@ pub struct Attribute {
 }
 
 impl Attribute {
+    #[must_use]
     pub fn name(&self) -> String {
         self.name.clone()
     }
@@ -45,6 +46,7 @@ impl Debug for Attribute {
 ///     name: name.to_owned(),
 /// }
 /// ```
+#[must_use]
 pub fn attr(axis: &str, name: &str) -> Attribute {
     Attribute {
         axis: axis.to_owned(),
@@ -54,7 +56,7 @@ pub fn attr(axis: &str, name: &str) -> Attribute {
 
 impl From<(&str, &str)> for Attribute {
     fn from(input: (&str, &str)) -> Self {
-        Attribute {
+        Self {
             axis: input.0.to_owned(),
             name: input.1.to_owned(),
         }
@@ -63,7 +65,7 @@ impl From<(&str, &str)> for Attribute {
 
 impl From<(String, String)> for Attribute {
     fn from(input: (String, String)) -> Self {
-        Attribute {
+        Self {
             axis: input.0,
             name: input.1,
         }
@@ -94,8 +96,8 @@ impl TryFrom<&str> for Attribute {
             )));
         }
         Ok(Self {
-            axis: split[0].to_owned(),
-            name: split[1].to_owned(),
+            axis: split[0].clone(),
+            name: split[1].clone(),
         })
     }
 }
@@ -166,7 +168,7 @@ impl<'de> Deserialize<'de> for Attribute {
             .split("::")
             .map(std::string::ToString::to_string)
             .collect::<Vec<_>>();
-        Ok(Attribute {
+        Ok(Self {
             axis: split[0].clone(),
             name: split[1].clone(),
         })
@@ -198,8 +200,9 @@ impl PartialEq for AccessPolicy {
 
 impl AccessPolicy {
     /// Create an access policy from a single attribute
-    pub fn from(axis_name: &str, attribute_name: &str) -> AccessPolicy {
-        AccessPolicy::Attr(Attribute {
+    #[must_use]
+    pub fn from(axis_name: &str, attribute_name: &str) -> Self {
+        Self::Attr(Attribute {
             axis: axis_name.to_owned(),
             name: attribute_name.to_owned(),
         })
@@ -213,25 +216,21 @@ impl AccessPolicy {
     /// value
     fn to_u32(&self, attribute_mapping: &mut HashMap<Attribute, u32>) -> u32 {
         match self {
-            AccessPolicy::Attr(attr) => {
+            Self::Attr(attr) => {
                 if let Some(integer_value) = attribute_mapping.get(attr) {
                     *integer_value
                 } else {
                     // To assign an integer value to a new attribute, we take the current max
                     // integer value + 1.
                     // Initial value starts at 1.
-                    let max = attribute_mapping
-                        .values()
-                        .max()
-                        .map(|max| *max + 1)
-                        .unwrap_or(1);
+                    let max = attribute_mapping.values().max().map_or(1, |max| *max + 1);
                     attribute_mapping.insert(attr.clone(), max);
                     max
                 }
             }
-            AccessPolicy::And(l, r) => l.to_u32(attribute_mapping) * r.to_u32(attribute_mapping),
-            AccessPolicy::Or(l, r) => l.to_u32(attribute_mapping) + r.to_u32(attribute_mapping),
-            AccessPolicy::All => 0,
+            Self::And(l, r) => l.to_u32(attribute_mapping) * r.to_u32(attribute_mapping),
+            Self::Or(l, r) => l.to_u32(attribute_mapping) + r.to_u32(attribute_mapping),
+            Self::All => 0,
         }
     }
 
@@ -243,16 +242,14 @@ impl AccessPolicy {
     ///     "Level": ["level_2"],
     /// }
     /// ```
-    /// The axes are ORed between each others while the attributes
-    /// of each axis are ANDed.
+    /// The axes are `ORed` between each others while the attributes
+    /// of each axis are `ANDed`.
     ///
     /// The example above would generate the access policy
     ///
     /// `Department("HR" OR "FIN") AND Level("level_2")`
-    pub fn from_axes(
-        axes_attributes: &HashMap<String, Vec<String>>,
-    ) -> Result<AccessPolicy, FormatErr> {
-        let mut access_policies: Vec<AccessPolicy> = Vec::with_capacity(axes_attributes.len());
+    pub fn from_axes(axes_attributes: &HashMap<String, Vec<String>>) -> Result<Self, FormatErr> {
+        let mut access_policies: Vec<Self> = Vec::with_capacity(axes_attributes.len());
         for (axis, attributes) in axes_attributes {
             access_policies.push(
                 attributes
@@ -261,13 +258,13 @@ impl AccessPolicy {
                     .reduce(BitOr::bitor)
                     .ok_or_else(|| FormatErr::MissingAttribute {
                         item: None,
-                        axis_name: Some(axis.to_owned()),
+                        axis_name: Some(axis.clone()),
                     })?,
             );
         }
         let access_policy = access_policies
             .iter()
-            .map(|ap| ap.to_owned())
+            .map(std::clone::Clone::clone)
             .reduce(BitAnd::bitand)
             .ok_or_else(|| FormatErr::MissingAxis("axis".to_string()))?;
         Ok(access_policy)
@@ -310,7 +307,7 @@ impl AccessPolicy {
                 .split(separator)
                 .collect::<Vec<_>>()
                 .into_iter()
-                .map(|s| s.trim())
+                .map(str::trim)
                 .collect::<Vec<_>>();
             let mut expression_chars = Vec::<char>::new();
             for (i, s) in expression.iter().enumerate() {
@@ -340,10 +337,10 @@ impl AccessPolicy {
     /// - operator
     /// - right part
     ///
-    /// Example: "Department::HR && Level::level_2" will be decomposed in:
-    /// - Department::HR
+    /// Example: "`Department::HR` && `Level::level_2`" will be decomposed in:
+    /// - `Department::HR`
     /// - &&
-    /// - Level::level_2
+    /// - `Level::level_2`
     fn decompose_expression(
         boolean_expression: &str,
         split_position: usize,
@@ -388,11 +385,11 @@ impl AccessPolicy {
 
     /// Convert a boolean expression into `AccessPolicy`.
     /// Example:
-    ///     input boolean expression: (Department::HR || Department::RnD) &&
-    /// Level::level_2
+    ///     input boolean expression: (`Department::HR` || `Department::RnD`) &&
+    /// `Level::level_2`
     ///     output: corresponding access policy:
-    /// And(Attr(Level::level2), Or(Attr(Department::HR),
-    /// Attr(Department::RnD)))
+    /// `And(Attr(Level::level2`), `Or(Attr(Department::HR`),
+    /// `Attr(Department::RnD`)))
     ///
     /// # Arguments
     ///
@@ -415,7 +412,7 @@ impl AccessPolicy {
         let boolean_expression_example = "(Department::HR || Department::RnD) && Level::level_2";
 
         // Remove spaces around parenthesis and operators
-        let boolean_expression = AccessPolicy::sanitize_spaces(boolean_expression);
+        let boolean_expression = Self::sanitize_spaces(boolean_expression);
 
         if !boolean_expression.contains("::") {
             return Err(FormatErr::InvalidBooleanExpression(format!(
@@ -437,21 +434,20 @@ impl AccessPolicy {
                 )));
             }
             // Search right closing parenthesis, avoiding false positive
-            let matching_closing_parenthesis =
-                AccessPolicy::find_next_parenthesis(boolean_expression)?;
+            let matching_closing_parenthesis = Self::find_next_parenthesis(boolean_expression)?;
             let (left_part, operator, right_part) =
                 Self::decompose_expression(boolean_expression, matching_closing_parenthesis)?;
             if operator.is_none() {
-                return AccessPolicy::from_boolean_expression(left_part.as_str());
+                return Self::from_boolean_expression(left_part.as_str());
             }
 
             let operator = operator.unwrap_or_default();
             let right_part = right_part.unwrap_or_default();
-            let ap1 = Box::new(AccessPolicy::from_boolean_expression(left_part.as_str())?);
-            let ap2 = Box::new(AccessPolicy::from_boolean_expression(right_part.as_str())?);
+            let ap1 = Box::new(Self::from_boolean_expression(left_part.as_str())?);
+            let ap2 = Box::new(Self::from_boolean_expression(right_part.as_str())?);
             let ap = match operator.as_str() {
-                "&&" => Ok(AccessPolicy::And(ap1, ap2)),
-                "||" => Ok(AccessPolicy::Or(ap1, ap2)),
+                "&&" => Ok(Self::And(ap1, ap2)),
+                "||" => Ok(Self::Or(ap1, ap2)),
                 _ => Err(FormatErr::from(ParsingError::UnsupportedOperator(
                     operator.to_string(),
                 ))),
@@ -494,16 +490,16 @@ impl AccessPolicy {
             let (left_part, operator, right_part) =
                 Self::decompose_expression(&boolean_expression, position)?;
             if operator.is_none() {
-                return AccessPolicy::from_boolean_expression(left_part.as_str());
+                return Self::from_boolean_expression(left_part.as_str());
             }
             let operator = operator.unwrap_or_default();
             let right_part = right_part.unwrap_or_default();
 
-            let ap1 = Box::new(AccessPolicy::from_boolean_expression(left_part.as_str())?);
-            let ap2 = Box::new(AccessPolicy::from_boolean_expression(right_part.as_str())?);
+            let ap1 = Box::new(Self::from_boolean_expression(left_part.as_str())?);
+            let ap2 = Box::new(Self::from_boolean_expression(right_part.as_str())?);
             let ap = match operator.as_str() {
-                "&&" => Ok(AccessPolicy::And(ap1, ap2)),
-                "||" => Ok(AccessPolicy::Or(ap1, ap2)),
+                "&&" => Ok(Self::And(ap1, ap2)),
+                "||" => Ok(Self::Or(ap1, ap2)),
                 _ => Err(FormatErr::from(ParsingError::UnsupportedOperator(
                     operator.to_string(),
                 ))),
@@ -550,21 +546,22 @@ impl AccessPolicy {
         Ok(())
     }
 
+    #[must_use]
     pub fn attributes(&self) -> Vec<Attribute> {
-        let mut attributes = AccessPolicy::_attributes(self);
+        let mut attributes = Self::_attributes(self);
         attributes.sort();
         attributes
     }
 
-    fn _attributes(access_policy: &AccessPolicy) -> Vec<Attribute> {
+    fn _attributes(access_policy: &Self) -> Vec<Attribute> {
         match access_policy {
-            AccessPolicy::Attr(att) => vec![att.clone()],
-            AccessPolicy::And(a1, a2) | AccessPolicy::Or(a1, a2) => {
-                let mut v = AccessPolicy::_attributes(a1);
-                v.extend(AccessPolicy::_attributes(a2));
+            Self::Attr(att) => vec![att.clone()],
+            Self::And(a1, a2) | Self::Or(a1, a2) => {
+                let mut v = Self::_attributes(a1);
+                v.extend(Self::_attributes(a2));
                 v
             }
-            AccessPolicy::All => vec![],
+            Self::All => vec![],
         }
     }
 }
@@ -589,7 +586,7 @@ impl BitOr for AccessPolicy {
 
 impl From<Attribute> for AccessPolicy {
     fn from(attribute: Attribute) -> Self {
-        AccessPolicy::Attr(attribute)
+        Self::Attr(attribute)
     }
 }
 
@@ -609,6 +606,7 @@ impl From<Attribute> for AccessPolicy {
 /// let access_policy =
 ///     ap("Security Level", "level 4") & (ap("Department", "MKG") | ap("Department", "FIN"));
 /// ```
+#[must_use]
 pub fn ap(axis: &str, name: &str) -> AccessPolicy {
     AccessPolicy::Attr(Attribute {
         axis: axis.to_owned(),
@@ -631,7 +629,10 @@ impl PolicyAxis {
     pub fn new(name: &str, attributes: &[&str], hierarchical: bool) -> Self {
         Self {
             name: name.to_owned(),
-            attributes: attributes.iter().map(|s| s.to_string()).collect::<Vec<_>>(),
+            attributes: attributes
+                .iter()
+                .map(|s| (*s).to_string())
+                .collect::<Vec<_>>(),
             hierarchical,
         }
     }
@@ -647,8 +648,8 @@ impl PolicyAxis {
 // addition of attributes is allowed
 #[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct Policy {
-    pub(crate) last_attribute: usize,
-    pub(crate) max_attribute: usize,
+    pub(crate) last_attribute_value: usize,
+    pub(crate) max_attribute_value: usize,
     // store the policies by name
     pub(crate) store: HashMap<String, (Vec<String>, bool)>,
     // mapping between (policy_name, policy_attribute) -> integer
@@ -669,20 +670,21 @@ impl Policy {
     #[must_use]
     pub fn new(nb_revocation: usize) -> Self {
         Self {
-            last_attribute: 0,
-            max_attribute: nb_revocation,
+            last_attribute_value: 0,
+            max_attribute_value: nb_revocation,
             store: HashMap::new(),
             attribute_to_int: HashMap::new(),
         }
     }
 
+    #[must_use]
     pub fn store(&self) -> HashMap<String, (Vec<String>, bool)> {
         self.store.clone()
     }
 
     #[must_use]
     pub fn max_attr(&self) -> usize {
-        self.max_attribute
+        self.max_attribute_value
     }
 
     /// Add a policy axis, mapping each attribute to a unique number in this
@@ -697,7 +699,7 @@ impl Policy {
         hierarchical: bool,
     ) -> Result<Self, FormatErr> {
         let axis = PolicyAxis::new(name, attributes, hierarchical);
-        if axis.len() + self.last_attribute > self.max_attribute {
+        if axis.len() + self.last_attribute_value > self.max_attribute_value {
             return Err(FormatErr::CapacityOverflow);
         }
         // insert new policy
@@ -710,12 +712,12 @@ impl Policy {
             return Err(FormatErr::ExistingPolicy(axis.name));
         } else {
             for attr in &axis.attributes {
-                self.last_attribute += 1;
+                self.last_attribute_value += 1;
                 if self
                     .attribute_to_int
                     .insert(
                         (axis.name.clone(), attr.clone()).into(),
-                        vec![u32::try_from(self.last_attribute)?].into(),
+                        vec![u32::try_from(self.last_attribute_value)?].into(),
                     )
                     .is_some()
                 {
@@ -724,7 +726,7 @@ impl Policy {
                 }
             }
             // add attribute is not a revocation
-            self.max_attribute += axis.attributes.len();
+            self.max_attribute_value += axis.attributes.len();
         }
         Ok(self)
     }
@@ -732,12 +734,12 @@ impl Policy {
     /// Rotate an attribute, changing its underlying value with that of an
     /// unused slot
     pub fn rotate(&mut self, attr: &Attribute) -> Result<(), FormatErr> {
-        if self.last_attribute + 1 > self.max_attribute {
+        if self.last_attribute_value + 1 > self.max_attribute_value {
             return Err(FormatErr::CapacityOverflow);
         }
         if let Some(uint) = self.attribute_to_int.get_mut(attr) {
-            self.last_attribute += 1;
-            uint.push(u32::try_from(self.last_attribute)?);
+            self.last_attribute_value += 1;
+            uint.push(u32::try_from(self.last_attribute_value)?);
         } else {
             return Err(FormatErr::AttributeNotFound(format!("{:?}", attr)));
         }
@@ -783,9 +785,10 @@ impl Policy {
     fn to_node(&self, attr: &Attribute) -> Result<Node, FormatErr> {
         if let Some((list, hierarchical)) = self.store.get(&attr.axis) {
             if list.contains(&attr.name) {
-                let res = list.iter().position(|r| r == &attr.name).ok_or_else(|| {
-                    FormatErr::ExpectedAttribute(attr.name.clone(), list.to_vec())
-                })?;
+                let res = list
+                    .iter()
+                    .position(|r| r == &attr.name)
+                    .ok_or_else(|| FormatErr::ExpectedAttribute(attr.name.clone(), list.clone()))?;
                 let mut val = self.attribute_to_int[attr]
                     .iter()
                     .map(|attr| Node::Leaf(*attr))

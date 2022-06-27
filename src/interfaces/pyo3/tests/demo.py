@@ -1,5 +1,5 @@
-import abe_gpsw
 import json
+import abe_gpsw
 
 
 # Declare 2 ABE policy axis:
@@ -115,3 +115,11 @@ print("Before the rotation of attribute Security Level::Low Secret")
 print(json.loads(str(bytes(policy), "utf-8")))
 print("After attributes rotation")
 print(json.loads(str(bytes(new_policy), "utf-8")))
+
+# Generation delegated key
+super_delegate = abe_gpsw.generate_delegated_key(
+    delegation_key_bytes=master_keys[2],
+    user_decryption_key_bytes=top_secret_mkg_fin_user,
+    access_policy_str="(Department::FIN || Department::MKG) && Security Level::Medium Secret",
+    policy_bytes=policy
+)

@@ -23,7 +23,7 @@ impl AsBytes for u32 {
                     .to_string(),
             ));
         }
-        Ok(u32::from_be_bytes(bytes[0..4].try_into()?))
+        Ok(Self::from_be_bytes(bytes[0..4].try_into()?))
     }
 
     fn len_bytes(&self) -> usize {
@@ -37,7 +37,7 @@ impl AsBytes for i32 {
     }
 
     fn try_from_bytes(bytes: &[u8]) -> Result<Self, FormatErr> {
-        Ok(i32::from_be_bytes(bytes[0..4].try_into()?))
+        Ok(Self::from_be_bytes(bytes[0..4].try_into()?))
     }
 
     fn len_bytes(&self) -> usize {
@@ -62,7 +62,7 @@ impl<T: AsBytes> AsBytes for Vec<T> {
 
     fn try_from_bytes(bytes: &[u8]) -> Result<Self, FormatErr> {
         if bytes.is_empty() {
-            return Ok(Vec::new());
+            return Ok(Self::new());
         }
         // retrieve len of vector
         let len: [u8; 4] = bytes[0..4].try_into()?;
@@ -72,7 +72,7 @@ impl<T: AsBytes> AsBytes for Vec<T> {
                 "deserializing element failed. Data altered?".to_string(),
             ));
         }
-        let mut res = Vec::with_capacity(len);
+        let mut res = Self::with_capacity(len);
         res.push(T::try_from_bytes(&bytes[4..])?);
         // deserialize
         for i in 1..len {

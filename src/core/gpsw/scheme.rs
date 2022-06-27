@@ -231,7 +231,7 @@ impl<G: BilinearMap> AsBytes for GpswCipherText<G> {
     }
 }
 
-#[derive(Debug, Default, Clone, PartialEq)]
+#[derive(Debug, Default, Clone, PartialEq, Eq)]
 pub struct Gpsw<G: BilinearMap> {
     pub(crate) group: G,
 }
@@ -373,7 +373,7 @@ impl<G: BilinearMap> Gpsw<G> {
         let mut big_d_i = Vec::with_capacity(msp.rows());
         let mut big_raw_d_i = Vec::with_capacity(msp.rows());
         for (i, row) in msp.matrix().iter().enumerate() {
-            let prod_scal = Self::prod_scal(&(*row), &u);
+            let prod_scal = Self::prod_scal(row, &u);
             let attribute = msp.get_attr_from_row(i) as usize;
             if attribute >= priv_key.t_i.len() {
                 return Err(FormatErr::InternalOperation(
@@ -415,7 +415,7 @@ impl<G: BilinearMap> Gpsw<G> {
         let mut big_d_i = Vec::with_capacity(msp.rows());
         let mut raw_big_d_i = Vec::with_capacity(msp.rows());
         for (i, row) in msp.matrix().iter().enumerate() {
-            let prod_scal = Self::prod_scal(&(*row), &u);
+            let prod_scal = Self::prod_scal(row, &u);
             let gt_rho_i = &del_key.inv_t_i[msp.get_attr_from_row(i) as usize];
             let di = self.group.g3_exp(gt_rho_i, &prod_scal);
             //randomize key
@@ -458,7 +458,7 @@ impl<G: BilinearMap> Gpsw<G> {
         let mut big_d_i = Vec::with_capacity(msp.rows());
         let mut raw_big_d_i = Vec::with_capacity(msp.rows());
         for (i, row) in msp.matrix().iter().enumerate() {
-            let prod_scal = Self::prod_scal(&(*row), &u);
+            let prod_scal = Self::prod_scal(row, &u);
             let gt_rho_i = &del_key.inv_t_i[msp.get_attr_from_row(i) as usize];
             let di = self.group.g3_exp(gt_rho_i, &prod_scal);
             //randomize key

@@ -3,28 +3,38 @@ use pyo3::{exceptions::PyTypeError, prelude::*};
 use crate::{
     core::{
         bilinear_map::bls12_381::Bls12_381,
-        gpsw::{scheme::GpswMasterPrivateKey, AsBytes, Gpsw},
+        gpsw::{
+            scheme::{GpswMasterPrivateKey, GpswMasterPublicDelegationKey},
+            AbeScheme, AsBytes, Gpsw,
+        },
         Engine,
     },
     interfaces::policy::{AccessPolicy, Attribute, Policy, PolicyAxis},
 };
+type UserDecryptionKey = <Gpsw<Bls12_381> as AbeScheme>::UserDecryptionKey;
 
 /// Generate the master authority keys for supplied Policy
 ///
 ///  - `policy_bytes` : Policy to use to generate the keys (JSON serialized)
+///
+/// Returns:
+///  - `master_private_key`: serialized in bytes
+///  - `master_public_key`: serialized in bytes
+///  - `master_public_delegation_key`: serialized in bytes
 #[pyfunction]
-pub fn generate_master_keys(policy_bytes: Vec<u8>) -> PyResult<(Vec<u8>, Vec<u8>)> {
+pub fn generate_master_keys(policy_bytes: Vec<u8>) -> PyResult<(Vec<u8>, Vec<u8>, Vec<u8>)> {
     let policy: Policy = serde_json::from_slice(policy_bytes.as_slice())
         .map_err(|e| PyTypeError::new_err(format!("Policy deserialization failed: {e}")))?;
 
     //
     // Setup CoverCrypt
-    let (master_private_key, master_public_key, _) =
+    let (master_private_key, master_public_key, master_public_delegation_key) =
         Engine::<Gpsw<Bls12_381>>::new().generate_master_key(&policy)?;
 
     Ok((
         master_private_key.try_into_bytes()?,
         master_public_key.try_into_bytes()?,
+        master_public_delegation_key.try_into_bytes()?,
     ))
 }
 
@@ -48,6 +58,45 @@ pub fn generate_user_private_key(
     let user_key = Engine::<Gpsw<Bls12_381>>::new().generate_user_key(
         &policy,
         &master_private_key,
+        &access_policy,
+    )?;
+
+    Ok(user_key.try_into_bytes()?)
+}
+
+/// Generate a delegated key: allows a user to generate a new key for a more
+/// restrictive policy
+///
+/// A more restrictive policy is a policy that must always satisfy
+/// the original policy when satisfied. In other words, we can only modify a
+/// policy by changing an `Or` node by either an `And` or replace it by
+/// one of its child.
+///
+/// Remark: It is also possible to merge 2 keys by `Or` node, this latter
+/// functionality is not yet supported
+///
+/// - `delegation_key_bytes`        : the master public delegation key
+/// - `user_decryption_key_bytes`   : the user decryption key
+/// - `access_policy_str`           : user access policy
+/// - `policy_bytes`                : global policy
+#[pyfunction]
+pub fn generate_delegated_key(
+    delegation_key_bytes: Vec<u8>,
+    user_decryption_key_bytes: Vec<u8>,
+    access_policy_str: String,
+    policy_bytes: Vec<u8>,
+) -> PyResult<Vec<u8>> {
+    let delegation_key =
+        GpswMasterPublicDelegationKey::<Bls12_381>::try_from_bytes(&delegation_key_bytes)?;
+    let user_decryption_key = UserDecryptionKey::try_from_bytes(&user_decryption_key_bytes)?;
+    let access_policy = AccessPolicy::from_boolean_expression(&access_policy_str)?;
+    let policy: Policy = serde_json::from_slice(&policy_bytes)
+        .map_err(|e| PyTypeError::new_err(format!("Policy deserialization failed: {e}")))?;
+
+    let user_key = Engine::<Gpsw<Bls12_381>>::new().delegate_user_key(
+        &policy,
+        &delegation_key,
+        &user_decryption_key,
         &access_policy,
     )?;
 
@@ -81,6 +130,9 @@ pub fn generate_policy(
     Ok(policy_bytes)
 }
 
+/// Rotate attributes: changing its underlying value with that of an unused slot
+///
+/// Returns the new policy with refreshed attributes
 #[pyfunction]
 pub fn rotate_attributes(attributes_bytes: Vec<u8>, policy_bytes: Vec<u8>) -> PyResult<Vec<u8>> {
     let attributes: Vec<Attribute> = serde_json::from_slice(&attributes_bytes)

@@ -13,7 +13,7 @@ use crate::{
     interfaces::policy::{Attribute, Policy},
 };
 
-/// An EncryptedHeader returned by the `encrypt_hybrid_header` function
+/// An `EncryptedHeader` returned by the `encrypt_hybrid_header` function
 pub struct EncryptedHeader<S>
 where
     S: SymmetricCrypto,
@@ -48,7 +48,7 @@ impl<S: SymmetricCrypto> EncryptedHeader<S> {
     }
 }
 
-/// An ClearTextHeader returned by the `decrypt_hybrid_header` function
+/// An `ClearTextHeader` returned by the `decrypt_hybrid_header` function
 pub struct ClearTextHeader<S>
 where
     S: SymmetricCrypto,
@@ -202,6 +202,7 @@ where
 
 /// The overhead due to symmetric encryption when encrypting a block.
 /// This is a constant
+#[must_use]
 pub fn symmetric_encryption_overhead<S, const MAX_CLEAR_TEXT_SIZE: usize>() -> usize
 where
     S: SymmetricCrypto,

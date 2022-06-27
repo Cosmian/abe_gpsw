@@ -11,7 +11,7 @@ use rand::{CryptoRng, RngCore};
 use super::BilinearMap;
 use crate::{core::gpsw::AsBytes, error::FormatErr};
 
-#[derive(Default, Debug, PartialEq, Clone)]
+#[derive(Default, Debug, PartialEq, Eq, Clone)]
 pub struct Bls12_381;
 
 #[derive(Clone, Debug)]
@@ -31,37 +31,37 @@ impl DerefMut for Scalar {
     }
 }
 
-impl<'a> Add<&'a Scalar> for Scalar {
+impl<'a> Add<&'a Self> for Scalar {
     type Output = Self;
 
-    fn add(self, rhs: &'a Scalar) -> Self {
-        Scalar(self.0 + rhs.0)
+    fn add(self, rhs: &'a Self) -> Self {
+        Self(self.0 + rhs.0)
     }
 }
 
-impl<'a> Sub<&'a Scalar> for Scalar {
+impl<'a> Sub<&'a Self> for Scalar {
     type Output = Self;
 
-    fn sub(self, rhs: &'a Scalar) -> Self {
-        Scalar(self.0 - rhs.0)
+    fn sub(self, rhs: &'a Self) -> Self {
+        Self(self.0 - rhs.0)
     }
 }
 
-impl<'a> Mul<&'a Scalar> for Scalar {
+impl<'a> Mul<&'a Self> for Scalar {
     type Output = Self;
 
-    fn mul(self, rhs: &'a Scalar) -> Self {
-        Scalar(self.0 * rhs.0)
+    fn mul(self, rhs: &'a Self) -> Self {
+        Self(self.0 * rhs.0)
     }
 }
 
 #[allow(clippy::suspicious_arithmetic_impl)]
-impl<'a> Div<&'a Scalar> for Scalar {
+impl<'a> Div<&'a Self> for Scalar {
     type Output = Self;
 
-    fn div(self, rhs: &'a Scalar) -> Self {
+    fn div(self, rhs: &'a Self) -> Self {
         let inv = rhs.invert().unwrap(); // Division by Zero;
-        Scalar(self.0 * inv)
+        Self(self.0 * inv)
     }
 }
 
@@ -69,17 +69,17 @@ impl Neg for Scalar {
     type Output = Self;
 
     fn neg(self) -> Self {
-        Scalar(-self.0)
+        Self(-self.0)
     }
 }
 
 impl From<i32> for Scalar {
     fn from(int: i32) -> Self {
-        let scalar = cosmian_bls12_381::Scalar::from(int.abs() as u64);
+        let scalar = cosmian_bls12_381::Scalar::from(u64::from(int.unsigned_abs()));
         if int < 0 {
-            Scalar(-scalar)
+            Self(-scalar)
         } else {
-            Scalar(scalar)
+            Self(scalar)
         }
     }
 }
@@ -107,7 +107,7 @@ impl AsBytes for Scalar {
 
         let inner = cosmian_bls12_381::Scalar::from_bytes(bytes[0..32].try_into()?);
         if inner.is_some().into() {
-            Ok(Scalar(inner.unwrap()))
+            Ok(Self(inner.unwrap()))
         } else {
             Err(FormatErr::Deserialization(
                 "Failed deserializing scalar".to_string(),
@@ -134,7 +134,7 @@ impl AsBytes for cosmian_bls12_381::G1Affine {
                 48
             )));
         }
-        let res = cosmian_bls12_381::G1Affine::from_compressed(&bytes[0..48].try_into()?);
+        let res = Self::from_compressed(&bytes[0..48].try_into()?);
         if res.is_none().into() {
             Err(FormatErr::Deserialization(
                 "Error deserializing G1Affine".to_string(),
@@ -163,7 +163,7 @@ impl AsBytes for cosmian_bls12_381::G2Affine {
                 96
             )));
         }
-        let res = cosmian_bls12_381::G2Affine::from_compressed(&bytes[0..96].try_into()?);
+        let res = Self::from_compressed(&bytes[0..96].try_into()?);
         if res.is_none().into() {
             Err(FormatErr::Deserialization(
                 "Error deserializing G2Affine".to_string(),
@@ -197,7 +197,7 @@ impl AsBytes for cosmian_bls12_381::Gt {
                 288
             )));
         }
-        let res = cosmian_bls12_381::Gt::from_compressed(&bytes[0..288].try_into()?);
+        let res = Self::from_compressed(&bytes[0..288].try_into()?);
         if res.is_none().into() {
             Err(FormatErr::Deserialization(
                 "Error deserializing Gt".to_string(),
