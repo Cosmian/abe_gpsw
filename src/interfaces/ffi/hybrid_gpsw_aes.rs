@@ -394,7 +394,7 @@ pub struct DecryptionCache {
 /// This method is to be used in conjunction with
 ///     `h_aes_decrypt_header_using_cache` function
 ///
-/// WARN: `h_aes_destroy_decryption_cache`() should be called
+/// WARN: `h_aes_destroy_decryption_cache` function should be called
 /// to reclaim the memory of the cache when done
 /// # Safety
 pub unsafe extern "C" fn h_aes_create_decryption_cache(
