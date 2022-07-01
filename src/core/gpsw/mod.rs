@@ -64,6 +64,13 @@ impl<T: AsBytes> AsBytes for Vec<T> {
         if bytes.is_empty() {
             return Ok(Self::new());
         }
+
+        if bytes.len() <= 4 {
+            return Err(FormatErr::Deserialization(
+                "deserializing element failed. Data are too small. Data altered?".to_string(),
+            ));
+        }
+
         // retrieve len of vector
         let len: [u8; 4] = bytes[0..4].try_into()?;
         let len = u32::from_be_bytes(len) as usize;
@@ -72,11 +79,21 @@ impl<T: AsBytes> AsBytes for Vec<T> {
                 "deserializing element failed. Data altered?".to_string(),
             ));
         }
+
+        let res0 = T::try_from_bytes(&bytes[4..])?;
+        let res0_len_bytes = res0.len_bytes();
+
+        if 4 + (len - 1) * res0_len_bytes >= bytes.len() {
+            return Err(FormatErr::Deserialization(
+                "deserializing element failed. Data altered?".to_string(),
+            ));
+        }
+
         let mut res = Self::with_capacity(len);
-        res.push(T::try_from_bytes(&bytes[4..])?);
+        res.push(res0);
         // deserialize
         for i in 1..len {
-            let beg = i * res[0].len_bytes();
+            let beg = i * res0_len_bytes;
             res.push(T::try_from_bytes(&bytes[4 + beg..])?)
         }
         Ok(res)

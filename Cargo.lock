@@ -4,7 +4,7 @@ version = 3
 
 [[package]]
 name = "abe_gpsw"
-version = "0.8.0"
+version = "1.0.0"
 dependencies = [
  "cosmian_bls12_381",
  "cosmian_crypto_base",
@@ -272,9 +272,9 @@ dependencies = [
 
 [[package]]
 name = "cosmian_crypto_base"
-version = "1.2.2"
+version = "2.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7b2b50ada1a06349282f875711c3acdce91bd99be8b2bec09a268ccc2b90244f"
+checksum = "3ede4e2cadd3696c9fe4062109dbca1652eb5359d77f60b6be2dd3ab716d00fd"
 dependencies = [
  "aes",
  "aes-gcm",
@@ -282,7 +282,6 @@ dependencies = [
  "cosmian_fpe",
  "cupid",
  "curve25519-dalek",
- "eyre",
  "getrandom 0.2.4",
  "hex",
  "hkdf",
@@ -507,16 +506,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "eyre"
-version = "0.6.5"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "221239d1d5ea86bf5d6f91c9d6bc3646ffe471b08ff9b0f91c44f115ac969d2b"
-dependencies = [
- "indenter",
- "once_cell",
-]
-
-[[package]]
 name = "ff"
 version = "0.9.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -645,12 +634,6 @@ name = "humantime"
 version = "2.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9a3a5bfb195931eeb336b2a7b4d761daec841b97f947d34394601737a7bba5e4"
-
-[[package]]
-name = "indenter"
-version = "0.3.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ce23b50ad8242c51a442f3ff322d56b02f08852c77e4c0b4d3fd684abc89c683"
 
 [[package]]
 name = "indoc"
