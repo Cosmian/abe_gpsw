@@ -7,7 +7,7 @@ use std::{
 };
 
 #[cfg(feature = "interfaces")]
-use cosmian_crypto_base::Error as CryptoError;
+use cosmian_crypto_base::CryptoBaseError;
 use hex::FromHexError;
 use thiserror::Error;
 
@@ -112,13 +112,13 @@ impl From<serde_json::Error> for FormatErr {
 }
 
 #[cfg(feature = "interfaces")]
-impl From<cosmian_crypto_base::Error> for FormatErr {
-    fn from(e: cosmian_crypto_base::Error) -> Self {
+impl From<CryptoBaseError> for FormatErr {
+    fn from(e: CryptoBaseError) -> Self {
         match e {
-            CryptoError::SizeError { given, expected } => {
+            CryptoBaseError::SizeError { given, expected } => {
                 Self::InvalidSize(format!("expected: {}, given: {}", expected, given))
             }
-            CryptoError::InvalidSize(e) => Self::InvalidSize(e),
+            CryptoBaseError::InvalidSize(e) => Self::InvalidSize(e),
             e => Self::CryptoError(e.to_string()),
         }
     }

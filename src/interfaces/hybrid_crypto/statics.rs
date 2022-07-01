@@ -4,7 +4,7 @@ use cosmian_crypto_base::{
     entropy::CsRng,
     hybrid_crypto::{Block, BytesScanner, Metadata},
     symmetric_crypto::{nonce::NonceTrait, SymmetricCrypto},
-    Error, KeyTrait,
+    CryptoBaseError, KeyTrait,
 };
 
 use crate::{
@@ -42,7 +42,7 @@ impl<S: SymmetricCrypto> EncryptedHeader<S> {
         let encrypted_header_bytes: Vec<u8> = header[(4 + symmetric_key_len)..].try_into()?;
 
         Ok(Self {
-            symmetric_key: S::Key::try_from_bytes(symmetric_key_bytes)?,
+            symmetric_key: S::Key::try_from_bytes(&symmetric_key_bytes)?,
             encrypted_header_bytes,
         })
     }
@@ -77,7 +77,7 @@ impl<S: SymmetricCrypto> ClearTextHeader<S> {
         let meta_data_bytes: Vec<u8> = header[(4 + symmetric_key_len)..].try_into()?;
 
         Ok(Self {
-            symmetric_key: S::Key::try_from_bytes(symmetric_key_bytes)?,
+            symmetric_key: S::Key::try_from_bytes(&symmetric_key_bytes)?,
             meta_data: Metadata::from_bytes(&meta_data_bytes)
                 .map_err(|e| FormatErr::CryptoError(e.to_string()))?,
         })
@@ -103,7 +103,7 @@ where
     let engine = Engine::<A>::new();
     let (sk_bytes, encrypted_sk) =
         engine.generate_symmetric_key(policy, public_key, attributes, S::Key::LENGTH)?;
-    let symmetric_key = S::Key::try_from_bytes(sk_bytes)?;
+    let symmetric_key = S::Key::try_from_bytes(&sk_bytes)?;
 
     // convert to bytes
     // ..size
@@ -158,7 +158,7 @@ where
     // symmetric key
     let engine = Engine::<A>::new();
     // let asymmetric_scheme = A::default();
-    let symmetric_key = S::Key::try_from_bytes(engine.decrypt_symmetric_key(
+    let symmetric_key = S::Key::try_from_bytes(&engine.decrypt_symmetric_key(
         user_decryption_key,
         &encrypted_symmetric_key,
         S::Key::LENGTH,
@@ -169,8 +169,7 @@ where
         let nonce = S::Nonce::try_from_bytes(
             scanner
                 .next(S::Nonce::LENGTH)
-                .map_err(|e| FormatErr::CryptoError(e.to_string()))?
-                .to_vec(),
+                .map_err(|e| FormatErr::CryptoError(e.to_string()))?,
         )?;
 
         // encrypted metadata
@@ -283,10 +282,12 @@ where
 
 // Attempt getting the length of this slice as an u32 in 4 big endian bytes and
 // return an error if it overflows
-fn u32_len(slice: &[u8]) -> Result<[u8; 4], Error> {
+fn u32_len(slice: &[u8]) -> Result<[u8; 4], CryptoBaseError> {
     u32::try_from(slice.len())
         .map_err(|_| {
-            Error::InvalidSize("Slice of bytes is too big to fit in 2^32 bytes".to_string())
+            CryptoBaseError::InvalidSize(
+                "Slice of bytes is too big to fit in 2^32 bytes".to_string(),
+            )
         })
         .map(u32::to_be_bytes)
 }

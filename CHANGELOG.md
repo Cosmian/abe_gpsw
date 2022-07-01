@@ -3,6 +3,16 @@
 All notable changes to this project will be documented in this file.
 
 ---
+## [1.0.0] - 2022-07-01
+### Added
+### Changed
+- Bump the cosmian_crypto_base version
+### Fixed
+- Remove an out of memory overflow in `try_from_bytes`
+### Removed
+---
+
+---
 ## [0.8.0] - 2022-06-23
 ### Added
 - [pyo3] ABE key delegation
