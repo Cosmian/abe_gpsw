@@ -10,11 +10,10 @@ use crate::{
         Engine,
     },
     ffi_bail, ffi_not_null, ffi_unwrap,
-    interfaces::{
-        ffi::error::{set_last_error, FfiError},
-        policy::{AccessPolicy, Attribute, Policy},
-    },
+    interfaces::ffi::error::{set_last_error, FfiError},
 };
+
+use abe_policy::{AccessPolicy, Attribute, Policy};
 
 #[no_mangle]
 /// Generate the master authority keys for supplied Policy

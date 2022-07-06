@@ -11,12 +11,14 @@ use cosmian_crypto_base::CryptoBaseError;
 use hex::FromHexError;
 use thiserror::Error;
 
-#[derive(Error, Debug, Clone, PartialEq)]
+#[derive(Error, Debug)]
 pub enum FormatErr {
     //
     // External errors conversion
     #[error("{0}")]
     CryptoError(String),
+    #[error(transparent)]
+    PolicyError(#[from] abe_policy::Error),
     #[error(transparent)]
     Infallible(Infallible),
     #[error(transparent)]
@@ -56,21 +58,8 @@ pub enum FormatErr {
     SymmetricDecryption(String),
     #[error("asymmetric decryption {0}")]
     AsymmetricDecryption(String),
-    #[error("attribute capacity overflow")]
-    CapacityOverflow,
-    #[error("attribute {0} for {1} already exists")]
-    ExistingAttribute(String, String),
-    #[error("policy {0} already exists")]
-    ExistingPolicy(String),
     #[error("invalid size")]
     InvalidSize(String),
-    #[error("could not decode number of attributes in encrypted message")]
-    DecodingAttributeNumber,
-    #[error(
-        "Unable to decrypt the header size. User decryption key has not the right policy to \
-         decrypt this input."
-    )]
-    InsufficientAccessPolicy,
     #[error("{0}")]
     Deserialization(String),
     #[error("{0}")]
@@ -79,12 +68,6 @@ pub enum FormatErr {
     InternalOperation(String),
     #[error("invalid formula: {0}")]
     InvalidFormula(String),
-    #[error("invalid boolean expression: {0}")]
-    InvalidBooleanExpression(String),
-    #[error("invalid attribute: {0}")]
-    InvalidAttribute(String),
-    #[error("encrypted data size cannot be less than {0} bytes")]
-    InvalidEncryptedDataSize(String),
     #[error("invalid encrypted data")]
     InvalidEncryptedData,
     #[error("conversion failed")]

@@ -6,14 +6,12 @@
 use js_sys::Uint8Array;
 use wasm_bindgen::{prelude::wasm_bindgen, JsValue};
 
-use crate::{
-    core::{
-        bilinear_map::bls12_381::Bls12_381,
-        gpsw::{scheme::GpswMasterPrivateKey, AsBytes, Gpsw},
-        Engine,
-    },
-    interfaces::policy::{AccessPolicy, Attribute, Policy},
+use crate::core::{
+    bilinear_map::bls12_381::Bls12_381,
+    gpsw::{scheme::GpswMasterPrivateKey, AsBytes, Gpsw},
+    Engine,
 };
+use abe_policy::{AccessPolicy, Attribute, Policy};
 
 /// Generate the master authority keys for supplied Policy
 ///

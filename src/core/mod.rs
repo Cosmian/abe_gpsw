@@ -1,7 +1,6 @@
 pub mod bilinear_map;
 pub mod gpsw;
 pub mod msp;
-pub mod policy;
 
 /// The engine is the main entry point of the core module
 /// See the demo for details

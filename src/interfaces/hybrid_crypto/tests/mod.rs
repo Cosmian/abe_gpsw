@@ -11,7 +11,6 @@ use crate::{
     core::{
         bilinear_map::bls12_381::Bls12_381,
         gpsw::{AbeScheme, AsBytes, Gpsw},
-        policy::{attr, Policy},
     },
     error::FormatErr,
     interfaces::hybrid_crypto::{
@@ -19,6 +18,7 @@ use crate::{
         symmetric_encryption_overhead,
     },
 };
+use abe_policy::{Attribute, Policy};
 
 type PublicKey = <Gpsw<Bls12_381> as AbeScheme>::MasterPublicKey;
 type UserDecryptionKey = <Gpsw<Bls12_381> as AbeScheme>::UserDecryptionKey;
@@ -43,8 +43,8 @@ pub fn test_aes_hybrid_encryption() -> Result<(), FormatErr> {
     let policy: Policy = serde_json::from_slice(&hex::decode(policy_hex)?)?;
 
     let policy_attributes = vec![
-        attr("Department", "FIN"),
-        attr("Security Level", "Confidential"),
+        Attribute::new("Department", "FIN"),
+        Attribute::new("Security Level", "Confidential"),
     ];
     let meta_data = Metadata {
         uid: vec![1, 2, 3, 4, 5, 6, 7, 8, 9],

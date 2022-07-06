@@ -17,16 +17,14 @@ use crate::{
         bilinear_map::bls12_381::Bls12_381,
         gpsw::{AbeScheme, AsBytes, Gpsw},
     },
-    interfaces::{
-        hybrid_crypto::{
-            decrypt_hybrid_block as core_decrypt_hybrid_block,
-            decrypt_hybrid_header as core_decrypt_hybrid_header,
-            encrypt_hybrid_block as core_encrypt_hybrid_block,
-            encrypt_hybrid_header as core_encrypt_hybrid_header,
-        },
-        policy::Attribute,
+    interfaces::hybrid_crypto::{
+        decrypt_hybrid_block as core_decrypt_hybrid_block,
+        decrypt_hybrid_header as core_decrypt_hybrid_header,
+        encrypt_hybrid_block as core_encrypt_hybrid_block,
+        encrypt_hybrid_header as core_encrypt_hybrid_header,
     },
 };
+use abe_policy::Attribute;
 
 type PublicKey = <Gpsw<Bls12_381> as AbeScheme>::MasterPublicKey;
 type UserDecryptionKey = <Gpsw<Bls12_381> as AbeScheme>::UserDecryptionKey;

@@ -4,12 +4,13 @@ use sha3::{
 };
 
 use crate::{
-    core::{
-        gpsw::{AbeScheme, AsBytes},
-        policy::{AccessPolicy, Attribute, Policy},
-    },
+    core::gpsw::{AbeScheme, AsBytes},
     error::FormatErr,
 };
+
+use abe_policy::{AccessPolicy, Attribute, Policy};
+
+use super::msp::policy_to_msp;
 
 /// The engine is the main entry point for the core ABE functionalities.
 ///
@@ -43,7 +44,7 @@ impl<S: AbeScheme> Engine<S> {
         ),
         FormatErr,
     > {
-        self.sch.generate_master_key(policy.max_attr())
+        self.sch.generate_master_key(policy.max_attr() as usize)
     }
 
     /// Generate a user decryption key
@@ -54,7 +55,7 @@ impl<S: AbeScheme> Engine<S> {
         priv_key: &S::MasterPrivateKey,
         access_policy: &AccessPolicy,
     ) -> Result<S::UserDecryptionKey, FormatErr> {
-        let msp = policy.to_msp(access_policy)?;
+        let msp = policy_to_msp(policy, access_policy)?;
         self.sch.key_generation(&msp, priv_key)
     }
 
@@ -76,7 +77,7 @@ impl<S: AbeScheme> Engine<S> {
     ) -> Result<S::UserDecryptionKey, FormatErr> {
         let msp = match access_policy {
             AccessPolicy::All => None,
-            _ => Some(policy.to_msp(access_policy)?),
+            _ => Some(policy_to_msp(policy, access_policy)?),
         };
         self.sch.key_delegation(&msp, user_key, del_key)
     }
