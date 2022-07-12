@@ -22,11 +22,10 @@ use crate::{
         bilinear_map::bls12_381::Bls12_381,
         gpsw::{AbeScheme, AsBytes, Gpsw},
     },
-    interfaces::{
-        hybrid_crypto::{encrypt_hybrid_block, encrypt_hybrid_header},
-        policy::{Attributes, Policy},
-    },
+    interfaces::hybrid_crypto::{encrypt_hybrid_block, encrypt_hybrid_header},
 };
+
+use abe_policy::{Attributes, Policy};
 
 pub const MAX_CLEAR_TEXT_SIZE: usize = 1 << 30;
 

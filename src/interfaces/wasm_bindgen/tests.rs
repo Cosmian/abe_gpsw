@@ -31,14 +31,13 @@ use crate::{
             AbeScheme, AsBytes, Gpsw,
         },
     },
-    interfaces::{
-        hybrid_crypto::{
-            decrypt_hybrid_block, decrypt_hybrid_header, encrypt_hybrid_header, ClearTextHeader,
-            EncryptedHeader,
-        },
-        policy::{Attributes, Policy},
+    interfaces::hybrid_crypto::{
+        decrypt_hybrid_block, decrypt_hybrid_header, encrypt_hybrid_header, ClearTextHeader,
+        EncryptedHeader,
     },
 };
+
+use abe_policy::{Attributes, Policy, PolicyAxis};
 
 type UserDecryptionKey = <Gpsw<Bls12_381> as AbeScheme>::UserDecryptionKey;
 type PublicKey = <Gpsw<Bls12_381> as AbeScheme>::MasterPublicKey;
@@ -47,16 +46,22 @@ fn create_test_policy() -> Policy {
     //
     // Policy settings
     //
-    // let policy = Policy::new(100);
-    Policy::new(100)
-        .add_axis(
+    let mut policy = Policy::new(100);
+    policy
+        .add_axis(&PolicyAxis::new(
             "Security Level",
             &["Protected", "Confidential", "Top Secret"],
             true,
-        )
-        .unwrap()
-        .add_axis("Department", &["R&D", "HR", "MKG", "FIN"], false)
-        .unwrap()
+        ))
+        .unwrap();
+    policy
+        .add_axis(&PolicyAxis::new(
+            "Department",
+            &["R&D", "HR", "MKG", "FIN"],
+            false,
+        ))
+        .unwrap();
+    policy
 }
 
 #[wasm_bindgen_test]

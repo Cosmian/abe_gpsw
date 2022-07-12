@@ -5,10 +5,11 @@ use crate::{
         bilinear_map::bls12_381::Bls12_381,
         engine::Engine,
         gpsw::{AsBytes, Gpsw},
-        policy::{AccessPolicy, Attributes, Policy},
     },
     error::FormatErr,
 };
+
+use abe_policy::{AccessPolicy, Attributes, Policy, PolicyAxis};
 
 /// # Encryption using an Authorization Policy
 /// This test demonstrates how data can be encrypted with policy attributes.
@@ -46,19 +47,26 @@ fn abe() -> Result<(), FormatErr> {
     // HR, MKG, FIN. This axis is not hierarchical: granting access to an
     // attribute of this axis to a user does not give access to any other
     // attribute. Each attribute must be granted individually.
-    let mut policy = Policy::new(100)
-        .add_axis(
-            "Security Level",
-            &[
-                "Protected",
-                "Low Secret",
-                "Medium Secret",
-                "High Secret",
-                "Top Secret",
-            ],
-            true,
-        )?
-        .add_axis("Department", &["R&D", "HR", "MKG", "FIN"], false)?;
+    let mut policy = Policy::new(100);
+
+    policy.add_axis(&PolicyAxis::new(
+        "Security Level",
+        &[
+            "Protected",
+            "Low Secret",
+            "Medium Secret",
+            "High Secret",
+            "Top Secret",
+        ],
+        true,
+    ))?;
+
+    policy.add_axis(&PolicyAxis::new(
+        "Department",
+        &["R&D", "HR", "MKG", "FIN"],
+        false,
+    ))?;
+
     println!("policy: {:?}", hex::encode(&serde_json::to_vec(&policy)?));
 
     // ## Master Authority

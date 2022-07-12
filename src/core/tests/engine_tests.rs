@@ -1,9 +1,10 @@
 use crate::core::{
     bilinear_map::bls12_381::Bls12_381,
     gpsw::{AbeScheme, AsBytes, Gpsw},
-    policy::{attr, AccessPolicy, Policy},
+    msp::policy_to_msp,
     Engine,
 };
+use abe_policy::{AccessPolicy, Attribute, Policy, PolicyAxis};
 
 type PublicKey = <Gpsw<Bls12_381> as AbeScheme>::MasterPublicKey;
 type UserDecryptionKey = <Gpsw<Bls12_381> as AbeScheme>::UserDecryptionKey;
@@ -24,8 +25,8 @@ pub fn symmetric_key_test() {
 
     println!("{:?}", &policy);
     let policy_attributes = vec![
-        attr("Department", "FIN"),
-        attr("Security Level", "Confidential"),
+        Attribute::new("Department", "FIN"),
+        Attribute::new("Security Level", "Confidential"),
     ];
     let (symmetric_key, encrypted_symmetric_key) = abe
         .generate_symmetric_key(&policy, &public_key, &policy_attributes, 32)
@@ -54,14 +55,22 @@ pub fn symmetric_key_test() {
 
 #[test]
 pub fn complex_access_policy_test() {
-    let policy = Policy::new(100)
-        .add_axis("Entity", &["BCEF", "BNPPF", "CIB", "CashMgt"], false)
-        .unwrap()
-        .add_axis(
+    let mut policy = Policy::new(100);
+
+    policy
+        .add_axis(&PolicyAxis::new(
+            "Entity",
+            &["BCEF", "BNPPF", "CIB", "CashMgt"],
+            false,
+        ))
+        .unwrap();
+
+    policy
+        .add_axis(&PolicyAxis::new(
             "Country",
             &["France", "Germany", "Italy", "Hungary", "Spain", "Belgium"],
             false,
-        )
+        ))
         .unwrap();
 
     let engine = Engine::<Gpsw<Bls12_381>>::new();
@@ -75,9 +84,7 @@ pub fn complex_access_policy_test() {
     .unwrap();
 
     // Verify access policy (optional check)
-    bnppf_all_access_policy
-        .verify_access_policy(&policy)
-        .unwrap();
+    policy_to_msp(&policy, &bnppf_all_access_policy).unwrap();
 
     println!(
         "{}",

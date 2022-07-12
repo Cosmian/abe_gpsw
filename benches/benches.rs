@@ -6,16 +6,17 @@ use {
         core::{
             bilinear_map::bls12_381::Bls12_381,
             gpsw::{AbeScheme, AsBytes, Gpsw},
-            policy::{attr, Policy},
         },
         interfaces::hybrid_crypto::{
             decrypt_hybrid_header, encrypt_hybrid_header, EncryptedHeader,
         },
     },
+    abe_policy::{Attribute, Policy},
     cosmian_crypto_base::{
         hybrid_crypto::Metadata, symmetric_crypto::aes_256_gcm_pure::Aes256GcmCrypto,
     },
 };
+
 #[cfg(feature = "ffi")]
 use {
     abe_gpsw::{
@@ -68,8 +69,8 @@ fn generate_encrypted_header() -> EncryptedHeader<Aes256GcmCrypto> {
         serde_json::from_slice(&hex::decode(policy_hex).expect("cannot hex decode policy"))
             .expect("cannot deserialize policy");
     let policy_attributes = vec![
-        attr("Department", "FIN"),
-        attr("Security Level", "Confidential"),
+        Attribute::new("Department", "FIN"),
+        Attribute::new("Security Level", "Confidential"),
     ];
 
     let meta_data = Metadata {
@@ -111,8 +112,8 @@ fn bench_header_encryption(c: &mut Criterion) {
             .expect("cannot deserialize policy");
 
     let policy_attributes_1 = vec![
-        attr("Department", "FIN"),
-        attr("Security Level", "Confidential"),
+        Attribute::new("Department", "FIN"),
+        Attribute::new("Security Level", "Confidential"),
     ];
     let encrypted_header_1 = encrypt_hybrid_header::<Gpsw<Bls12_381>, Aes256GcmCrypto>(
         &policy,
@@ -122,10 +123,10 @@ fn bench_header_encryption(c: &mut Criterion) {
     )
     .expect("cannot encrypt header 1");
     let policy_attributes_3 = vec![
-        attr("Department", "FIN"),
-        attr("Security Level", "Top Secret"),
-        attr("Security Level", "Confidential"),
-        attr("Security Level", "Protected"),
+        Attribute::new("Department", "FIN"),
+        Attribute::new("Security Level", "Top Secret"),
+        Attribute::new("Security Level", "Confidential"),
+        Attribute::new("Security Level", "Protected"),
     ];
     let encrypted_header_3 = encrypt_hybrid_header::<Gpsw<Bls12_381>, Aes256GcmCrypto>(
         &policy,
@@ -206,8 +207,8 @@ fn bench_ffi_header_encryption(c: &mut Criterion) {
             .expect("cannot deserialize policy");
 
     let policy_attributes = vec![
-        attr("Department", "FIN"),
-        attr("Security Level", "Confidential"),
+        Attribute::new("Department", "FIN"),
+        Attribute::new("Security Level", "Confidential"),
     ];
     let meta_data = Metadata {
         uid: vec![1, 2, 3, 4, 5, 6, 7, 8, 9],
@@ -289,8 +290,8 @@ fn bench_ffi_header_encryption_using_cache(c: &mut Criterion) {
             .expect("cannot deserialize policy");
 
     let policy_attributes = vec![
-        attr("Department", "FIN"),
-        attr("Security Level", "Confidential"),
+        Attribute::new("Department", "FIN"),
+        Attribute::new("Security Level", "Confidential"),
     ];
     let meta_data = Metadata {
         uid: vec![1, 2, 3, 4, 5, 6, 7, 8, 9],

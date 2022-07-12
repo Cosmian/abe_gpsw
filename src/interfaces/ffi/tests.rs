@@ -9,11 +9,11 @@ use crate::{
     core::{
         bilinear_map::bls12_381::Bls12_381,
         gpsw::{AbeScheme, AsBytes, Gpsw},
-        policy::{attr, Policy},
     },
     error::FormatErr,
     interfaces::{ffi::error::get_last_error, hybrid_crypto::EncryptedHeader},
 };
+use abe_policy::{Attribute, Policy};
 
 type PublicKey = <Gpsw<Bls12_381> as AbeScheme>::MasterPublicKey;
 
@@ -47,8 +47,8 @@ unsafe fn encrypt_header(
     let policy: Policy = serde_json::from_slice(&hex::decode(policy_hex)?)?;
 
     let policy_attributes = vec![
-        attr("Department", "FIN"),
-        attr("Security Level", "Confidential"),
+        Attribute::new("Department", "FIN"),
+        Attribute::new("Security Level", "Confidential"),
     ];
 
     let mut symmetric_key = vec![0u8; 32];
@@ -222,8 +222,8 @@ unsafe fn encrypt_header_using_cache(
     ))?;
 
     let policy_attributes = vec![
-        attr("Department", "FIN"),
-        attr("Security Level", "Confidential"),
+        Attribute::new("Department", "FIN"),
+        Attribute::new("Security Level", "Confidential"),
     ];
 
     let mut symmetric_key = vec![0u8; 32];

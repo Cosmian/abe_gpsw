@@ -1,11 +1,12 @@
 #![allow(dead_code)]
 use std::{
-    collections::HashMap,
+    collections::{BinaryHeap, HashMap},
     convert::{TryFrom, TryInto},
     fmt::Display,
     ops::{BitAnd, BitOr},
 };
 
+use abe_policy::{AccessPolicy, Attribute, Policy};
 use regex::Regex;
 
 use crate::{
@@ -408,3 +409,81 @@ impl Node {
         }
     }
 } // impl Node
+
+// Verify the Policy Access and generate the corresponding msp
+pub fn policy_to_msp(
+    policy: &Policy,
+    axis: &AccessPolicy,
+) -> Result<MonotoneSpanProgram<i32>, FormatErr> {
+    if let AccessPolicy::All = axis {
+        policy
+            .attribute_to_int
+            .values()
+            .flat_map(BinaryHeap::iter)
+            .map(|attr| Node::Leaf(*attr))
+            .reduce(BitOr::bitor)
+            .ok_or(FormatErr::MissingAttribute {
+                item: None,
+                axis_name: None,
+            })?
+            .to_msp()
+    } else {
+        let formula = policy_to_formula(policy, axis)?;
+        formula.to_msp()
+    }
+}
+
+// Recursive function
+fn policy_to_formula(policy: &Policy, axis: &AccessPolicy) -> Result<Node, FormatErr> {
+    Ok(match axis {
+        AccessPolicy::Attr(a) => policy_to_node(policy, a)?,
+        AccessPolicy::And(a, b) => policy_to_formula(policy, a)? & policy_to_formula(policy, b)?,
+        AccessPolicy::Or(a, b) => policy_to_formula(policy, a)? | policy_to_formula(policy, b)?,
+        AccessPolicy::All => {
+            return Err(FormatErr::InvalidFormula(
+                "`All` is not authorized inside a formula".to_string(),
+            ));
+        }
+    })
+}
+
+// Convert an Attribute to a Node for msp computation
+// take care of the hierarchical mode
+// In hierarchical, return the Or of all lower attributes
+fn policy_to_node(policy: &Policy, attr: &Attribute) -> Result<Node, FormatErr> {
+    if let Some((list, hierarchical)) = policy.store.get(&attr.axis()) {
+        if list.contains(&attr.name()) {
+            let res = list
+                .iter()
+                .position(|r| r == &attr.name())
+                .ok_or_else(|| FormatErr::ExpectedAttribute(attr.name(), list.clone()))?;
+            let mut val = policy.attribute_to_int[attr]
+                .iter()
+                .map(|attr| Node::Leaf(*attr))
+                .reduce(std::ops::BitOr::bitor)
+                .ok_or_else(|| FormatErr::AttributeNotFound(format!("{:?}", attr)))?;
+            if *hierarchical {
+                for (at, elem) in list.iter().enumerate() {
+                    if at >= res {
+                        break;
+                    }
+                    val = val
+                        | policy.attribute_to_int[&(attr.axis().clone(), elem.clone()).into()]
+                            .iter()
+                            .map(|attr| Node::Leaf(*attr))
+                            .reduce(std::ops::BitOr::bitor)
+                            .ok_or_else(|| FormatErr::AttributeNotFound(format!("{:?}", attr)))?;
+                }
+            }
+
+            Ok(val)
+        } else {
+            Err(FormatErr::MissingAttribute {
+                item: Some(attr.name()),
+                axis_name: Some(attr.axis()),
+            })
+        }
+    } else {
+        Err(FormatErr::MissingAxis(attr.axis()))
+    }
+}

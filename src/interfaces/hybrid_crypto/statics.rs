@@ -10,7 +10,7 @@ use cosmian_crypto_base::{
 use crate::{
     core::{gpsw::AbeScheme, Engine},
     error::FormatErr,
-    interfaces::policy::{Attribute, Policy},
+    interfaces::abe_policy::{Attribute, Policy},
 };
 
 /// An `EncryptedHeader` returned by the `encrypt_hybrid_header` function

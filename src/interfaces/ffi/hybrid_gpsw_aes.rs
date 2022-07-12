@@ -22,7 +22,6 @@ use crate::{
             scheme::{GpswDecryptionKey, GpswMasterPublicKey},
             AbeScheme, AsBytes, Gpsw,
         },
-        policy::{Attribute, Policy},
     },
     ffi_bail, ffi_not_null, ffi_unwrap,
     interfaces::{
@@ -33,6 +32,7 @@ use crate::{
         },
     },
 };
+use abe_policy::{Attribute, Policy};
 
 type PublicKey = <Gpsw<Bls12_381> as AbeScheme>::MasterPublicKey;
 type UserDecryptionKey = <Gpsw<Bls12_381> as AbeScheme>::UserDecryptionKey;

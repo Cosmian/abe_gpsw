@@ -1,17 +1,15 @@
 use pyo3::{exceptions::PyTypeError, prelude::*};
 
-use crate::{
-    core::{
-        bilinear_map::bls12_381::Bls12_381,
-        gpsw::{
-            scheme::{GpswMasterPrivateKey, GpswMasterPublicDelegationKey},
-            AbeScheme, AsBytes, Gpsw,
-        },
-        Engine,
+use crate::core::{
+    bilinear_map::bls12_381::Bls12_381,
+    gpsw::{
+        scheme::{GpswMasterPrivateKey, GpswMasterPublicDelegationKey},
+        AbeScheme, AsBytes, Gpsw,
     },
-    interfaces::policy::{AccessPolicy, Attribute, Policy, PolicyAxis},
+    Engine,
 };
 type UserDecryptionKey = <Gpsw<Bls12_381> as AbeScheme>::UserDecryptionKey;
+use abe_policy::{AccessPolicy, Attribute, Policy, PolicyAxis};
 
 /// Generate the master authority keys for supplied Policy
 ///
@@ -53,7 +51,8 @@ pub fn generate_user_private_key(
         GpswMasterPrivateKey::<Bls12_381>::try_from_bytes(&master_private_key_bytes)?;
     let policy = serde_json::from_slice(&policy_bytes)
         .map_err(|e| PyTypeError::new_err(format!("Policy deserialization failed: {e}")))?;
-    let access_policy = AccessPolicy::from_boolean_expression(&access_policy_str)?;
+    let access_policy = AccessPolicy::from_boolean_expression(&access_policy_str)
+        .map_err(|e| PyTypeError::new_err(format!("Access policy creation failed: {e}")))?;
 
     let user_key = Engine::<Gpsw<Bls12_381>>::new().generate_user_key(
         &policy,
@@ -89,7 +88,9 @@ pub fn generate_delegated_key(
     let delegation_key =
         GpswMasterPublicDelegationKey::<Bls12_381>::try_from_bytes(&delegation_key_bytes)?;
     let user_decryption_key = UserDecryptionKey::try_from_bytes(&user_decryption_key_bytes)?;
-    let access_policy = AccessPolicy::from_boolean_expression(&access_policy_str)?;
+    let access_policy = AccessPolicy::from_boolean_expression(&access_policy_str)
+        .map_err(|e| PyTypeError::new_err(format!("Access policy creation failed: {e}")))?;
+
     let policy: Policy = serde_json::from_slice(&policy_bytes)
         .map_err(|e| PyTypeError::new_err(format!("Policy deserialization failed: {e}")))?;
 
@@ -115,14 +116,21 @@ pub fn generate_policy(
 ) -> PyResult<Vec<u8>> {
     let policy_axis: Vec<PolicyAxis> = serde_json::from_slice(&policy_axis_bytes)
         .map_err(|e| PyTypeError::new_err(format!("Policy Axis deserialization failed: {e}")))?;
-    let mut policy = Policy::new(max_attribute_value);
+    let mut policy = Policy::new(max_attribute_value as u32);
     for axis in &policy_axis {
         let attrs = axis
-            .attributes
+            .attributes()
             .iter()
             .map(std::ops::Deref::deref)
             .collect::<Vec<_>>();
-        policy = policy.add_axis(&axis.name, &attrs, axis.hierarchical)?;
+
+        policy
+            .add_axis(&PolicyAxis::new(
+                axis.name(),
+                &attrs,
+                axis.is_hierarchical(),
+            ))
+            .map_err(|e| PyTypeError::new_err(format!("Add axis failed: {e}")))?;
     }
     let policy_bytes = serde_json::to_vec(&policy)
         .map_err(|e| PyTypeError::new_err(format!("Error serializing policy: {e}")))?;
@@ -141,7 +149,9 @@ pub fn rotate_attributes(attributes_bytes: Vec<u8>, policy_bytes: Vec<u8>) -> Py
         .map_err(|e| PyTypeError::new_err(format!("Error deserializing policy: {e}")))?;
 
     for attr in &attributes {
-        policy.rotate(attr)?;
+        policy
+            .rotate(attr)
+            .map_err(|e| PyTypeError::new_err(format!("Rotation failed: {e}")))?;
     }
     serde_json::to_vec(&policy)
         .map_err(|e| PyTypeError::new_err(format!("Error serializing policy: {e}")))

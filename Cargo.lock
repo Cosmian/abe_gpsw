@@ -4,8 +4,9 @@ version = 3
 
 [[package]]
 name = "abe_gpsw"
-version = "1.0.0"
+version = "1.1.0"
 dependencies = [
+ "abe_policy",
  "cosmian_bls12_381",
  "cosmian_crypto_base",
  "criterion",
@@ -26,6 +27,17 @@ dependencies = [
  "thiserror",
  "wasm-bindgen",
  "wasm-bindgen-test",
+]
+
+[[package]]
+name = "abe_policy"
+version = "0.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "cdc56bd72f6f7f12de477a700692ce63befa83d0b05fd5b009a76e1cf3c313d5"
+dependencies = [
+ "serde",
+ "serde_json",
+ "thiserror",
 ]
 
 [[package]]

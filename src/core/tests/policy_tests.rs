@@ -1,19 +1,22 @@
 use std::convert::TryFrom;
 
-use crate::{
-    core::policy::{ap, attr, AccessPolicy, Attribute, Attributes, Policy},
-    error::FormatErr,
-};
+use crate::{core::msp::policy_to_msp, error::FormatErr};
+
+use abe_policy::{ap, AccessPolicy, Attribute, Attributes, Policy, PolicyAxis};
 
 #[test]
 fn policy_group() -> Result<(), FormatErr> {
-    let policy_group = Policy::new(1000)
-        .add_axis(
-            "Security Level",
-            &["level 1", "level 2", "level 3", "level 4", "level 5"],
-            true,
-        )?
-        .add_axis("Department", &["R&D", "HR", "MKG", "fin"], false)?;
+    let mut policy_group = Policy::new(1000);
+    policy_group.add_axis(&PolicyAxis::new(
+        "Security Level",
+        &["level 1", "level 2", "level 3", "level 4", "level 5"],
+        true,
+    ))?;
+    policy_group.add_axis(&PolicyAxis::new(
+        "Department",
+        &["R&D", "HR", "MKG", "fin"],
+        false,
+    ))?;
     let json = serde_json::to_string(&policy_group).unwrap();
     println!("{}", &json);
     let _pol_acc: AccessPolicy =
@@ -34,7 +37,7 @@ fn attribute_parser() {
     assert!(Attribute::try_from("::").is_err());
     assert!(Attribute::try_from("::::").is_err());
 
-    let attribute2 = attr("Security Level", "level 1");
+    let attribute2 = Attribute::new("Security Level", "level 1");
     assert_eq!(
         Attribute::try_from(" Security Level::level 1  ").unwrap(),
         attribute2
@@ -98,7 +101,7 @@ fn policy_group_from_java() {
     assert!(attributes.contains(&"MKG".to_string()));
     let attribute_to_int = policy_group.attribute_to_int;
     let dpt_hr = attribute_to_int
-        .get(&attr("Department", "HR"))
+        .get(&Attribute::new("Department", "HR"))
         .ok_or("There should be a Department::HR")
         .unwrap();
     assert_eq!(vec![10, 6], dpt_hr.clone().into_vec());
@@ -157,30 +160,38 @@ fn parse_boolean_expression_additional_tests() {
 
 #[test]
 fn verify_access_policy() {
-    let policy = Policy::new(1000)
-        .add_axis(
+    let mut policy = Policy::new(1000);
+    policy
+        .add_axis(&PolicyAxis::new(
             "Level",
             &["level 1", "level 2", "level 3", "level 4", "level 5"],
             true,
-        )
-        .unwrap()
-        .add_axis("Department", &["R&D", "HR", "MKG", "fin"], false)
+        ))
+        .unwrap();
+
+    policy
+        .add_axis(&PolicyAxis::new(
+            "Department",
+            &["R&D", "HR", "MKG", "fin"],
+            false,
+        ))
         .unwrap();
     let access_policy = AccessPolicy::from_boolean_expression(
         "(Department::HR || Department::R&D) && Level::level 2",
     )
     .unwrap();
-    access_policy.verify_access_policy(&policy).unwrap();
+
+    policy_to_msp(&policy, &access_policy).unwrap();
 
     let access_policy = AccessPolicy::from_boolean_expression(
         "(Axis_Name_Not_Existing_in_Policy::HR || Department::R&D) && Level::level 2",
     )
     .unwrap();
-    assert!(access_policy.verify_access_policy(&policy).is_err());
+    assert!(policy_to_msp(&policy, &access_policy).is_err());
 
     let access_policy = AccessPolicy::from_boolean_expression(
         "(Department::Attribute_Value_Not_Existing_in_Policy || Department::R&D) && Level::level 2",
     )
     .unwrap();
-    assert!(access_policy.verify_access_policy(&policy).is_err());
+    assert!(policy_to_msp(&policy, &access_policy).is_err());
 }
