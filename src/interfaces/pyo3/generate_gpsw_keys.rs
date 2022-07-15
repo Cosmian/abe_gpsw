@@ -25,7 +25,7 @@ pub fn generate_master_keys(policy_bytes: Vec<u8>) -> PyResult<(Vec<u8>, Vec<u8>
         .map_err(|e| PyTypeError::new_err(format!("Policy deserialization failed: {e}")))?;
 
     //
-    // Setup CoverCrypt
+    // Setup GPSW
     let (master_private_key, master_public_key, master_public_delegation_key) =
         Engine::<Gpsw<Bls12_381>>::new().generate_master_key(&policy)?;
 
