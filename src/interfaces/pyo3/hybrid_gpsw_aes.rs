@@ -63,7 +63,7 @@ pub fn get_encrypted_header_size(encrypted_bytes: Vec<u8>) -> PyResult<u32> {
 /// Generate an encrypted header. A header contains the following elements:
 ///
 /// - `encapsulation_size`  : the size of the symmetric key encapsulation (u32)
-/// - `encapsulation`       : symmetric key encapsulation using CoverCrypt
+/// - `encapsulation`       : symmetric key encapsulation using GPSW
 /// - `encrypted_metadata`  : Optional metadata encrypted using the DEM
 ///
 /// Parameters:
@@ -71,7 +71,7 @@ pub fn get_encrypted_header_size(encrypted_bytes: Vec<u8>) -> PyResult<u32> {
 /// - `metadata_bytes`         : meta data
 /// - `policy_bytes`           : global policy
 /// - `attributes_bytes`       : access policy
-/// - `public_key_bytes`       : CoverCrypt public key
+/// - `public_key_bytes`       : GPSW public key
 #[pyfunction]
 pub fn encrypt_hybrid_header(
     metadata_bytes: Vec<u8>,

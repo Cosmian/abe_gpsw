@@ -1,2 +1,2 @@
-wasmtime
+maturin
 notebook
