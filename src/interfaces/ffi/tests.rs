@@ -1,10 +1,8 @@
-use std::{convert::TryFrom, ffi::CStr};
-
-use cosmian_crypto_base::{
-    hybrid_crypto::Metadata,
-    symmetric_crypto::{aes_256_gcm_pure::Aes256GcmCrypto, SymmetricCrypto},
+use super::hybrid_gpsw_aes::{
+    h_aes_create_decryption_cache, h_aes_create_encryption_cache, h_aes_decrypt_header,
+    h_aes_decrypt_header_using_cache, h_aes_destroy_decryption_cache,
+    h_aes_destroy_encryption_cache, h_aes_encrypt_header, h_aes_encrypt_header_using_cache,
 };
-
 use crate::{
     core::{
         bilinear_map::bls12_381::Bls12_381,
@@ -14,19 +12,16 @@ use crate::{
     interfaces::{ffi::error::get_last_error, hybrid_crypto::EncryptedHeader},
 };
 use abe_policy::{Attribute, Policy};
-
-type PublicKey = <Gpsw<Bls12_381> as AbeScheme>::MasterPublicKey;
-
-type UserDecryptionKey = <Gpsw<Bls12_381> as AbeScheme>::UserDecryptionKey;
+use cosmian_crypto_base::{
+    symmetric_crypto::{aes_256_gcm_pure::Aes256GcmCrypto, Metadata, SymmetricCrypto},
+    KeyTrait,
+};
+use serde_json::Value;
+use std::ffi::CStr;
 use std::{ffi::CString, os::raw::c_int};
 
-use serde_json::Value;
-
-use super::hybrid_gpsw_aes::{
-    h_aes_create_decryption_cache, h_aes_create_encryption_cache, h_aes_decrypt_header,
-    h_aes_decrypt_header_using_cache, h_aes_destroy_decryption_cache,
-    h_aes_destroy_encryption_cache, h_aes_encrypt_header, h_aes_encrypt_header_using_cache,
-};
+type PublicKey = <Gpsw<Bls12_381> as AbeScheme>::MasterPublicKey;
+type UserDecryptionKey = <Gpsw<Bls12_381> as AbeScheme>::UserDecryptionKey;
 
 unsafe fn encrypt_header(
     meta_data: &Metadata,
@@ -89,9 +84,8 @@ unsafe fn encrypt_header(
         meta_data.additional_data.as_ref().unwrap().len() as i32,
     ))?;
 
-    let symmetric_key_ = <Aes256GcmCrypto as SymmetricCrypto>::Key::try_from(
-        std::slice::from_raw_parts(symmetric_key_ptr as *const u8, symmetric_key_len as usize)
-            .to_vec(),
+    let symmetric_key_ = <Aes256GcmCrypto as SymmetricCrypto>::Key::try_from_bytes(
+        std::slice::from_raw_parts(symmetric_key_ptr as *const u8, symmetric_key_len as usize),
     )?;
 
     let encrypted_header_bytes_ = std::slice::from_raw_parts(
@@ -149,9 +143,8 @@ unsafe fn decrypt_header(
         user_decryption_key_len,
     ))?;
 
-    let symmetric_key_ = <Aes256GcmCrypto as SymmetricCrypto>::Key::try_from(
-        std::slice::from_raw_parts(symmetric_key_ptr as *const u8, symmetric_key_len as usize)
-            .to_vec(),
+    let symmetric_key_ = <Aes256GcmCrypto as SymmetricCrypto>::Key::try_from_bytes(
+        std::slice::from_raw_parts(symmetric_key_ptr as *const u8, symmetric_key_len as usize),
     )?;
 
     let uid_bytes_ = std::slice::from_raw_parts(uid_ptr as *const u8, uid_len as usize).to_vec();
@@ -255,9 +248,8 @@ unsafe fn encrypt_header_using_cache(
         meta_data.additional_data.as_ref().unwrap().len() as i32,
     ))?;
 
-    let symmetric_key_ = <Aes256GcmCrypto as SymmetricCrypto>::Key::try_from(
-        std::slice::from_raw_parts(symmetric_key_ptr as *const u8, symmetric_key_len as usize)
-            .to_vec(),
+    let symmetric_key_ = <Aes256GcmCrypto as SymmetricCrypto>::Key::try_from_bytes(
+        std::slice::from_raw_parts(symmetric_key_ptr as *const u8, symmetric_key_len as usize),
     )?;
 
     let encrypted_header_bytes_ = std::slice::from_raw_parts(
@@ -320,9 +312,8 @@ unsafe fn decrypt_header_using_cache(
         cache_handle,
     ))?;
 
-    let symmetric_key_ = <Aes256GcmCrypto as SymmetricCrypto>::Key::try_from(
-        std::slice::from_raw_parts(symmetric_key_ptr as *const u8, symmetric_key_len as usize)
-            .to_vec(),
+    let symmetric_key_ = <Aes256GcmCrypto as SymmetricCrypto>::Key::try_from_bytes(
+        std::slice::from_raw_parts(symmetric_key_ptr as *const u8, symmetric_key_len as usize),
     )?;
 
     let uid_bytes_ = std::slice::from_raw_parts(uid_ptr as *const u8, uid_len as usize).to_vec();

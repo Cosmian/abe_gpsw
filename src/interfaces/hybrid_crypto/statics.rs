@@ -2,8 +2,8 @@ use std::convert::{TryFrom, TryInto};
 
 use cosmian_crypto_base::{
     entropy::CsRng,
-    hybrid_crypto::{Block, BytesScanner, Metadata},
-    symmetric_crypto::{nonce::NonceTrait, SymmetricCrypto},
+    symmetric_crypto::{nonce::NonceTrait, Block, BytesScanner, Metadata, SymmetricCrypto},
+    typenum::Unsigned,
     CryptoBaseError, KeyTrait,
 };
 
@@ -25,7 +25,8 @@ where
 impl<S: SymmetricCrypto> EncryptedHeader<S> {
     pub fn try_into_bytes(&self) -> Result<Vec<u8>, FormatErr> {
         let mut bytes: Vec<u8> =
-            u32::to_be_bytes(<S as SymmetricCrypto>::Key::LENGTH as u32).try_into()?;
+            u32::to_be_bytes(<<S as SymmetricCrypto>::Key as KeyTrait>::Length::to_u32())
+                .try_into()?;
         bytes.extend_from_slice(&self.symmetric_key.to_bytes());
         bytes.extend_from_slice(&self.encrypted_header_bytes[..]);
         Ok(bytes)
@@ -60,9 +61,10 @@ where
 impl<S: SymmetricCrypto> ClearTextHeader<S> {
     pub fn try_into_bytes(&self) -> Result<Vec<u8>, FormatErr> {
         let mut bytes: Vec<u8> =
-            u32::to_be_bytes(<S as SymmetricCrypto>::Key::LENGTH as u32).try_into()?;
+            u32::to_be_bytes(<<S as SymmetricCrypto>::Key as KeyTrait>::Length::to_u32())
+                .try_into()?;
         bytes.extend_from_slice(&self.symmetric_key.to_bytes());
-        bytes.extend_from_slice(&self.meta_data.to_bytes()?);
+        bytes.extend_from_slice(&self.meta_data.try_to_bytes()?);
         Ok(bytes)
     }
 
@@ -78,8 +80,7 @@ impl<S: SymmetricCrypto> ClearTextHeader<S> {
 
         Ok(Self {
             symmetric_key: S::Key::try_from_bytes(&symmetric_key_bytes)?,
-            meta_data: Metadata::from_bytes(&meta_data_bytes)
-                .map_err(|e| FormatErr::CryptoError(e.to_string()))?,
+            meta_data: Metadata::try_from_bytes(&meta_data_bytes)?,
         })
     }
 }
@@ -101,8 +102,12 @@ where
     S: SymmetricCrypto,
 {
     let engine = Engine::<A>::new();
-    let (sk_bytes, encrypted_sk) =
-        engine.generate_symmetric_key(policy, public_key, attributes, S::Key::LENGTH)?;
+    let (sk_bytes, encrypted_sk) = engine.generate_symmetric_key(
+        policy,
+        public_key,
+        attributes,
+        <S::Key as KeyTrait>::Length::to_usize(),
+    )?;
     let symmetric_key = S::Key::try_from_bytes(&sk_bytes)?;
 
     // convert to bytes
@@ -113,10 +118,10 @@ where
     if let Some(meta) = meta_data {
         // Nonce
         let nonce = S::Nonce::new(&mut CsRng::new());
-        header_bytes.extend(nonce.to_bytes());
+        header_bytes.extend_from_slice(nonce.as_slice());
 
         // Encrypted metadata
-        let encrypted_metadata = S::encrypt(&symmetric_key, &meta.to_bytes()?, &nonce, None)?;
+        let encrypted_metadata = S::encrypt(&symmetric_key, &meta.try_to_bytes()?, &nonce, None)?;
         // ... size
         header_bytes.extend(u32_len(&encrypted_metadata)?);
         // ... bytes
@@ -161,7 +166,7 @@ where
     let symmetric_key = S::Key::try_from_bytes(&engine.decrypt_symmetric_key(
         user_decryption_key,
         &encrypted_symmetric_key,
-        S::Key::LENGTH,
+        <S::Key as KeyTrait>::Length::to_usize(),
     )?)?;
 
     let meta_data = if scanner.has_more() {
@@ -182,7 +187,7 @@ where
         let encrypted_metadata = scanner
             .next(encrypted_metadata_size)
             .map_err(|e| FormatErr::CryptoError(e.to_string()))?;
-        Metadata::from_bytes(&S::decrypt(
+        Metadata::try_from_bytes(&S::decrypt(
             &symmetric_key,
             encrypted_metadata,
             &nonce,
