@@ -7,7 +7,7 @@ use std::{
 };
 
 #[cfg(feature = "interfaces")]
-use cosmian_crypto_base::CryptoBaseError;
+use cosmian_crypto_base::{CryptoBaseError, CryptoCoreError};
 use hex::FromHexError;
 use thiserror::Error;
 
@@ -104,6 +104,13 @@ impl From<CryptoBaseError> for FormatErr {
             CryptoBaseError::InvalidSize(e) => Self::InvalidSize(e),
             e => Self::CryptoError(e.to_string()),
         }
+    }
+}
+
+#[cfg(feature = "interfaces")]
+impl From<CryptoCoreError> for FormatErr {
+    fn from(e: CryptoCoreError) -> Self {
+        Self::CryptoError(e.to_string())
     }
 }
 

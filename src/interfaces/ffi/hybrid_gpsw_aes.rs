@@ -9,9 +9,8 @@ use std::{
     },
 };
 
-use cosmian_crypto_base::{
-    hybrid_crypto::Metadata,
-    symmetric_crypto::{aes_256_gcm_pure::Aes256GcmCrypto, SymmetricCrypto},
+use cosmian_crypto_base::symmetric_crypto::{
+    aes_256_gcm_pure::Aes256GcmCrypto, Metadata, SymKey, SymmetricCrypto,
 };
 use lazy_static::lazy_static;
 
@@ -213,8 +212,7 @@ pub unsafe extern "C" fn h_aes_encrypt_header_using_cache(
     ));
 
     let allocated = *symmetric_key_len;
-    let symmetric_key_bytes: Vec<u8> = encrypted_header.symmetric_key.into();
-    let len = symmetric_key_bytes.len();
+    let len = encrypted_header.symmetric_key.as_bytes().len();
     *symmetric_key_len = len as c_int;
     if (allocated as usize) < len {
         ffi_bail!(
@@ -223,7 +221,7 @@ pub unsafe extern "C" fn h_aes_encrypt_header_using_cache(
         );
     }
     std::slice::from_raw_parts_mut(symmetric_key_ptr.cast::<u8>(), len)
-        .copy_from_slice(&symmetric_key_bytes);
+        .copy_from_slice(encrypted_header.symmetric_key.as_bytes());
 
     let allocated = *header_bytes_len;
     let len = encrypted_header.encrypted_header_bytes.len();
@@ -342,8 +340,7 @@ pub unsafe extern "C" fn h_aes_encrypt_header(
     ));
 
     let allocated = *symmetric_key_len;
-    let symmetric_key_bytes: Vec<u8> = encrypted_header.symmetric_key.into();
-    let len = symmetric_key_bytes.len();
+    let len = encrypted_header.symmetric_key.as_bytes().len();
     *symmetric_key_len = len as c_int;
     if (allocated as usize) < len {
         ffi_bail!(
@@ -352,7 +349,7 @@ pub unsafe extern "C" fn h_aes_encrypt_header(
         );
     }
     std::slice::from_raw_parts_mut(symmetric_key_ptr.cast::<u8>(), len)
-        .copy_from_slice(&symmetric_key_bytes);
+        .copy_from_slice(encrypted_header.symmetric_key.as_bytes());
 
     let allocated = *header_bytes_len;
     let len = encrypted_header.encrypted_header_bytes.len();
@@ -509,8 +506,7 @@ pub unsafe extern "C" fn h_aes_decrypt_header_using_cache(
 
     // Symmetric Key
     let allocated = *symmetric_key_len;
-    let symmetric_key_bytes: Vec<u8> = header.symmetric_key.into();
-    let len = symmetric_key_bytes.len();
+    let len = header.symmetric_key.as_bytes().len();
     *symmetric_key_len = len as c_int;
     if (allocated as usize) < len {
         ffi_bail!(
@@ -519,7 +515,7 @@ pub unsafe extern "C" fn h_aes_decrypt_header_using_cache(
         );
     }
     std::slice::from_raw_parts_mut(symmetric_key_ptr.cast::<u8>(), len)
-        .copy_from_slice(&symmetric_key_bytes);
+        .copy_from_slice(header.symmetric_key.as_bytes());
 
     // UID - if expected
     if !uid_ptr.is_null() && *uid_len > 0 {
@@ -645,8 +641,7 @@ pub unsafe extern "C" fn h_aes_decrypt_header(
 
     // Symmetric Key
     let allocated = *symmetric_key_len;
-    let symmetric_key_bytes: Vec<u8> = header.symmetric_key.into();
-    let len = symmetric_key_bytes.len();
+    let len = header.symmetric_key.as_bytes().len();
     *symmetric_key_len = len as c_int;
     if (allocated as usize) < len {
         ffi_bail!(
@@ -655,7 +650,7 @@ pub unsafe extern "C" fn h_aes_decrypt_header(
         );
     }
     std::slice::from_raw_parts_mut(symmetric_key_ptr.cast::<u8>(), len)
-        .copy_from_slice(&symmetric_key_bytes);
+        .copy_from_slice(header.symmetric_key.as_bytes());
 
     // UID - if expected
     if !uid_ptr.is_null() && *uid_len > 0 {
@@ -755,7 +750,7 @@ pub unsafe extern "C" fn h_aes_encrypt_block(
     let data = std::slice::from_raw_parts(data_ptr.cast::<u8>(), data_len as usize).to_vec();
 
     let symmetric_key = ffi_unwrap!(<Aes256GcmCrypto as SymmetricCrypto>::Key::try_from(
-        symmetric_key
+        symmetric_key.as_slice()
     ));
     let encrypted_block = ffi_unwrap!(encrypt_hybrid_block::<
         Gpsw<Bls12_381>,
@@ -831,7 +826,7 @@ pub unsafe extern "C" fn h_aes_decrypt_block(
     .to_vec();
 
     let symmetric_key = ffi_unwrap!(<Aes256GcmCrypto as SymmetricCrypto>::Key::try_from(
-        symmetric_key
+        symmetric_key.as_slice()
     ));
     let encrypted_block = ffi_unwrap!(decrypt_hybrid_block::<
         Gpsw<Bls12_381>,

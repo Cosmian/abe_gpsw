@@ -3,17 +3,6 @@
 #![allow(clippy::unused_unit)]
 // Wait for `wasm-bindgen` issue 2774: https://github.com/rustwasm/wasm-bindgen/issues/2774
 
-use std::convert::{TryFrom, TryInto};
-
-use cosmian_crypto_base::{
-    hybrid_crypto::Metadata,
-    symmetric_crypto::{aes_256_gcm_pure::Aes256GcmCrypto, SymmetricCrypto},
-};
-use js_sys::Uint8Array;
-use serde_json::Value;
-use wasm_bindgen::JsValue;
-use wasm_bindgen_test::wasm_bindgen_test;
-
 use super::{
     generate_gpsw_keys::{webassembly_generate_master_keys, webassembly_generate_user_private_key},
     hybrid_gpsw_aes_decryption::{
@@ -36,8 +25,16 @@ use crate::{
         EncryptedHeader,
     },
 };
-
 use abe_policy::{Attributes, Policy, PolicyAxis};
+use cosmian_crypto_base::{
+    symmetric_crypto::{aes_256_gcm_pure::Aes256GcmCrypto, Metadata, SymmetricCrypto},
+    KeyTrait,
+};
+use js_sys::Uint8Array;
+use serde_json::Value;
+use std::convert::{TryFrom, TryInto};
+use wasm_bindgen::JsValue;
+use wasm_bindgen_test::wasm_bindgen_test;
 
 type UserDecryptionKey = <Gpsw<Bls12_381> as AbeScheme>::UserDecryptionKey;
 type PublicKey = <Gpsw<Bls12_381> as AbeScheme>::MasterPublicKey;
@@ -227,7 +224,7 @@ pub fn test_encrypt_hybrid_block() {
         hex::decode("cd8ca2eeb654b5f39f347f4e3f91b3a15c450c1e52c40716237b4c18510f65b4").unwrap();
 
     let symmetric_key =
-        <Aes256GcmCrypto as SymmetricCrypto>::Key::try_from(symmetric_key_bytes.clone()).unwrap();
+        <Aes256GcmCrypto as SymmetricCrypto>::Key::try_from_bytes(&symmetric_key_bytes).unwrap();
 
     let symmetric_key_js = Uint8Array::from(symmetric_key_bytes.as_slice());
     let uid_js = Uint8Array::from(uid_bytes.as_slice());

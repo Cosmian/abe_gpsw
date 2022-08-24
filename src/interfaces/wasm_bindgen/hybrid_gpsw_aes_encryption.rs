@@ -11,8 +11,8 @@ use std::{
 };
 
 use cosmian_crypto_base::{
-    hybrid_crypto::Metadata,
-    symmetric_crypto::{aes_256_gcm_pure::Aes256GcmCrypto, SymmetricCrypto},
+    symmetric_crypto::{aes_256_gcm_pure::Aes256GcmCrypto, Metadata, SymmetricCrypto},
+    KeyTrait,
 };
 use lazy_static::lazy_static;
 use wasm_bindgen::prelude::*;
@@ -204,7 +204,7 @@ pub fn webassembly_encrypt_hybrid_block(
     //
     // Parse symmetric key
     let symmetric_key =
-        <Aes256GcmCrypto as SymmetricCrypto>::Key::try_from(symmetric_key_bytes.to_vec())
+        <Aes256GcmCrypto as SymmetricCrypto>::Key::try_from_bytes(&symmetric_key_bytes.to_vec())
             .map_err(|e| JsValue::from_str(&format!("Error parsing symmetric key: {e}")))?;
 
     let uid = uid_bytes.map_or(vec![], |v| v.to_vec());

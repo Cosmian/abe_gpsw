@@ -3,6 +3,15 @@
 All notable changes to this project will be documented in this file.
 
 ---
+## [1.1.2] - 2022-08-24
+### Added
+### Changed
+- Update CryptoBase to v2.1
+### Fixed
+### Removed
+---
+
+---
 ## [1.1.1] - 2022-07-18
 ### Added
 ### Changed
