@@ -31,9 +31,9 @@ dependencies = [
 
 [[package]]
 name = "abe_policy"
-version = "0.1.1"
+version = "1.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "cdc56bd72f6f7f12de477a700692ce63befa83d0b05fd5b009a76e1cf3c313d5"
+checksum = "0c7ff4c05215e2282ad617c529a1430696e40be870eb6aeda70c2b28afe69fde"
 dependencies = [
  "serde",
  "serde_json",

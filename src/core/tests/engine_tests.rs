@@ -12,21 +12,27 @@ type UserDecryptionKey = <Gpsw<Bls12_381> as AbeScheme>::UserDecryptionKey;
 #[test]
 pub fn symmetric_key_test() {
     let public_key_str = include_str!("master_public_key.txt");
-    let public_key = PublicKey::try_from_bytes(&hex::decode(public_key_str).unwrap()).unwrap();
+    let public_key = PublicKey::try_from_bytes(
+        &hex::decode(&public_key_str[..public_key_str.len() - 1]).unwrap(),
+    )
+    .unwrap();
 
     let policy_str = include_str!("policy.txt");
-    let policy: Policy = serde_json::from_slice(&hex::decode(policy_str).unwrap()).unwrap();
+    let policy: Policy =
+        serde_json::from_slice(&hex::decode(&policy_str[..policy_str.len() - 1]).unwrap()).unwrap();
 
     let user_decryption_key_str = include_str!("user_decryption_key.txt");
-    let user_decryption_key =
-        UserDecryptionKey::try_from_bytes(&hex::decode(user_decryption_key_str).unwrap()).unwrap();
+    let user_decryption_key = UserDecryptionKey::try_from_bytes(
+        &hex::decode(&user_decryption_key_str[..user_decryption_key_str.len() - 1]).unwrap(),
+    )
+    .unwrap();
 
     let abe = Engine::<Gpsw<Bls12_381>>::new();
 
     println!("{:?}", &policy);
     let policy_attributes = vec![
         Attribute::new("Department", "FIN"),
-        Attribute::new("Security Level", "Confidential"),
+        Attribute::new("Security Level", "Top Secret"),
     ];
     let (symmetric_key, encrypted_symmetric_key) = abe
         .generate_symmetric_key(&policy, &public_key, &policy_attributes, 32)
@@ -44,7 +50,7 @@ pub fn symmetric_key_test() {
     let public_key = mk.1;
     println!("public_key: {}", public_key);
     let access_policy =
-        AccessPolicy::from_boolean_expression("Security Level::Confidential && Department::FIN")
+        AccessPolicy::from_boolean_expression("Security Level::Top Secret && Department::FIN")
             .unwrap();
     let user_decryption_key = abe
         .generate_user_key(&policy, &mk.0, &access_policy)

@@ -67,9 +67,8 @@ pub fn webassembly_encrypt_hybrid_header(
     let encrypted_header = encrypt_hybrid_header::<Gpsw<Bls12_381>, Aes256GcmCrypto>(
         &policy,
         &public_key,
-        Attributes::try_from(attributes_str)
-            .map_err(|e| JsValue::from_str(&format!("Error parsing attributes: {e:?}")))?
-            .attributes(),
+        &Attributes::try_from(attributes_str)
+            .map_err(|e| JsValue::from_str(&format!("Error parsing attributes: {e:?}")))?,
         Some(Metadata {
             uid: uid_bytes.to_vec(),
             additional_data: None,
@@ -163,9 +162,8 @@ pub fn webassembly_encrypt_hybrid_header_using_cache(
     let encrypted_header = encrypt_hybrid_header::<Gpsw<Bls12_381>, Aes256GcmCrypto>(
         &cache.policy,
         &cache.public_key,
-        Attributes::try_from(attributes_str)
-            .map_err(|e| JsValue::from_str(&format!("Error parsing attributes: {e:?}")))?
-            .attributes(),
+        &Attributes::try_from(attributes_str)
+            .map_err(|e| JsValue::from_str(&format!("Error parsing attributes: {e:?}")))?,
         Some(Metadata {
             uid: uid_bytes.to_vec(),
             additional_data: None,

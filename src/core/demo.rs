@@ -198,7 +198,7 @@ fn abe() -> Result<(), FormatErr> {
     let low_secret_mkg_cipher_text = engine.encrypt(
         &policy,
         &public_key,
-        Attributes::try_from("Security Level::Low Secret, Department::MKG")?.attributes(),
+        &Attributes::try_from("Security Level::Low Secret, Department::MKG")?,
         &low_secret_mkg_message,
     )?;
 
@@ -225,7 +225,7 @@ fn abe() -> Result<(), FormatErr> {
     let top_secret_mkg_cipher_text = engine.encrypt(
         &policy,
         &public_key,
-        Attributes::try_from("Security Level::Top Secret, Department::MKG")?.attributes(),
+        &Attributes::try_from("Security Level::Top Secret, Department::MKG")?,
         &top_secret_mkg_message,
     )?;
     let result = engine.decrypt(&top_secret_mkg_cipher_text, &medium_secret_mkg_user)?;
@@ -248,7 +248,7 @@ fn abe() -> Result<(), FormatErr> {
     let low_secret_hr_cipher_text = engine.encrypt(
         &policy,
         &public_key,
-        Attributes::try_from("Security Level::Low Secret, Department::HR")?.attributes(),
+        &Attributes::try_from("Security Level::Low Secret, Department::HR")?,
         &low_secret_hr_message,
     )?;
     let result = engine.decrypt(&low_secret_hr_cipher_text, &medium_secret_mkg_user)?;
@@ -276,7 +276,7 @@ fn abe() -> Result<(), FormatErr> {
     let new_low_level_mkg_cipher_text = engine.encrypt(
         &policy,
         &public_key,
-        Attributes::try_from("Security Level::Low Secret, Department::MKG")?.attributes(),
+        &Attributes::try_from("Security Level::Low Secret, Department::MKG")?,
         &new_low_level_mkg_message,
     )?;
 

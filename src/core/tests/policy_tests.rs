@@ -2,7 +2,7 @@ use std::convert::TryFrom;
 
 use crate::{core::msp::policy_to_msp, error::FormatErr};
 
-use abe_policy::{ap, AccessPolicy, Attribute, Attributes, Policy, PolicyAxis};
+use abe_policy::{AccessPolicy, Attribute, Attributes, Policy, PolicyAxis};
 
 #[test]
 fn policy_group() -> Result<(), FormatErr> {
@@ -18,9 +18,8 @@ fn policy_group() -> Result<(), FormatErr> {
         false,
     ))?;
     let json = serde_json::to_string(&policy_group).unwrap();
-    println!("{}", &json);
-    let _pol_acc: AccessPolicy =
-        ap("Security Level", "level 1") & (ap("Department", "HR") | ap("Department", "R&D"));
+    let _pol_acc: AccessPolicy = AccessPolicy::new("Security Level", "level 1")
+        & (AccessPolicy::new("Department", "HR") | AccessPolicy::new("Department", "R&D"));
     // deserialization
     let _policy_group_: Policy = serde_json::from_str(&json).unwrap();
     // assert_eq!(policy_group, policy_group_);
@@ -59,11 +58,11 @@ fn attributes_parser() {
 
 #[test]
 fn partialeq_access_policy() {
-    let fr = ap("Countries", "FR"); //1
-    let en = ap("Countries", "EN"); //2
-    let de = ap("Countries", "DE"); //3
-    let au = ap("Countries", "AU"); //4
-    let sec_level_1 = ap("Levels", "Sec_level_1");
+    let fr = AccessPolicy::new("Countries", "FR"); //1
+    let en = AccessPolicy::new("Countries", "EN"); //2
+    let de = AccessPolicy::new("Countries", "DE"); //3
+    let au = AccessPolicy::new("Countries", "AU"); //4
+    let sec_level_1 = AccessPolicy::new("Levels", "Sec_level_1");
     let access_policy_1 = (fr.clone() | en.clone() | de.clone()) & sec_level_1.clone();
     let access_policy_2 = (en.clone() | de.clone() | fr.clone()) & sec_level_1.clone();
     let access_policy_3 = (de.clone() | fr.clone() | en.clone()) & sec_level_1.clone();
@@ -88,12 +87,12 @@ fn partialeq_access_policy() {
 
 #[test]
 fn policy_group_from_java() {
-    let json = r#"{"last_attribute_value":10,"max_attribute_value":1000,"store":{"Department":[["HR","MKG","R&D","fin"],false],"Security Level":[["level 1","level 2","level 3","level 4","level 5"],true]},"attribute_to_int":{"Security Level::level 5":[5],"Security Level::level 3":[3],"Department::HR":[10,6],"Department::R&D":[8],"Security Level::level 4":[4],"Security Level::level 1":[1],"Department::MKG":[7],"Security Level::level 2":[2],"Department::fin":[9]}}"#;
+    let json = r#"{"last_attribute_value":10,"max_attribute_creations":1000,"axes":{"Department":[["HR","MKG","R&D","fin"],false],"Security Level":[["level 1","level 2","level 3","level 4","level 5"],true]},"attribute_to_int":{"Security Level::level 5":[5],"Security Level::level 3":[3],"Department::HR":[10,6],"Department::R&D":[8],"Security Level::level 4":[4],"Security Level::level 1":[1],"Department::MKG":[7],"Security Level::level 2":[2],"Department::fin":[9]}}"#;
     let policy_group: Policy = serde_json::from_str(json).unwrap();
     assert_eq!(10, policy_group.last_attribute_value);
-    assert_eq!(1000, policy_group.max_attribute_value);
+    assert_eq!(1000, policy_group.max_attribute_creations);
     let (attributes, hierarchical) = policy_group
-        .store
+        .axes
         .get("Department")
         .ok_or("There should be a department")
         .unwrap();
@@ -113,7 +112,9 @@ fn parse_boolean_expression() {
         "(Department::HR || Department::R&D) && Level::level_2",
     )
     .unwrap();
-    let expected_ap = (ap("Department", "HR") | ap("Department", "R&D")) & ap("Level", "level_2");
+    let expected_ap = (AccessPolicy::new("Department", "HR")
+        | AccessPolicy::new("Department", "R&D"))
+        & AccessPolicy::new("Level", "level_2");
     assert_eq!(expected_ap, access_policy);
 
     let access_policy = AccessPolicy::from_boolean_expression(
@@ -124,11 +125,12 @@ fn parse_boolean_expression() {
 
     let access_policy =
         AccessPolicy::from_boolean_expression("(((Department::HR))) && Level::level_2").unwrap();
-    let expected_ap = (ap("Department", "HR")) & ap("Level", "level_2");
+    let expected_ap =
+        (AccessPolicy::new("Department", "HR")) & AccessPolicy::new("Level", "level_2");
     assert_eq!(expected_ap, access_policy);
 
     let access_policy = AccessPolicy::from_boolean_expression("(((Department::HR)))").unwrap();
-    let expected_ap = ap("Department", "HR");
+    let expected_ap = AccessPolicy::new("Department", "HR");
     assert_eq!(expected_ap, access_policy);
 
     assert!(AccessPolicy::from_boolean_expression("Department:HR").is_err());
@@ -139,7 +141,8 @@ fn parse_boolean_expression() {
 
 #[test]
 fn parse_boolean_expression_additional_tests() {
-    let expected_ap = (ap("X", "A") | ap("X", "B")) & ap("Y", "111");
+    let expected_ap =
+        (AccessPolicy::new("X", "A") | AccessPolicy::new("X", "B")) & AccessPolicy::new("Y", "111");
 
     let access_policy = AccessPolicy::from_boolean_expression("(X::A || X::B) && Y::111").unwrap();
     assert_eq!(expected_ap, access_policy);
@@ -153,8 +156,9 @@ fn parse_boolean_expression_additional_tests() {
         "( with spaces::a lot of spaces & || really a lot::really ? ) &&   why not :: here too",
     )
     .unwrap();
-    let expected_ap = (ap("with spaces", "a lot of spaces &") | ap("really a lot", "really ?"))
-        & ap("why not", "here too");
+    let expected_ap = (AccessPolicy::new("with spaces", "a lot of spaces &")
+        | AccessPolicy::new("really a lot", "really ?"))
+        & AccessPolicy::new("why not", "here too");
     assert_eq!(expected_ap, access_policy);
 }
 

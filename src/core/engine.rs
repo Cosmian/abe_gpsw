@@ -44,7 +44,8 @@ impl<S: AbeScheme> Engine<S> {
         ),
         FormatErr,
     > {
-        self.sch.generate_master_key(policy.max_attr() as usize)
+        self.sch
+            .generate_master_key(policy.max_attribute_creations as usize)
     }
 
     /// Generate a user decryption key
