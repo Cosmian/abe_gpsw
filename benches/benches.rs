@@ -71,7 +71,7 @@ fn generate_encrypted_header() -> EncryptedHeader<Aes256GcmCrypto> {
             .expect("cannot deserialize policy");
     let policy_attributes = vec![
         Attribute::new("Department", "FIN"),
-        Attribute::new("Security Level", "Confidential"),
+        Attribute::new("Security Level", "Top Secret"),
     ];
 
     let meta_data = Metadata {
@@ -114,7 +114,7 @@ fn bench_header_encryption(c: &mut Criterion) {
 
     let policy_attributes_1 = vec![
         Attribute::new("Department", "FIN"),
-        Attribute::new("Security Level", "Confidential"),
+        Attribute::new("Security Level", "Top Secret"),
     ];
     let encrypted_header_1 = encrypt_hybrid_header::<Gpsw<Bls12_381>, Aes256GcmCrypto>(
         &policy,
@@ -126,7 +126,7 @@ fn bench_header_encryption(c: &mut Criterion) {
     let policy_attributes_3 = vec![
         Attribute::new("Department", "FIN"),
         Attribute::new("Security Level", "Top Secret"),
-        Attribute::new("Security Level", "Confidential"),
+        Attribute::new("Security Level", "Medium Secret"),
         Attribute::new("Security Level", "Protected"),
     ];
     let encrypted_header_3 = encrypt_hybrid_header::<Gpsw<Bls12_381>, Aes256GcmCrypto>(
@@ -209,7 +209,7 @@ fn bench_ffi_header_encryption(c: &mut Criterion) {
 
     let policy_attributes = vec![
         Attribute::new("Department", "FIN"),
-        Attribute::new("Security Level", "Confidential"),
+        Attribute::new("Security Level", "Top Secret"),
     ];
     let meta_data = Metadata {
         uid: vec![1, 2, 3, 4, 5, 6, 7, 8, 9],
@@ -293,7 +293,7 @@ fn bench_ffi_header_encryption_using_cache(c: &mut Criterion) {
 
     let policy_attributes = vec![
         Attribute::new("Department", "FIN"),
-        Attribute::new("Security Level", "Confidential"),
+        Attribute::new("Security Level", "Top Secret"),
     ];
     let meta_data = Metadata {
         uid: vec![1, 2, 3, 4, 5, 6, 7, 8, 9],
@@ -372,7 +372,7 @@ fn bench_header_decryption(c: &mut Criterion) {
     let encrypted_header = generate_encrypted_header();
 
     let user_decryption_key_json: serde_json::Value = serde_json::from_str(include_str!(
-        "../src/interfaces/hybrid_crypto/tests/fin_confidential_user_key.json"
+        "../src/interfaces/hybrid_crypto/tests/fin_top_secret_user_key.json"
     ))
     .expect("cannot deserialize user key JSON");
     let key_value = &user_decryption_key_json["value"][0]["value"][1]["value"];
@@ -399,7 +399,7 @@ fn bench_ffi_header_decryption(c: &mut Criterion) {
     let encrypted_header = generate_encrypted_header();
 
     let user_decryption_key_json: serde_json::Value = serde_json::from_str(include_str!(
-        "../src/interfaces/hybrid_crypto/tests/fin_confidential_user_key.json"
+        "../src/interfaces/hybrid_crypto/tests/fin_top_secret_user_key.json"
     ))
     .expect("cannot deserialize user key JSON");
     let key_value = &user_decryption_key_json["value"][0]["value"][1]["value"];
@@ -458,7 +458,7 @@ fn bench_ffi_header_decryption_using_cache(c: &mut Criterion) {
     let encrypted_header = generate_encrypted_header();
 
     let user_decryption_key_json: serde_json::Value = serde_json::from_str(include_str!(
-        "../src/interfaces/hybrid_crypto/tests/fin_confidential_user_key.json"
+        "../src/interfaces/hybrid_crypto/tests/fin_top_secret_user_key.json"
     ))
     .expect("cannot deserialize user key JSON");
     let key_value = &user_decryption_key_json["value"][0]["value"][1]["value"];

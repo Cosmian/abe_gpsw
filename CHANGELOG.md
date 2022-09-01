@@ -3,6 +3,15 @@
 All notable changes to this project will be documented in this file.
 
 ---
+## [2.0.0] - 2023-08-25
+### Added
+### Changed
+- Update ABEPolicy to v1.0
+### Fixed
+### Removed
+---
+
+---
 ## [1.1.2] - 2022-08-24
 ### Added
 ### Changed

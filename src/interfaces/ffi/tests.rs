@@ -43,7 +43,7 @@ unsafe fn encrypt_header(
 
     let policy_attributes = vec![
         Attribute::new("Department", "FIN"),
-        Attribute::new("Security Level", "Confidential"),
+        Attribute::new("Security Level", "Top Secret"),
     ];
 
     let mut symmetric_key = vec![0u8; 32];
@@ -108,7 +108,7 @@ unsafe fn decrypt_header(
     header: &EncryptedHeader<Aes256GcmCrypto>,
 ) -> Result<DecryptedHeader, FormatErr> {
     let user_decryption_key_json: Value = serde_json::from_str(include_str!(
-        "../hybrid_crypto/tests/fin_confidential_user_key.json"
+        "../hybrid_crypto/tests/fin_top_secret_user_key.json"
     ))?;
     let key_value = &user_decryption_key_json["value"][0]["value"][1]["value"];
     let hex_key = &key_value[0]["value"].as_str().unwrap();
@@ -216,7 +216,7 @@ unsafe fn encrypt_header_using_cache(
 
     let policy_attributes = vec![
         Attribute::new("Department", "FIN"),
-        Attribute::new("Security Level", "Confidential"),
+        Attribute::new("Security Level", "Top Secret"),
     ];
 
     let mut symmetric_key = vec![0u8; 32];
@@ -270,7 +270,7 @@ unsafe fn decrypt_header_using_cache(
     header: &EncryptedHeader<Aes256GcmCrypto>,
 ) -> Result<DecryptedHeader, FormatErr> {
     let user_decryption_key_json: Value = serde_json::from_str(include_str!(
-        "../hybrid_crypto/tests/fin_confidential_user_key.json"
+        "../hybrid_crypto/tests/fin_top_secret_user_key.json"
     ))?;
     let key_value = &user_decryption_key_json["value"][0]["value"][1]["value"];
     let hex_key = &key_value[0]["value"].as_str().unwrap();

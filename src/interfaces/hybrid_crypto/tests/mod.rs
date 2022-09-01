@@ -40,7 +40,7 @@ pub fn test_aes_hybrid_encryption() -> Result<(), FormatErr> {
 
     let policy_attributes = vec![
         Attribute::new("Department", "FIN"),
-        Attribute::new("Security Level", "Confidential"),
+        Attribute::new("Security Level", "Top Secret"),
     ];
     let meta_data = Metadata {
         uid: vec![1, 2, 3, 4, 5, 6, 7, 8, 9],
@@ -71,7 +71,7 @@ pub fn test_aes_hybrid_encryption() -> Result<(), FormatErr> {
     );
 
     let user_decryption_key_json: Value =
-        serde_json::from_str(include_str!("./fin_confidential_user_key.json"))?;
+        serde_json::from_str(include_str!("./fin_top_secret_user_key.json"))?;
     let key_value = &user_decryption_key_json["value"][0]["value"][1]["value"];
     let hex_key = &key_value[0]["value"].as_str().unwrap();
     let user_decryption_key = UserDecryptionKey::try_from_bytes(&hex::decode(hex_key)?)?;

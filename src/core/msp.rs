@@ -451,12 +451,12 @@ fn policy_to_formula(policy: &Policy, axis: &AccessPolicy) -> Result<Node, Forma
 // take care of the hierarchical mode
 // In hierarchical, return the Or of all lower attributes
 fn policy_to_node(policy: &Policy, attr: &Attribute) -> Result<Node, FormatErr> {
-    if let Some((list, hierarchical)) = policy.store.get(&attr.axis()) {
-        if list.contains(&attr.name()) {
+    if let Some((list, hierarchical)) = policy.axes.get(&attr.axis) {
+        if list.contains(&attr.name) {
             let res = list
                 .iter()
-                .position(|r| r == &attr.name())
-                .ok_or_else(|| FormatErr::ExpectedAttribute(attr.name(), list.clone()))?;
+                .position(|r| r == &attr.name)
+                .ok_or_else(|| FormatErr::ExpectedAttribute(attr.name.clone(), list.clone()))?;
             let mut val = policy.attribute_to_int[attr]
                 .iter()
                 .map(|attr| Node::Leaf(*attr))
@@ -468,7 +468,7 @@ fn policy_to_node(policy: &Policy, attr: &Attribute) -> Result<Node, FormatErr> 
                         break;
                     }
                     val = val
-                        | policy.attribute_to_int[&(attr.axis().clone(), elem.clone()).into()]
+                        | policy.attribute_to_int[&(attr.axis.clone(), elem.clone()).into()]
                             .iter()
                             .map(|attr| Node::Leaf(*attr))
                             .reduce(std::ops::BitOr::bitor)
@@ -479,11 +479,11 @@ fn policy_to_node(policy: &Policy, attr: &Attribute) -> Result<Node, FormatErr> 
             Ok(val)
         } else {
             Err(FormatErr::MissingAttribute {
-                item: Some(attr.name()),
-                axis_name: Some(attr.axis()),
+                item: Some(attr.name.clone()),
+                axis_name: Some(attr.axis.clone()),
             })
         }
     } else {
-        Err(FormatErr::MissingAxis(attr.axis()))
+        Err(FormatErr::MissingAxis(attr.axis.clone()))
     }
 }

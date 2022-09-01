@@ -119,17 +119,13 @@ pub fn generate_policy(
     let mut policy = Policy::new(max_attribute_value as u32);
     for axis in &policy_axis {
         let attrs = axis
-            .attributes()
+            .attributes
             .iter()
             .map(std::ops::Deref::deref)
             .collect::<Vec<_>>();
 
         policy
-            .add_axis(&PolicyAxis::new(
-                axis.name(),
-                &attrs,
-                axis.is_hierarchical(),
-            ))
+            .add_axis(&PolicyAxis::new(&axis.name, &attrs, axis.hierarchical))
             .map_err(|e| PyTypeError::new_err(format!("Add axis failed: {e}")))?;
     }
     let policy_bytes = serde_json::to_vec(&policy)

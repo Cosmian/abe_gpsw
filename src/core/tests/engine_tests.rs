@@ -26,7 +26,7 @@ pub fn symmetric_key_test() {
     println!("{:?}", &policy);
     let policy_attributes = vec![
         Attribute::new("Department", "FIN"),
-        Attribute::new("Security Level", "Confidential"),
+        Attribute::new("Security Level", "Top Secret"),
     ];
     let (symmetric_key, encrypted_symmetric_key) = abe
         .generate_symmetric_key(&policy, &public_key, &policy_attributes, 32)
@@ -44,7 +44,7 @@ pub fn symmetric_key_test() {
     let public_key = mk.1;
     println!("public_key: {}", public_key);
     let access_policy =
-        AccessPolicy::from_boolean_expression("Security Level::Confidential && Department::FIN")
+        AccessPolicy::from_boolean_expression("Security Level::Top Secret && Department::FIN")
             .unwrap();
     let user_decryption_key = abe
         .generate_user_key(&policy, &mk.0, &access_policy)

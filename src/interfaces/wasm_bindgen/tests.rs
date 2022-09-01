@@ -115,7 +115,7 @@ pub fn test_decrypt_hybrid_header() {
     let policy: Policy = serde_json::from_slice(&hex::decode(policy_hex).unwrap()).unwrap();
 
     let policy_attributes =
-        Attributes::try_from("Department::FIN, Security Level::Confidential").unwrap();
+        Attributes::try_from("Department::FIN, Security Level::Top Secret").unwrap();
 
     let meta_data = Metadata {
         uid: vec![1, 2, 3, 4, 5, 6, 7, 8, 9],
@@ -124,7 +124,7 @@ pub fn test_decrypt_hybrid_header() {
     let encrypted_header = encrypt_hybrid_header::<Gpsw<Bls12_381>, Aes256GcmCrypto>(
         &policy,
         &public_key,
-        policy_attributes.attributes(),
+        &policy_attributes,
         Some(meta_data),
     )
     .unwrap();
@@ -132,7 +132,7 @@ pub fn test_decrypt_hybrid_header() {
     //
     // Check webassembly function
     let user_decryption_key_json: Value = serde_json::from_str(include_str!(
-        "../hybrid_crypto/tests/fin_confidential_user_key.json"
+        "../hybrid_crypto/tests/fin_top_secret_user_key.json"
     ))
     .unwrap();
     let key_value = &user_decryption_key_json["value"][0]["value"][1]["value"];
@@ -191,7 +191,7 @@ pub fn test_encrypt_hybrid_header() {
     let encrypted_header_js = webassembly_encrypt_hybrid_header(
         policy_js,
         public_key_js,
-        "Department::FIN, Security Level::Confidential",
+        "Department::FIN, Security Level::Top Secret",
         uid_js,
     )
     .unwrap();
@@ -202,7 +202,7 @@ pub fn test_encrypt_hybrid_header() {
 
     // Decrypt
     let user_decryption_key_json: Value = serde_json::from_str(include_str!(
-        "../hybrid_crypto/tests/fin_confidential_user_key.json"
+        "../hybrid_crypto/tests/fin_top_secret_user_key.json"
     ))
     .unwrap();
     let key_value = &user_decryption_key_json["value"][0]["value"][1]["value"];
