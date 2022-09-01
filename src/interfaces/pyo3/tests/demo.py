@@ -30,7 +30,7 @@ policy_axis_json = [
 policy_axis = bytes(json.dumps(policy_axis_json), 'utf-8')
 
 policy = abe_gpsw.generate_policy(
-    policy_axis_bytes=policy_axis, max_attribute_value=100)
+    policy_axis_bytes=policy_axis, max_attribute_creations=100)
 
 master_keys = abe_gpsw.generate_master_keys(policy)
 

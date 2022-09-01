@@ -3,6 +3,15 @@
 All notable changes to this project will be documented in this file.
 
 ---
+## [2.0.1] - 2023-09-02
+### Added
+- Enable tests on external libs as `cosmian_js_lib` and `cosmian_java_lib`
+### Changed
+### Fixed
+### Removed
+---
+
+---
 ## [2.0.0] - 2023-08-25
 ### Added
 ### Changed

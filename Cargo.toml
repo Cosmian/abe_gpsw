@@ -11,7 +11,7 @@ documentation = "https://docs.rs/abe_gpsw/"
 edition = "2018"
 license = "MIT/Apache-2.0"
 repository = "https://github.com/Cosmian/abe_gpsw"
-version = "2.0.0"
+version = "2.0.1"
 
 [lib]
 name = "abe_gpsw"
@@ -52,7 +52,9 @@ wasm-bindgen = { version = "0.2", features = [
 
 [dev-dependencies]
 wasm-bindgen-test = { version = "0.3" }
-criterion = { version = "0.3", features = ["html_reports"] }
+# Criterion used on branch "version-0.4"
+# serde_cbor is unmaintained: https://rustsec.org/advisories/RUSTSEC-2021-0127
+criterion = {git = "https://github.com/bheisler/criterion.rs", branch = "version-0.4", features = ["html_reports"], default_features = false}
 
 [[bench]]
 name = "benches"

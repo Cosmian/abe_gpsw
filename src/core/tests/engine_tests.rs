@@ -1,13 +1,58 @@
+use std::{fs::File, io::Write};
+
+use abe_policy::{AccessPolicy, Attribute, Policy, PolicyAxis};
+
 use crate::core::{
     bilinear_map::bls12_381::Bls12_381,
     gpsw::{AbeScheme, AsBytes, Gpsw},
     msp::policy_to_msp,
     Engine,
 };
-use abe_policy::{AccessPolicy, Attribute, Policy, PolicyAxis};
 
 type PublicKey = <Gpsw<Bls12_381> as AbeScheme>::MasterPublicKey;
 type UserDecryptionKey = <Gpsw<Bls12_381> as AbeScheme>::UserDecryptionKey;
+
+#[test]
+fn generate_non_regression_files() {
+    let abe = Engine::<Gpsw<Bls12_381>>::new();
+    let mut policy = Policy::new(20);
+    policy
+        .add_axis(&PolicyAxis::new(
+            "Security Level",
+            &["Protected", "Confidential", "Top Secret"],
+            true,
+        ))
+        .unwrap();
+    policy
+        .add_axis(&PolicyAxis::new("Department", &["FIN", "MKG", "HR"], false))
+        .unwrap();
+
+    let mk = abe.generate_master_key(&policy).unwrap();
+    let uk = abe
+        .generate_user_key(
+            &policy,
+            &mk.0,
+            &(AccessPolicy::new("Security Level", "Confidential")
+                & AccessPolicy::new("Department", "FIN")),
+        )
+        .unwrap();
+
+    //
+    // Write to files
+    //
+    let mut public_key_file = File::create("target/master_public_key.txt").unwrap();
+    public_key_file
+        .write_all(mk.1.to_string().as_bytes())
+        .unwrap();
+    let mut policy_file = File::create("target/policy.txt").unwrap();
+    policy_file
+        .write_all(hex::encode(policy.to_string()).as_bytes())
+        .unwrap();
+    let mut user_decryption_key_file = File::create("target/user_decryption_key.txt").unwrap();
+    user_decryption_key_file
+        .write_all(uk.to_string().as_bytes())
+        .unwrap();
+}
 
 #[test]
 pub fn symmetric_key_test() {
