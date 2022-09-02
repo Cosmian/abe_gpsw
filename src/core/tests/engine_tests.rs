@@ -113,11 +113,13 @@ fn generate_another_non_regression_files() {
     policy_file
         .write_all(hex::encode(policy.to_string()).as_bytes())
         .unwrap();
-    let mut top_secret_mkg_fin_file = File::create("target/another_key_top_secret_mkg_fin.txt").unwrap();
+    let mut top_secret_mkg_fin_file =
+        File::create("target/another_key_top_secret_mkg_fin.txt").unwrap();
     top_secret_mkg_fin_file
         .write_all(top_secret_mkg_fin.to_string().as_bytes())
         .unwrap();
-    let mut medium_secret_mkg_file = File::create("target/another_key_medium_secret_mkg.txt").unwrap();
+    let mut medium_secret_mkg_file =
+        File::create("target/another_key_medium_secret_mkg.txt").unwrap();
     medium_secret_mkg_file
         .write_all(medium_secret_mkg.to_string().as_bytes())
         .unwrap();
@@ -213,16 +215,14 @@ pub fn complex_access_policy_test() {
 
     // Check that wrong encryption-attributes give an error. This error is an
     // `FormatErr:AttributeNotFound`
-    assert!(
-        engine
-            .encrypt(
-                &policy,
-                &public_key,
-                &[("Bad_Entity", "BNPPF").into(), ("Country", "France").into()],
-                &bnppf_france_message,
-            )
-            .is_err()
-    );
+    assert!(engine
+        .encrypt(
+            &policy,
+            &public_key,
+            &[("Bad_Entity", "BNPPF").into(), ("Country", "France").into()],
+            &bnppf_france_message,
+        )
+        .is_err());
 
     let bnppf_france_cipher_text = engine
         .encrypt(
