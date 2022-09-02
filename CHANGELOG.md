@@ -8,6 +8,7 @@ All notable changes to this project will be documented in this file.
 - Enable tests on external libs as `cosmian_js_lib` and `cosmian_java_lib`
 ### Changed
 ### Fixed
+- Fix error message for invalid size errors
 ### Removed
 ---
 

@@ -55,6 +55,75 @@ fn generate_non_regression_files() {
 }
 
 #[test]
+fn generate_another_non_regression_files() {
+    let abe = Engine::<Gpsw<Bls12_381>>::new();
+    let mut policy = Policy::new(20);
+    policy
+        .add_axis(&PolicyAxis::new(
+            "Security Level",
+            &[
+                "Protected",
+                "Low Secret",
+                "Medium Secret",
+                "High Secret",
+                "Top Secret",
+            ],
+            true,
+        ))
+        .unwrap();
+    policy
+        .add_axis(&PolicyAxis::new(
+            "Department",
+            &["R&D", "HR", "MKG", "FIN"],
+            false,
+        ))
+        .unwrap();
+
+    let mk = abe.generate_master_key(&policy).unwrap();
+    let top_secret_mkg_fin = abe
+        .generate_user_key(
+            &policy,
+            &mk.0,
+            &(AccessPolicy::new("Security Level", "Top Secret")
+                & (AccessPolicy::new("Department", "FIN")
+                    | AccessPolicy::new("Department", "MKG"))),
+        )
+        .unwrap();
+    let medium_secret_mkg = abe
+        .generate_user_key(
+            &policy,
+            &mk.0,
+            &(AccessPolicy::new("Security Level", "Medium Secret")
+                & AccessPolicy::new("Department", "MKG")),
+        )
+        .unwrap();
+
+    //
+    // Write to files
+    //
+    let mut public_key_file = File::create("target/another_master_public_key.txt").unwrap();
+    public_key_file
+        .write_all(mk.1.to_string().as_bytes())
+        .unwrap();
+    let mut private_key_file = File::create("target/another_master_private_key.txt").unwrap();
+    private_key_file
+        .write_all(mk.0.to_string().as_bytes())
+        .unwrap();
+    let mut policy_file = File::create("target/another_policy.txt").unwrap();
+    policy_file
+        .write_all(hex::encode(policy.to_string()).as_bytes())
+        .unwrap();
+    let mut top_secret_mkg_fin_file = File::create("target/another_key_top_secret_mkg_fin.txt").unwrap();
+    top_secret_mkg_fin_file
+        .write_all(top_secret_mkg_fin.to_string().as_bytes())
+        .unwrap();
+    let mut medium_secret_mkg_file = File::create("target/another_key_medium_secret_mkg.txt").unwrap();
+    medium_secret_mkg_file
+        .write_all(medium_secret_mkg.to_string().as_bytes())
+        .unwrap();
+}
+
+#[test]
 pub fn symmetric_key_test() {
     let public_key_str = include_str!("master_public_key.txt");
     let public_key = PublicKey::try_from_bytes(&hex::decode(public_key_str).unwrap()).unwrap();
@@ -144,14 +213,16 @@ pub fn complex_access_policy_test() {
 
     // Check that wrong encryption-attributes give an error. This error is an
     // `FormatErr:AttributeNotFound`
-    assert!(engine
-        .encrypt(
-            &policy,
-            &public_key,
-            &[("Bad_Entity", "BNPPF").into(), ("Country", "France").into()],
-            &bnppf_france_message,
-        )
-        .is_err());
+    assert!(
+        engine
+            .encrypt(
+                &policy,
+                &public_key,
+                &[("Bad_Entity", "BNPPF").into(), ("Country", "France").into()],
+                &bnppf_france_message,
+            )
+            .is_err()
+    );
 
     let bnppf_france_cipher_text = engine
         .encrypt(
