@@ -107,16 +107,16 @@ pub fn generate_delegated_key(
 /// Generate ABE policy from axis given in serialized JSON
 ///
 /// - `policy_axis_bytes`: as many axis as needed
-/// - `max_attribute_value`: maximum number of attributes that can be used in
-///   policy
+/// - `max_attribute_creations`: maximum number of attributes that can be used
+///   in policy
 #[pyfunction]
 pub fn generate_policy(
     policy_axis_bytes: Vec<u8>,
-    max_attribute_value: usize,
+    max_attribute_creations: usize,
 ) -> PyResult<Vec<u8>> {
     let policy_axis: Vec<PolicyAxis> = serde_json::from_slice(&policy_axis_bytes)
         .map_err(|e| PyTypeError::new_err(format!("Policy Axis deserialization failed: {e}")))?;
-    let mut policy = Policy::new(max_attribute_value as u32);
+    let mut policy = Policy::new(max_attribute_creations as u32);
     for axis in &policy_axis {
         let attrs = axis
             .attributes

@@ -58,7 +58,7 @@ pub enum FormatErr {
     SymmetricDecryption(String),
     #[error("asymmetric decryption {0}")]
     AsymmetricDecryption(String),
-    #[error("invalid size")]
+    #[error("invalid size: {0}")]
     InvalidSize(String),
     #[error("{0}")]
     Deserialization(String),

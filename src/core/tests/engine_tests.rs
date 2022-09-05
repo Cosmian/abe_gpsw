@@ -1,13 +1,129 @@
+use std::{fs::File, io::Write};
+
+use abe_policy::{AccessPolicy, Attribute, Policy, PolicyAxis};
+
 use crate::core::{
     bilinear_map::bls12_381::Bls12_381,
     gpsw::{AbeScheme, AsBytes, Gpsw},
     msp::policy_to_msp,
     Engine,
 };
-use abe_policy::{AccessPolicy, Attribute, Policy, PolicyAxis};
 
 type PublicKey = <Gpsw<Bls12_381> as AbeScheme>::MasterPublicKey;
 type UserDecryptionKey = <Gpsw<Bls12_381> as AbeScheme>::UserDecryptionKey;
+
+#[test]
+fn generate_non_regression_files() {
+    let abe = Engine::<Gpsw<Bls12_381>>::new();
+    let mut policy = Policy::new(20);
+    policy
+        .add_axis(&PolicyAxis::new(
+            "Security Level",
+            &["Protected", "Confidential", "Top Secret"],
+            true,
+        ))
+        .unwrap();
+    policy
+        .add_axis(&PolicyAxis::new("Department", &["FIN", "MKG", "HR"], false))
+        .unwrap();
+
+    let mk = abe.generate_master_key(&policy).unwrap();
+    let uk = abe
+        .generate_user_key(
+            &policy,
+            &mk.0,
+            &(AccessPolicy::new("Security Level", "Confidential")
+                & AccessPolicy::new("Department", "FIN")),
+        )
+        .unwrap();
+
+    //
+    // Write to files
+    //
+    let mut public_key_file = File::create("target/master_public_key.txt").unwrap();
+    public_key_file
+        .write_all(mk.1.to_string().as_bytes())
+        .unwrap();
+    let mut policy_file = File::create("target/policy.txt").unwrap();
+    policy_file
+        .write_all(hex::encode(policy.to_string()).as_bytes())
+        .unwrap();
+    let mut user_decryption_key_file = File::create("target/user_decryption_key.txt").unwrap();
+    user_decryption_key_file
+        .write_all(uk.to_string().as_bytes())
+        .unwrap();
+}
+
+#[test]
+fn generate_another_non_regression_files() {
+    let abe = Engine::<Gpsw<Bls12_381>>::new();
+    let mut policy = Policy::new(20);
+    policy
+        .add_axis(&PolicyAxis::new(
+            "Security Level",
+            &[
+                "Protected",
+                "Low Secret",
+                "Medium Secret",
+                "High Secret",
+                "Top Secret",
+            ],
+            true,
+        ))
+        .unwrap();
+    policy
+        .add_axis(&PolicyAxis::new(
+            "Department",
+            &["R&D", "HR", "MKG", "FIN"],
+            false,
+        ))
+        .unwrap();
+
+    let mk = abe.generate_master_key(&policy).unwrap();
+    let top_secret_mkg_fin = abe
+        .generate_user_key(
+            &policy,
+            &mk.0,
+            &(AccessPolicy::new("Security Level", "Top Secret")
+                & (AccessPolicy::new("Department", "FIN")
+                    | AccessPolicy::new("Department", "MKG"))),
+        )
+        .unwrap();
+    let medium_secret_mkg = abe
+        .generate_user_key(
+            &policy,
+            &mk.0,
+            &(AccessPolicy::new("Security Level", "Medium Secret")
+                & AccessPolicy::new("Department", "MKG")),
+        )
+        .unwrap();
+
+    //
+    // Write to files
+    //
+    let mut public_key_file = File::create("target/another_master_public_key.txt").unwrap();
+    public_key_file
+        .write_all(mk.1.to_string().as_bytes())
+        .unwrap();
+    let mut private_key_file = File::create("target/another_master_private_key.txt").unwrap();
+    private_key_file
+        .write_all(mk.0.to_string().as_bytes())
+        .unwrap();
+    let mut policy_file = File::create("target/another_policy.txt").unwrap();
+    policy_file
+        .write_all(hex::encode(policy.to_string()).as_bytes())
+        .unwrap();
+    let mut top_secret_mkg_fin_file =
+        File::create("target/another_key_top_secret_mkg_fin.txt").unwrap();
+    top_secret_mkg_fin_file
+        .write_all(top_secret_mkg_fin.to_string().as_bytes())
+        .unwrap();
+    let mut medium_secret_mkg_file =
+        File::create("target/another_key_medium_secret_mkg.txt").unwrap();
+    medium_secret_mkg_file
+        .write_all(medium_secret_mkg.to_string().as_bytes())
+        .unwrap();
+}
 
 #[test]
 pub fn symmetric_key_test() {

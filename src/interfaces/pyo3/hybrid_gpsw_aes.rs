@@ -5,6 +5,7 @@
 
 use std::convert::TryInto;
 
+use abe_policy::Attribute;
 use cosmian_crypto_base::{
     symmetric_crypto::{aes_256_gcm_pure::Aes256GcmCrypto, Metadata, SymKey, SymmetricCrypto},
     KeyTrait,
@@ -23,7 +24,6 @@ use crate::{
         encrypt_hybrid_header as core_encrypt_hybrid_header,
     },
 };
-use abe_policy::Attribute;
 
 type PublicKey = <Gpsw<Bls12_381> as AbeScheme>::MasterPublicKey;
 type UserDecryptionKey = <Gpsw<Bls12_381> as AbeScheme>::UserDecryptionKey;
