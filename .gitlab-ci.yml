@@ -7,6 +7,18 @@ variables:
   KMS_PUBLIC_PATH: /tmp
   KMS_PRIVATE_PATH: /tmp
   KMS_SHARED_PATH: /tmp
+  # Postgres for `cloudproof_js` tests
+  POSTGRES_DB: app_db
+  POSTGRES_USER: app_user
+  POSTGRES_PASSWORD: password
+  PGPASSWORD: password
+  # Postgrest for `cloudproof_js` tests
+  PGRST_SERVER_HOST: localhost
+  PGRST_SERVER_PORT: 3000
+  PGRST_DB_URI: postgres://app_user:password@localhost:5432/app_db
+  PGRST_DB_SCHEMA: public
+  PGRST_DB_ANON_ROLE: app_user
+  PGRST_OPENAPI_SERVER_PROXY_URI: http://localhost:3000
 
 stages:
   - prebuild
@@ -42,6 +54,7 @@ cargo_security_check:
   script:
     - cargo outdated -wR
     - cargo audit --deny warnings
+  allow_failure: true
 
 #
 # Build base
@@ -65,6 +78,14 @@ benchmarks:
 
 build_x86_64:
   <<: *base_compile
+  script:
+    - cargo build --verbose --release --features ffi --target x86_64-unknown-linux-gnu
+    - cargo test --verbose --release --all-features --target x86_64-unknown-linux-gnu
+    - cbindgen . -c cbindgen.toml | grep -v \#include | uniq >target/${CI_PROJECT_NAME}.h
+
+build_x86_64_centos7:
+  <<: *base_compile
+  image: gitlab.cosmian.com:5000/core/ci-rust-glibc-2.17
   script:
     - cargo build --verbose --release --features ffi --target x86_64-unknown-linux-gnu
     - cargo test --verbose --release --features ffi --target x86_64-unknown-linux-gnu
@@ -107,6 +128,7 @@ build_osx:
   artifacts:
     paths:
       - target/release/*.a
+      - target/release/*.dylib
       - target/release/*.so
       - target/*.h
     expire_in: 3 mos
@@ -121,14 +143,21 @@ build_android:
       - jniLibs
     expire_in: 3 mos
 
-test_cosmian_java_lib:
-  image: gitlab.cosmian.com:5000/core/ci-java-8:latest
+test_cloudproof_java:
+  image: openjdk:8
   stage: test
   services:
-    - name: gitlab.cosmian.com:5000/core/kms:2.1.0_ci
+    - name: gitlab.cosmian.com:5000/core/kms:2.2.0_ci
       alias: kms_ci
+    - redis:latest
+  before_script:
+    - apt update && apt install -y maven
   script:
-    - bash ci/cosmian_java_lib.sh
+    - git clone https://github.com/Cosmian/cloudproof_java.git
+    - cp target/x86_64-unknown-linux-gnu/release/libcosmian_abe_gpsw.so cloudproof_java/src/test/resources/linux-x86-64/
+    - cd cloudproof_java
+    - mvn package
+  allow_failure: true
 
 test_python:
   stage: test
@@ -140,13 +169,27 @@ test_python:
       - target/wheels/*.whl
     expire_in: 3 mos
 
-test_cosmian_js_lib:
+test_cloudproof_js:
   image: node:16
   stage: test
+  services:
+    - name: postgres
+      alias: db
+    - name: postgrest/postgrest
+      alias: server
+    - redis:latest
+  before_script:
+    - apt update && apt install -y postgresql libpq-dev
   script:
-    - bash ci/cosmian_js_lib.sh
+    - git clone https://github.com/Cosmian/cloudproof_js.git
+    - cp -r pkg/* cloudproof_js/tests/wasm_lib/abe/gpsw/
+    - cd cloudproof_js
+    - psql -h localhost -U "$POSTGRES_USER" -d "$POSTGRES_DB" -f ./dump_db_demo.sql
+    - npm install jest
+    - npm test
+  allow_failure: true
 
-publish:
+npm_publish:
   image: gitlab.cosmian.com:5000/core/ci-npm:latest
   stage: publish
   rules:
@@ -156,3 +199,19 @@ publish:
     - wasm-pack build --release --features wasm_bindgen
     - wasm-pack pack
     - wasm-pack publish
+
+cargo_publish:
+  stage: publish
+  rules:
+    - if: '$CI_COMMIT_TAG =~ /^v\d+.\d+.\d+$/'
+  before_script:
+    - apt update && apt install -y git
+  script:
+    - echo "[registry]" > ~/.cargo/credentials
+    - echo "token = \"$CRATES_IO\"" >> ~/.cargo/credentials
+    - rm -rf /tmp/abe_gpsw
+    - cp -rf . /tmp/abe_gpsw
+    - cd /tmp/abe_gpsw
+    - rm -rf jniLibs target
+    - cargo publish --token $CRATES_IO
+    - rm -rf /tmp/abe_gpsw

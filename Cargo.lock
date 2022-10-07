@@ -3,33 +3,6 @@
 version = 3
 
 [[package]]
-name = "abe_gpsw"
-version = "2.0.1"
-dependencies = [
- "abe_policy",
- "cosmian_bls12_381",
- "cosmian_crypto_base",
- "criterion",
- "ff",
- "getrandom 0.2.7",
- "group",
- "hex",
- "js-sys",
- "lazy_static",
- "pyo3",
- "rand",
- "rand_core 0.5.1",
- "rand_hc",
- "regex",
- "serde",
- "serde_json",
- "sha3",
- "thiserror",
- "wasm-bindgen",
- "wasm-bindgen-test",
-]
-
-[[package]]
 name = "abe_policy"
 version = "1.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -293,6 +266,33 @@ dependencies = [
 ]
 
 [[package]]
+name = "cosmian_abe_gpsw"
+version = "2.0.1"
+dependencies = [
+ "abe_policy",
+ "cosmian_bls12_381",
+ "cosmian_crypto_base",
+ "criterion",
+ "ff",
+ "getrandom 0.2.7",
+ "group",
+ "hex",
+ "js-sys",
+ "lazy_static",
+ "pyo3",
+ "rand",
+ "rand_core 0.5.1",
+ "rand_hc",
+ "regex",
+ "serde",
+ "serde_json",
+ "sha3",
+ "thiserror",
+ "wasm-bindgen",
+ "wasm-bindgen-test",
+]
+
+[[package]]
 name = "cosmian_bls12_381"
 version = "0.4.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -307,9 +307,9 @@ dependencies = [
 
 [[package]]
 name = "cosmian_crypto_base"
-version = "2.1.1"
+version = "2.1.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ebb9a218b5d3215d4c2e11995df9941715b97ab9699b7ba6f357362794146615"
+checksum = "1462ff077686c6495985985efa50273ac948d1f38102cc05b1234afb2b6500dd"
 dependencies = [
  "aes 0.8.1",
  "aes-gcm",
