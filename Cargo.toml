@@ -10,7 +10,7 @@ description = "ABE GPSW scheme for BLS pairing implemented in rust"
 documentation = "https://docs.rs/cosmian_abe_gpsw/"
 edition = "2018"
 license = "MIT/Apache-2.0"
-repository = "https://github.com/Cosmian/cosmian_abe_gpsw"
+repository = "https://github.com/Cosmian/abe_gpsw"
 version = "2.0.2"
 
 [lib]
