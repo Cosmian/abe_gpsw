@@ -11,11 +11,11 @@ documentation = "https://docs.rs/cosmian_abe_gpsw/"
 edition = "2018"
 license = "MIT/Apache-2.0"
 repository = "https://github.com/Cosmian/cosmian_abe_gpsw"
-version = "2.0.1"
+version = "2.0.2"
 
 [lib]
 name = "cosmian_abe_gpsw"
-crate-type = ["lib", "cdylib", "staticlib"]
+crate-type = ["rlib", "cdylib", "staticlib"]
 # The cdylib is only interesting if the `--features ffi` flag is set on build
 # This does not seem to be actionable conditionally https://github.com/rust-lang/cargo/issues/4881
 

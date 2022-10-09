@@ -267,7 +267,7 @@ dependencies = [
 
 [[package]]
 name = "cosmian_abe_gpsw"
-version = "2.0.1"
+version = "2.0.2"
 dependencies = [
  "abe_policy",
  "cosmian_bls12_381",
