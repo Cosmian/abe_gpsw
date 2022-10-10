@@ -60,7 +60,6 @@ cargo_security_check:
 # Is crate publishable
 cargo_prepublish:
   stage: prebuild
-  cache: {}
   script:
     - cargo publish --dry-run
   allow_failure: true
@@ -201,7 +200,7 @@ test_cloudproof_js:
     - npm test
   allow_failure: true
 
-package_artifacts:
+pack_all_artifacts:
   stage: package
   before_script:
     - apt update && apt install -y zip
