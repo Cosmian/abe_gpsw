@@ -3,6 +3,15 @@
 All notable changes to this project will be documented in this file.
 
 ---
+## [2.0.2] - 2022-10-07
+### Added
+### Changed
+- Rename library name to `cosmian_abe_gpsw`
+### Fixed
+### Removed
+---
+
+---
 ## [2.0.1] - 2022-09-02
 ### Added
 - Enable tests on external libs as `cosmian_js_lib` and `cosmian_java_lib`

@@ -56,7 +56,7 @@ cargo build --release --all-features
 
 The latter will build a shared library and one can verify that the FFI symbols are present using (linux)
 ```bash
-objdump -T  target/release/libabe_gpsw.so
+objdump -T  target/release/libcosmian_abe_gpsw.so
 ```
 
 The code contains numerous tests that you can run using

@@ -2,7 +2,8 @@
 use criterion::{criterion_group, criterion_main, Criterion};
 #[cfg(feature = "interfaces")]
 use {
-    abe_gpsw::{
+    abe_policy::{Attribute, Policy},
+    cosmian_abe_gpsw::{
         core::{
             bilinear_map::bls12_381::Bls12_381,
             gpsw::{AbeScheme, AsBytes, Gpsw},
@@ -11,7 +12,6 @@ use {
             decrypt_hybrid_header, encrypt_hybrid_header, EncryptedHeader,
         },
     },
-    abe_policy::{Attribute, Policy},
     cosmian_crypto_base::{
         symmetric_crypto::aes_256_gcm_pure::Aes256GcmCrypto, symmetric_crypto::Metadata,
         typenum::Unsigned,
@@ -20,7 +20,7 @@ use {
 
 #[cfg(feature = "ffi")]
 use {
-    abe_gpsw::{
+    cosmian_abe_gpsw::{
         error::FormatErr,
         interfaces::ffi::{
             error::get_last_error,
