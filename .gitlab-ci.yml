@@ -57,6 +57,14 @@ cargo_security_check:
     - cargo audit --deny warnings
   allow_failure: true
 
+# Is crate publishable
+cargo_prepublish:
+  stage: prebuild
+  cache: {}
+  script:
+    - cargo publish --dry-run
+  allow_failure: true
+
 #
 # Build base
 #
@@ -101,9 +109,9 @@ build_wasm:
   <<: *base_compile
   image: gitlab.cosmian.com:5000/core/ci-npm:latest
   script:
-    - wasm-pack build --release --features wasm_bindgen
+    - wasm-pack build -d pkg/bundler --release --features wasm_bindgen
     - wasm-pack test --node --features wasm_bindgen --lib
-    - wasm-pack build --target nodejs --release --features wasm_bindgen
+    - wasm-pack build -d pkg/nodejs --target nodejs --release --features wasm_bindgen
   artifacts:
     paths:
       - pkg
@@ -186,7 +194,7 @@ test_cloudproof_js:
   script:
     - git clone https://github.com/Cosmian/cloudproof_js.git
     - mkdir -p cloudproof_js/tests/wasm_lib/${CI_PROJECT_NAME}
-    - cp -r pkg/* cloudproof_js/tests/wasm_lib/${CI_PROJECT_NAME}/
+    - cp -r pkg/nodejs/* cloudproof_js/tests/wasm_lib/${CI_PROJECT_NAME}/
     - cd cloudproof_js
     - psql -h localhost -U "$POSTGRES_USER" -d "$POSTGRES_DB" -f ./dump_db_demo.sql
     - npm install jest
@@ -198,7 +206,7 @@ package_artifacts:
   before_script:
     - apt update && apt install -y zip
   script:
-    - zip -r ${CI_PROJECT_NAME}-${CI_COMMIT_TAG}-bin.zip *.h pkg target jniLibs
+    - zip -r ${CI_PROJECT_NAME}-${CI_COMMIT_TAG}-bin.zip pkg target jniLibs
   artifacts:
     paths:
       - ${CI_PROJECT_NAME}-${CI_COMMIT_TAG}-bin.zip
