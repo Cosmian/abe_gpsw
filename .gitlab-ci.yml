@@ -57,13 +57,6 @@ cargo_security_check:
     - cargo audit --deny warnings
   allow_failure: true
 
-# Is crate publishable
-cargo_prepublish:
-  stage: prebuild
-  script:
-    - cargo publish --dry-run
-  allow_failure: true
-
 #
 # Build base
 #
