@@ -8,10 +8,7 @@ use crate::{
             },
             AsBytes, Gpsw,
         },
-        msp::{
-            Node,
-            Node::{And, Leaf, Or},
-        },
+        msp::Node::{self, And, Leaf, Or},
     },
     error::FormatErr,
 };
@@ -23,9 +20,9 @@ fn encrypt_decrypt() -> Result<(), FormatErr> {
     let c = Box::new(Leaf(3));
     let d = Box::new(Leaf(4));
     let formula = And(a, Box::new(Or(d, Box::new(And(b, c)))));
-    println!("formula: {}", formula);
+    println!("formula: {formula}");
     let msp = formula.to_msp()?;
-    println!("msp: {}", msp);
+    println!("msp: {msp}");
 
     let abe = Gpsw {
         group: Bls12_381::default(),
@@ -50,9 +47,9 @@ fn user_key_as_bytes() -> Result<(), FormatErr> {
     let c = Box::new(Leaf(3));
     let d = Box::new(Leaf(4));
     let formula = And(a, Box::new(Or(d, Box::new(And(b, c)))));
-    println!("formula: {}", formula);
+    println!("formula: {formula}");
     let msp = formula.to_msp()?;
-    println!("msp: {}", msp);
+    println!("msp: {msp}");
 
     let abe = Gpsw {
         group: Bls12_381::default(),
@@ -74,9 +71,9 @@ fn ciphertext_as_bytes() -> Result<(), FormatErr> {
     let c = Box::new(Leaf(3));
     let d = Box::new(Leaf(4));
     let formula = And(a, Box::new(Or(d, Box::new(And(b, c)))));
-    println!("formula: {}", formula);
+    println!("formula: {formula}");
     let msp = formula.to_msp()?;
-    println!("msp: {}", msp);
+    println!("msp: {msp}");
 
     let abe = Gpsw {
         group: Bls12_381::default(),
@@ -101,9 +98,9 @@ fn master_public_key_as_bytes() -> Result<(), FormatErr> {
     let c = Box::new(Leaf(3));
     let d = Box::new(Leaf(4));
     let formula = And(a, Box::new(Or(d, Box::new(And(b, c)))));
-    println!("formula: {}", formula);
+    println!("formula: {formula}");
     let msp = formula.to_msp()?;
-    println!("msp: {}", msp);
+    println!("msp: {msp}");
 
     let abe = Gpsw {
         group: Bls12_381::default(),

@@ -105,9 +105,9 @@ fn msp_to_matrix() -> Result<(), FormatErr> {
     let d = Box::new(Leaf(4));
     // can be written let formula = a & (d | (b & c));
     let formula = And(a, Box::new(Or(d, Box::new(And(b, c)))));
-    println!("formula: {}", formula);
+    println!("formula: {formula}");
     let msp = formula.to_msp()?;
-    println!("msp: {}", msp);
+    println!("msp: {msp}");
     Ok(())
 }
 
@@ -119,9 +119,9 @@ fn msp_as_bytes() -> Result<(), FormatErr> {
     let d = Box::new(Leaf(4));
     // can be written let formula = a & (d | (b & c));
     let formula = And(a, Box::new(Or(d, Box::new(And(b, c)))));
-    println!("formula: {}", formula);
+    println!("formula: {formula}");
     let msp = formula.to_msp()?;
-    println!("msp: {}", msp);
+    println!("msp: {msp}");
     //let msp_2 = msp.as_bytes()?;
     let msp_2 = MonotoneSpanProgram::<i32>::try_from_bytes(&msp.try_into_bytes()?)?;
     assert_eq!(msp.nb_row, msp_2.nb_row);

@@ -110,7 +110,7 @@ impl<I: std::fmt::Debug> Display for MonotoneSpanProgram<I> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         writeln!(f)?;
         for (attr, row) in self.row_to_attr.iter().zip(self.matrix.iter()) {
-            writeln!(f, "attr {:>4}: {:?}", attr, *row)?;
+            writeln!(f, "attr {attr:>4}: {:?}", *row)?;
         }
         Ok(())
     }
@@ -202,11 +202,11 @@ impl BitOr for Node {
 impl Display for Node {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let str = match self {
-            Self::And(n1, n2) => format!("AND( {}, {} )", n1, n2),
-            Self::Or(n1, n2) => format!("OR( {}, {} )", n1, n2),
-            Self::Leaf(v) => format!("LEAF({})", v),
+            Self::And(n1, n2) => format!("AND( {n1}, {n2} )"),
+            Self::Or(n1, n2) => format!("OR( {n1}, {n2} )"),
+            Self::Leaf(v) => format!("LEAF({v})"),
         };
-        write!(f, "{}", str)
+        write!(f, "{str}")
     }
 }
 
@@ -295,8 +295,7 @@ impl Node {
         if s.is_empty() || s.chars().any(|c| !authorized.contains(&c)) {
             return Err(ParsingError::UnexpectedCharacter(format!(
                 "formula must contain only digits, parenthesis and operators & and |. Given \
-                 formula: {}",
-                s
+                 formula: {s}"
             )));
         }
         // Remove all spaces
@@ -314,8 +313,7 @@ impl Node {
                 .find_at(&new_s, 0)
                 .ok_or_else(|| {
                     ParsingError::UnexpectedCharacter(format!(
-                        "integer detected by regex but not found in: {}",
-                        new_s,
+                        "integer detected by regex but not found in: {new_s}"
                     ))
                 })?
                 .as_str();
@@ -461,7 +459,7 @@ fn policy_to_node(policy: &Policy, attr: &Attribute) -> Result<Node, FormatErr> 
                 .iter()
                 .map(|attr| Node::Leaf(*attr))
                 .reduce(std::ops::BitOr::bitor)
-                .ok_or_else(|| FormatErr::AttributeNotFound(format!("{:?}", attr)))?;
+                .ok_or_else(|| FormatErr::AttributeNotFound(format!("{attr:?}")))?;
             if *hierarchical {
                 for (at, elem) in list.iter().enumerate() {
                     if at >= res {
@@ -472,7 +470,7 @@ fn policy_to_node(policy: &Policy, attr: &Attribute) -> Result<Node, FormatErr> 
                             .iter()
                             .map(|attr| Node::Leaf(*attr))
                             .reduce(std::ops::BitOr::bitor)
-                            .ok_or_else(|| FormatErr::AttributeNotFound(format!("{:?}", attr)))?;
+                            .ok_or_else(|| FormatErr::AttributeNotFound(format!("{attr:?}")))?;
                 }
             }
 
