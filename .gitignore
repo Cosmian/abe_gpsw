@@ -1,4 +1,5 @@
 .cargo_check
+Cargo.lock
 target*/
 *nix
 flamegraph*.svg
