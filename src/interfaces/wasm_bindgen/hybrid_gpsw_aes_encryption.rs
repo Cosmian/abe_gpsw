@@ -212,7 +212,7 @@ pub fn webassembly_encrypt_hybrid_block(
     let ciphertext = encrypt_hybrid_block::<Gpsw<Bls12_381>, Aes256GcmCrypto, MAX_CLEAR_TEXT_SIZE>(
         &symmetric_key,
         &uid,
-        block_number_value as usize,
+        block_number_value,
         &data_bytes.to_vec(),
     )
     .map_err(|e| JsValue::from_str(&format!("Error encrypting block: {e}")))?;

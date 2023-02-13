@@ -209,7 +209,7 @@ pub fn webassembly_decrypt_hybrid_block(
     let cleartext = decrypt_hybrid_block::<Gpsw<Bls12_381>, Aes256GcmCrypto, MAX_CLEAR_TEXT_SIZE>(
         &symmetric_key,
         &uid,
-        block_number_value as usize,
+        block_number_value,
         &encrypted_bytes.to_vec(),
     )
     .map_err(|e| JsValue::from_str(&format!("Error decrypting block: {e}")))?;

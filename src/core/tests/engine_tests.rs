@@ -158,7 +158,7 @@ pub fn symmetric_key_test() {
     // Regenerate test vector (if needed)
     let mk = abe.generate_master_key(&policy).unwrap();
     let public_key = mk.1;
-    println!("public_key: {}", public_key);
+    println!("public_key: {public_key}");
     let access_policy =
         AccessPolicy::from_boolean_expression("Security Level::Top Secret && Department::FIN")
             .unwrap();

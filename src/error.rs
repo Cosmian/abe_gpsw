@@ -39,7 +39,7 @@ pub enum FormatErr {
     #[error("{} is missing{}",
         .item.clone().unwrap_or_else(|| "attribute".to_string()),
         match .axis_name {
-            Some(axis) => format!(" in axis {}", axis),
+            Some(axis) => format!(" in axis {axis}"),
             None => "".to_string(),
     })]
     MissingAttribute {
@@ -99,7 +99,7 @@ impl From<CryptoBaseError> for FormatErr {
     fn from(e: CryptoBaseError) -> Self {
         match e {
             CryptoBaseError::SizeError { given, expected } => {
-                Self::InvalidSize(format!("expected: {}, given: {}", expected, given))
+                Self::InvalidSize(format!("expected: {expected}, given: {given}"))
             }
             CryptoBaseError::InvalidSize(e) => Self::InvalidSize(e),
             e => Self::CryptoError(e.to_string()),

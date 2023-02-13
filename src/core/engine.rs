@@ -126,7 +126,7 @@ impl<S: AbeScheme> Engine<S> {
             .try_into_bytes()?;
         // Use a hash of the plaintext bytes as the symmetric key
         let sym_key = Shake256::default()
-            .chain(&random.try_into_bytes()?)
+            .chain(random.try_into_bytes()?)
             .finalize_xof()
             .read_boxed(symmetric_key_len)
             .into_vec();
@@ -148,7 +148,7 @@ impl<S: AbeScheme> Engine<S> {
             .ok_or(FormatErr::InvalidEncryptedData)?;
         // Use a hash of the plaintext bytes as the symmetric key
         Ok(Shake256::default()
-            .chain(&random.try_into_bytes()?)
+            .chain(random.try_into_bytes()?)
             .finalize_xof()
             .read_boxed(symmetric_key_len)
             .into_vec())

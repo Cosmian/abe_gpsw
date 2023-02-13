@@ -67,7 +67,7 @@ fn abe() -> Result<(), FormatErr> {
         false,
     ))?;
 
-    println!("policy: {:?}", hex::encode(&serde_json::to_vec(&policy)?));
+    println!("policy: {:?}", hex::encode(serde_json::to_vec(&policy)?));
 
     // ## Master Authority
     // The Master Authority possesses the keys for the given Policy:

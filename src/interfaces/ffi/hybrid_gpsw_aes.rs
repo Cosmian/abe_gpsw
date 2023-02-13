@@ -86,7 +86,7 @@ pub unsafe extern "C" fn h_aes_create_encryption_cache(
     let policy: Policy = match serde_json::from_str(&policy) {
         Ok(p) => p,
         Err(e) => {
-            ffi_bail!(format!("Hybrid Cipher: invalid Policy: {:?}", e));
+            ffi_bail!(format!("Hybrid Cipher: invalid Policy: {e:?}"));
         }
     };
 
@@ -96,7 +96,7 @@ pub unsafe extern "C" fn h_aes_create_encryption_cache(
     let public_key = match PublicKey::try_from_bytes(public_key_bytes) {
         Ok(key) => key,
         Err(e) => {
-            ffi_bail!(format!("Hybrid Cipher: invalid public key: {:?}", e));
+            ffi_bail!(format!("Hybrid Cipher: invalid public key: {e:?}"));
         }
     };
 
@@ -161,8 +161,7 @@ pub unsafe extern "C" fn h_aes_encrypt_header_using_cache(
         cache
     } else {
         set_last_error(FfiError::Generic(format!(
-            "Hybrid Cipher: no encryption cache with handle: {}",
-            cache_handle
+            "Hybrid Cipher: no encryption cache with handle: {cache_handle}"
         )));
         return 1;
     };
@@ -415,10 +414,7 @@ pub unsafe extern "C" fn h_aes_create_decryption_cache(
     let user_decryption_key = match UserDecryptionKey::try_from_bytes(user_decryption_key_bytes) {
         Ok(key) => key,
         Err(e) => {
-            ffi_bail!(format!(
-                "Hybrid Cipher: invalid user decryption key: {:?}",
-                e
-            ));
+            ffi_bail!(format!("Hybrid Cipher: invalid user decryption key: {e:?}"));
         }
     };
 
@@ -492,8 +488,7 @@ pub unsafe extern "C" fn h_aes_decrypt_header_using_cache(
         cache
     } else {
         set_last_error(FfiError::Generic(format!(
-            "Hybrid Cipher: no decryption cache with handle: {}",
-            cache_handle
+            "Hybrid Cipher: no decryption cache with handle: {cache_handle}"
         )));
         return 1;
     };
