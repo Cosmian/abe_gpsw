@@ -17,3 +17,15 @@ coverage = "tarpaulin --release -v -f -t 1800 --out Xml --ignore-tests --exclude
 
 # Find unused dependencies
 deps = "udeps --workspace --all-targets --all-features --backend depinfo"
+
+[target.x86_64-apple-darwin]
+rustflags = [
+  "-C", "link-arg=-undefined",
+  "-C", "link-arg=dynamic_lookup",
+]
+
+[target.aarch64-apple-darwin]
+rustflags = [
+  "-C", "link-arg=-undefined",
+  "-C", "link-arg=dynamic_lookup",
+]
