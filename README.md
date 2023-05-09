@@ -196,14 +196,15 @@ BLS12-381 is chosen so that `z` has small Hamming weight (to improve pairing per
 
 # Benchmarks
 
-Run on a (small) 1.4Ghz Intel Core i5 using `cargo bench --all-features`.
-
-Header encryption is the KEM part; the DEM part uses AES-256-GCM and the AES native interface, which time is negligible.
+The header encryption is the KEM part; the DEM part uses AES-256-GCM and the AES native interface, which time is negligible.
 
 The encryption size overhead due to the header encryption is 404 bytes for 1 partition, and 508 bytes for 3 partitions.
 
-| Benchmark                       | Time       |
-|---------------------------------|------------|
-|Header encryption/1 partition    |  5.2125 ms |
-|Header encryption/3 partitions   |  6.1943 ms |
-|Header decryption                | 10.684 ms  |
+The following was run on a (small) 1.4Ghz Intel Core i5 using `cargo bench --all-features`.
+
+
+| Benchmark                       | Time     |
+|---------------------------------|----------|
+|Header encryption/1 partition    |  5.21 ms |
+|Header encryption/3 partitions   |  6.19 ms |
+|Header decryption                | 10.68 ms |
