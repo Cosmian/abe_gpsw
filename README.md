@@ -17,7 +17,7 @@ The implementation uses the [BLS12-381](https://crates.io/crates/cosmian_bls12_3
   - [Key-Policy](#key-policy)
   - [Policies](#policies)
 - [BLS12-381: Pairing-friendly elliptic curve](#bls12-381-pairing-friendly-elliptic-curve)
-- [Benchmarks](#benchamrks)
+- [Benchmarks](#benchmarks)
 
 # Quick start
 
