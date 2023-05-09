@@ -70,7 +70,7 @@ cargo test --release --all-features
 
 Go to the [build](build/glibc-2.17/) directory for an example on hw to build for GLIBC 2.17
 
-## Benchmarks
+## Running benchmarks
 
 Benchmarking is using [Criterion](https://github.com/bheisler/criterion.rs) library.
 
