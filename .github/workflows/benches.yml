@@ -4,14 +4,13 @@ name: Benches
 on: push
 
 jobs:
-  bench-classic:
+  bench-paper:
     uses: Cosmian/reusable_workflows/.github/workflows/cargo-bench.yml@develop
     with:
       toolchain: stable
-      features: interfaces
       force: true
 
-  bench-hybridized:
+  bench-interfaces:
     uses: Cosmian/reusable_workflows/.github/workflows/cargo-bench.yml@develop
     with:
       toolchain: stable
