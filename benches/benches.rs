@@ -584,16 +584,6 @@ fn create_policies() -> (Vec<Node>, Vec<Vec<u32>>) {
         And(
             attr_a.clone(),
             Box::new(Or(
-                attr_1.clone(),
-                Box::new(Or(
-                    attr_2.clone(),
-                    Box::new(Or(attr_3.clone(), attr_4.clone())),
-                )),
-            )),
-        ),
-        And(
-            attr_a.clone(),
-            Box::new(Or(
                 Box::new(Or(attr_1.clone(), attr_2.clone())),
                 Box::new(Or(attr_3.clone(), attr_4.clone())),
             )),
@@ -630,8 +620,22 @@ fn bench_paper_policies(c: &mut Criterion) {
     for (i, attributes) in user_attr.into_iter().enumerate() {
         let msp = attributes.to_msp().unwrap();
         let usk = abe.key_generation(&msp, &msk.priv_key).unwrap();
+        #[cfg(feature = "interfaces")]
+        println!(
+            "Serialized USK size ({} attriutes): {}",
+            i + 1,
+            usk.try_into_bytes().unwrap().len()
+        );
         for (j, policy) in encapsulation_attr.iter().enumerate() {
             let enc = abe.encrypt(&msg, policy, &msk.pub_key).unwrap();
+            #[cfg(feature = "interfaces")]
+            if i == 0 {
+                println!(
+                    "Serialized encapsulation size ({} attriutes): {}",
+                    j + 1,
+                    enc.try_into_bytes().unwrap().len()
+                );
+            }
             c.bench_function(
                 &format!(
                     "Encryption: user with {} partitions, encapsulation with {} partition(s)",

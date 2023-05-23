@@ -1,7 +1,7 @@
 ---
 name: Benches
 
-on: push
+on: on-demand
 
 jobs:
   bench-paper:
