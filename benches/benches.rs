@@ -1,42 +1,47 @@
-#[cfg(any(feature = "ffi", feature = "interfaces"))]
-use criterion::{criterion_group, criterion_main, Criterion};
+use cosmian_abe_gpsw::core::{
+    bilinear_map::bls12_381::Bls12_381,
+    gpsw::Gpsw,
+    msp::Node::{self, *},
+};
 #[cfg(feature = "interfaces")]
+use criterion::criterion_main;
+use criterion::{criterion_group, Criterion};
+#[cfg(feature = "ffi")]
 use {
-    abe_policy::{Attribute, Policy},
+    abe_policy::Attribute,
     cosmian_abe_gpsw::{
-        core::{
-            bilinear_map::bls12_381::Bls12_381,
-            gpsw::{AbeScheme, AsBytes, Gpsw},
-        },
-        interfaces::hybrid_crypto::{
-            decrypt_hybrid_header, encrypt_hybrid_header, EncryptedHeader,
+        error::FormatErr,
+        interfaces::{
+            ffi::{
+                error::get_last_error,
+                hybrid_gpsw_aes::{
+                    h_aes_create_decryption_cache, h_aes_create_encryption_cache,
+                    h_aes_decrypt_header, h_aes_decrypt_header_using_cache,
+                    h_aes_destroy_decryption_cache, h_aes_destroy_encryption_cache,
+                    h_aes_encrypt_header, h_aes_encrypt_header_using_cache,
+                },
+            },
+            hybrid_crypto::EncryptedHeader,
         },
     },
     cosmian_crypto_base::{
-        symmetric_crypto::aes_256_gcm_pure::Aes256GcmCrypto, symmetric_crypto::Metadata,
+        symmetric_crypto::{Metadata, SymmetricCrypto},
         typenum::Unsigned,
+        KeyTrait,
     },
-};
-
-#[cfg(feature = "ffi")]
-use {
-    cosmian_abe_gpsw::{
-        error::FormatErr,
-        interfaces::ffi::{
-            error::get_last_error,
-            hybrid_gpsw_aes::{
-                h_aes_create_decryption_cache, h_aes_create_encryption_cache, h_aes_decrypt_header,
-                h_aes_decrypt_header_using_cache, h_aes_destroy_decryption_cache,
-                h_aes_destroy_encryption_cache, h_aes_encrypt_header,
-                h_aes_encrypt_header_using_cache,
-            },
-        },
-    },
-    cosmian_crypto_base::{symmetric_crypto::SymmetricCrypto, KeyTrait},
     std::{
         ffi::{CStr, CString},
         os::raw::c_int,
     },
+};
+#[cfg(feature = "interfaces")]
+use {
+    abe_policy::Policy,
+    cosmian_abe_gpsw::{
+        core::gpsw::{AbeScheme, AsBytes},
+        interfaces::hybrid_crypto::{decrypt_hybrid_header, encrypt_hybrid_header},
+    },
+    cosmian_crypto_base::symmetric_crypto::aes_256_gcm_pure::Aes256GcmCrypto,
 };
 
 #[cfg(feature = "interfaces")]
@@ -46,7 +51,7 @@ type PublicKey = <Gpsw<Bls12_381> as AbeScheme>::MasterPublicKey;
 type UserDecryptionKey = <Gpsw<Bls12_381> as AbeScheme>::UserDecryptionKey;
 
 /// Generate encrypted header with some metadata
-#[cfg(feature = "interfaces")]
+#[cfg(feature = "ffi")]
 fn generate_encrypted_header() -> EncryptedHeader<Aes256GcmCrypto> {
     let public_key_json: serde_json::Value = serde_json::from_str(include_str!(
         "../src/interfaces/hybrid_crypto/tests/public_master_key.json"
@@ -90,6 +95,8 @@ fn generate_encrypted_header() -> EncryptedHeader<Aes256GcmCrypto> {
 
 #[cfg(feature = "interfaces")]
 fn bench_header_encryption(c: &mut Criterion) {
+    use abe_policy::AccessPolicy;
+
     let public_key_json: serde_json::Value = serde_json::from_str(include_str!(
         "../src/interfaces/hybrid_crypto/tests/public_master_key.json"
     ))
@@ -112,75 +119,39 @@ fn bench_header_encryption(c: &mut Criterion) {
         serde_json::from_slice(&hex::decode(policy_hex).expect("cannot hex decode policy"))
             .expect("cannot deserialize policy");
 
-    let policy_attributes_1 = vec![
-        Attribute::new("Department", "FIN"),
-        Attribute::new("Security Level", "Top Secret"),
-    ];
-    let encrypted_header_1 = encrypt_hybrid_header::<Gpsw<Bls12_381>, Aes256GcmCrypto>(
-        &policy,
-        &public_key,
-        &policy_attributes_1,
-        None,
-    )
-    .expect("cannot encrypt header 1");
-    let policy_attributes_3 = vec![
-        Attribute::new("Department", "FIN"),
-        Attribute::new("Security Level", "Top Secret"),
-        Attribute::new("Security Level", "Medium Secret"),
-        Attribute::new("Security Level", "Protected"),
-    ];
-    let encrypted_header_3 = encrypt_hybrid_header::<Gpsw<Bls12_381>, Aes256GcmCrypto>(
-        &policy,
-        &public_key,
-        &policy_attributes_3,
-        None,
-    )
-    .expect("cannot encrypt header 3");
-
-    print!("Bench header encryption size: ");
-    println!(
-        "1 partition: {} bytes, 3 partitions: {} bytes",
-        encrypted_header_1.encrypted_header_bytes.len(),
-        encrypted_header_3.encrypted_header_bytes.len(),
-    );
-
     let mut group = c.benchmark_group("Header encryption");
-    group.bench_function("1 partition", |b| {
-        b.iter(|| {
-            encrypt_hybrid_header::<Gpsw<Bls12_381>, Aes256GcmCrypto>(
-                &policy,
-                &public_key,
-                &policy_attributes_1,
-                None,
-            )
-            .expect("cannot encrypt header 1")
-        })
-    });
-    group.bench_function("3 partitions", |b| {
-        b.iter(|| {
-            encrypt_hybrid_header::<Gpsw<Bls12_381>, Aes256GcmCrypto>(
-                &policy,
-                &public_key,
-                &policy_attributes_3,
-                None,
-            )
-            .expect("cannot encrypt header 3")
-        })
-    });
-    group.bench_function("speed with metadata", |b| {
-        b.iter(|| {
-            encrypt_hybrid_header::<Gpsw<Bls12_381>, Aes256GcmCrypto>(
-                &policy,
-                &public_key,
-                &policy_attributes_1,
-                Some(Metadata {
-                    uid: vec![1, 2, 3, 4, 5, 6, 7, 8, 9],
-                    additional_data: Some(vec![10, 11, 12, 13, 14]),
-                }),
-            )
-            .expect("cannot encrypt header 1")
-        })
-    });
+    for i in 1..=5 {
+        let access_policy = match i {
+            1 => "Department::FIN ",
+            2 => "Department::FIN && Security Level::Top Secret",
+            3 => "Department::FIN && (Security Level::Top Secret || Security Level::High Secret)",
+            4 => {
+                "Department::FIN && (Security Level::Top Secret || Security Level::High Secret || \
+                 Security Level::Medium Secret)"
+            }
+            5 => {
+                "Department::FIN && (Security Level::Top Secret || Security Level::High Secret || \
+                 Security Level::Medium Secret || Security Level::Low Secret)"
+            }
+            _ => "",
+        };
+        let access_policy = AccessPolicy::from_boolean_expression(access_policy).unwrap();
+        let policy_attributes = access_policy.attributes();
+        println!("{policy_attributes:?}");
+        assert_eq!(i, policy_attributes.len());
+
+        group.bench_function(format!("{i} partition"), |b| {
+            b.iter(|| {
+                encrypt_hybrid_header::<Gpsw<Bls12_381>, Aes256GcmCrypto>(
+                    &policy,
+                    &public_key,
+                    &policy_attributes,
+                    None,
+                )
+                .unwrap_or_else(|_| panic!("cannot encrypt header {}", i))
+            })
+        });
+    }
 }
 
 #[cfg(feature = "ffi")]
@@ -369,7 +340,29 @@ fn bench_ffi_header_encryption_using_cache(c: &mut Criterion) {
 
 #[cfg(feature = "interfaces")]
 fn bench_header_decryption(c: &mut Criterion) {
-    let encrypted_header = generate_encrypted_header();
+    use abe_policy::AccessPolicy;
+
+    let public_key_json: serde_json::Value = serde_json::from_str(include_str!(
+        "../src/interfaces/hybrid_crypto/tests/public_master_key.json"
+    ))
+    .expect("cannot deserialize public key JSON");
+    let key_value = &public_key_json["value"][0]["value"][1]["value"];
+
+    // Public Key bytes
+    let hex_key = key_value[0]["value"]
+        .as_str()
+        .expect("no key as hex found in JSON");
+    let public_key =
+        PublicKey::try_from_bytes(&hex::decode(hex_key).expect("cannot hex decode public key"))
+            .expect("cannot deserialize public key");
+
+    // Policy
+    let policy_hex = key_value[1]["value"][4]["value"][0]["value"][2]["value"]
+        .as_str()
+        .expect("no policy as hex found in JSON");
+    let policy: Policy =
+        serde_json::from_slice(&hex::decode(policy_hex).expect("cannot hex decode policy"))
+            .expect("cannot deserialize policy");
 
     let user_decryption_key_json: serde_json::Value = serde_json::from_str(include_str!(
         "../src/interfaces/hybrid_crypto/tests/fin_top_secret_user_key.json"
@@ -383,15 +376,43 @@ fn bench_header_decryption(c: &mut Criterion) {
         UserDecryptionKey::try_from_bytes(&hex::decode(hex_key).expect("cannot hex decode key"))
             .expect("cannot generate user private key");
 
-    c.bench_function("Header decryption", |b| {
-        b.iter(|| {
-            decrypt_hybrid_header::<Gpsw<Bls12_381>, Aes256GcmCrypto>(
-                &user_decryption_key,
-                &encrypted_header.encrypted_header_bytes,
-            )
-            .expect("cannot decrypt hybrid header")
-        })
-    });
+    for i in 2..=5 {
+        let access_policy = match i {
+            //1 => "Security Level::Top Secret",
+            2 => "Department::FIN && Security Level::Top Secret",
+            3 => "Department::FIN && (Security Level::Top Secret || Security Level::High Secret)",
+            4 => {
+                "Department::FIN && (Security Level::Top Secret || Security Level::High Secret || \
+                 Security Level::Medium Secret)"
+            }
+            5 => {
+                "Department::FIN && (Security Level::Top Secret || Security Level::High Secret || \
+                 Security Level::Medium Secret || Security Level::Low Secret)"
+            }
+            _ => "",
+        };
+        let access_policy = AccessPolicy::from_boolean_expression(access_policy).unwrap();
+        let policy_attributes = access_policy.attributes();
+        println!("{policy_attributes:?}");
+        assert_eq!(i, policy_attributes.len());
+
+        let encrypted_header = encrypt_hybrid_header::<Gpsw<Bls12_381>, Aes256GcmCrypto>(
+            &policy,
+            &public_key,
+            &policy_attributes,
+            None,
+        )
+        .unwrap_or_else(|_| panic!("cannot encrypt header {}", i));
+        c.bench_function(&format!("Header decryption/{i} partition(s)"), |b| {
+            b.iter(|| {
+                decrypt_hybrid_header::<Gpsw<Bls12_381>, Aes256GcmCrypto>(
+                    &user_decryption_key,
+                    &encrypted_header.encrypted_header_bytes,
+                )
+                .unwrap_or_else(|_| panic!("cannot decrypt hybrid header for {} partitions", i))
+            })
+        });
+    }
 }
 
 #[cfg(feature = "ffi")]
@@ -538,6 +559,124 @@ unsafe fn unwrap_ffi_error(val: i32) -> Result<(), FormatErr> {
     }
 }
 
+fn create_policies() -> (Vec<Node>, Vec<Vec<u32>>) {
+    let attr_a = Box::new(Leaf(10));
+    let _attr_b = Box::new(Leaf(11));
+    let _attr_c = Box::new(Leaf(12));
+    let _attr_d = Box::new(Leaf(13));
+
+    let attr_1 = Box::new(Leaf(1));
+    let attr_2 = Box::new(Leaf(2));
+    let attr_3 = Box::new(Leaf(3));
+    let attr_4 = Box::new(Leaf(4));
+    let attr_5 = Box::new(Leaf(5));
+
+    let msp_vec = vec![
+        And(attr_1.clone(), attr_a.clone()),
+        And(attr_a.clone(), Box::new(Or(attr_1.clone(), attr_2.clone()))),
+        And(
+            attr_a.clone(),
+            Box::new(Or(
+                attr_1.clone(),
+                Box::new(Or(attr_2.clone(), attr_3.clone())),
+            )),
+        ),
+        And(
+            attr_a.clone(),
+            Box::new(Or(
+                Box::new(Or(attr_1.clone(), attr_2.clone())),
+                Box::new(Or(attr_3.clone(), attr_4.clone())),
+            )),
+        ),
+        And(
+            attr_a,
+            Box::new(Or(
+                attr_1,
+                Box::new(Or(
+                    Box::new(Or(attr_2, attr_3)),
+                    Box::new(Or(attr_4, attr_5)),
+                )),
+            )),
+        ),
+    ];
+
+    let attr_vec = vec![
+        vec![1, 10],
+        vec![1, 10, 11],
+        vec![1, 10, 11, 12],
+        vec![1, 10, 11, 12, 13],
+        vec![1, 10, 11, 12, 13, 14],
+    ];
+
+    (msp_vec, attr_vec)
+}
+
+fn bench_paper_policies(c: &mut Criterion) {
+    let abe = Gpsw::<Bls12_381>::default();
+    let msk = abe.generate_master_key(15).unwrap();
+    let msg = abe.msg_encode(b"test").unwrap();
+
+    let (user_attr, encapsulation_attr) = create_policies();
+    for (i, attributes) in user_attr.into_iter().enumerate() {
+        let msp = attributes.to_msp().unwrap();
+        let usk = abe.key_generation(&msp, &msk.priv_key).unwrap();
+        #[cfg(feature = "interfaces")]
+        println!(
+            "Serialized USK size ({} attriutes): {}",
+            i + 1,
+            usk.try_into_bytes().unwrap().len()
+        );
+        for (j, policy) in encapsulation_attr.iter().enumerate() {
+            let enc = abe.encrypt(&msg, policy, &msk.pub_key).unwrap();
+            #[cfg(feature = "interfaces")]
+            if i == 0 {
+                println!(
+                    "Serialized encapsulation size ({} attriutes): {}",
+                    j + 1,
+                    enc.try_into_bytes().unwrap().len()
+                );
+            }
+            c.bench_function(
+                &format!(
+                    "Encryption: user with {} partitions, encapsulation with {} partition(s)",
+                    i + 1,
+                    j + 1
+                ),
+                |b| {
+                    b.iter(|| {
+                        let _enc = abe.encrypt(&msg, policy, &msk.pub_key).unwrap();
+                    })
+                },
+            );
+
+            assert_eq!(
+                msg,
+                abe.decrypt(&enc, &usk).unwrap().expect("decrypt failed")
+            );
+
+            c.bench_function(
+                &format!(
+                    "Decryption: user with {} partitions, encapsulation with {} partition(s)",
+                    i + 1,
+                    j + 1
+                ),
+                |b| {
+                    b.iter(|| {
+                        let _dec = abe.decrypt(&enc, &usk).expect("decrypt failed");
+                    })
+                },
+            );
+        }
+    }
+}
+
+criterion_group!(
+    name = paper;
+    config = Criterion::default().sample_size(5000);
+    targets =
+        bench_paper_policies,
+);
+
 #[cfg(feature = "interfaces")]
 criterion_group!(
     name = benches;
@@ -559,7 +698,7 @@ criterion_group!(
 );
 
 #[cfg(all(feature = "interfaces", feature = "ffi"))]
-criterion_main!(benches, benches_ffi);
+criterion_main!(benches, benches_ffi, paper);
 
 #[cfg(all(feature = "interfaces", not(feature = "ffi")))]
 criterion_main!(benches);
